@@ -4,8 +4,9 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@trigger.dev/sdk": "^3.0.0",
-    "@va-hub/db": "workspace:*",
-    "@va-hub/scraper": "workspace:*"
+    "@libsql/client": "0.17.0",
+    "@trigger.dev/sdk": "4.4.3",
+    "drizzle-orm": "0.30.10",
+    "fast-xml-parser": "^5.5.6"
   }
 }

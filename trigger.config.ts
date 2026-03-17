@@ -1,10 +1,11 @@
 import { defineConfig } from "@trigger.dev/sdk/v3";
 
 export default defineConfig({
-  project: "va-freelance-hub",
+  project: "proj_hzeuykzmhlzwmqeljfft",
   runtime: "bun",
   logLevel: "log",
   dirs: ["./jobs"],
+  maxDuration: 300,
   retries: {
     enabledInDev: false,
     default: {

@@ -4,8 +4,7 @@
   "version": "0.1.0",
   "workspaces": [
     "apps/*",
-    "packages/*",
-    "jobs"
+    "packages/*"
   ],
   "scripts": {
     "dev": "bun run --cwd apps/web dev",
@@ -18,5 +17,8 @@
   "devDependencies": {
     "@types/bun": "latest",
     "typescript": "^5.4.0"
+  },
+  "dependencies": {
+    "@trigger.dev/sdk": "4.4.3"
   }
 }
