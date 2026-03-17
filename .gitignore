@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+
+# Bun
+bun.lockb
+*.bun
+
+# Turso local
+.turso/
+*.db
+*.db-shm
+*.db-wal
+
+# Zig build artifacts
+packages/zig-parser/zig-cache/
+packages/zig-parser/zig-out/
+packages/zig-parser/src/*.o
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+bun-debug.log*
+
+# Vercel
+.vercel/
+
+# Trigger.dev
+.trigger/

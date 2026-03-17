@@ -1,0 +1,9 @@
+[install]
+# Use exact versions by default for reproducibility
+exact = false
+
+[install.scopes]
+# Add any private registry scopes here if needed
+
+[run]
+bun = true

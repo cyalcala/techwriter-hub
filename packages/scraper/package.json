@@ -1,0 +1,15 @@
+{
+  "name": "@va-hub/scraper",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./rss": "./rss.ts",
+    "./html": "./html.ts",
+    "./sources": "./sources.ts"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^4.3.0"
+  }
+}
