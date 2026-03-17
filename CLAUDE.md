@@ -102,7 +102,7 @@ summarized via Claude API (Sonnet) into 5-7 action steps.
 TURSO_DATABASE_URL=libsql://your-db.turso.io
 TURSO_AUTH_TOKEN=your-token
 TRIGGER_SECRET_KEY=tr_dev_xxxxx
-VERCEL_REVALIDATE_SECRET=random-string-you-generate
+ISR_SECRET=random-string-you-generate
 NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
 ANTHROPIC_API_KEY=sk-ant-xxxxx  # Phase 2 only
 ```

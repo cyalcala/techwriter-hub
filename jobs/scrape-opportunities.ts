@@ -80,11 +80,11 @@ export const scrapeOpportunitiesTask = schedules.task({
 });
 
 async function revalidateVercel() {
-  const secret = process.env.VERCEL_REVALIDATE_SECRET;
+  const secret = process.env.ISR_SECRET;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
 
   if (!secret || !appUrl) {
-    console.warn("[scrape] Revalidation skipped — VERCEL_REVALIDATE_SECRET or NEXT_PUBLIC_APP_URL not set");
+    console.warn("[scrape] Revalidation skipped — ISR_SECRET or NEXT_PUBLIC_APP_URL not set");
     return;
   }
 

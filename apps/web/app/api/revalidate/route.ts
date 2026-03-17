@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   const secret = req.headers.get("x-revalidate-secret");
 
-  if (secret !== process.env.VERCEL_REVALIDATE_SECRET) {
+  if (secret !== process.env.ISR_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
