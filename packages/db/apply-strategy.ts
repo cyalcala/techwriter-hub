@@ -7,8 +7,8 @@ async function applyStrategy() {
   // Ranking Strategy: 1=Easiest (Direct), 5=Hardest
   const strategy = [
     { name: "Magic", heat: 3, friction: 1, url: "https://getmagic.com/careers" },
-    { name: "PropVA", heat: 3, friction: 1, url: "https://propva.zohorecruit.eu/jobs/Careers" }, // Fixed PropVA 404
     { name: "TaskUs", heat: 3, friction: 1, url: "https://taskus.com/careers" },
+    { name: "PropVA", heat: 2, friction: 3, url: "https://propva.zohorecruit.eu/jobs/Careers" }, // Moved to mid
     { name: "Wing Assistant", heat: 3, friction: 2, url: "https://wingassistant.com/careers" },
     { name: "Prialto", heat: 2, friction: 2, url: "https://prialto.com/careers" },
     { name: "Remote CoWorker", heat: 2, friction: 2, url: "https://remotecoworker.com/careers" },
