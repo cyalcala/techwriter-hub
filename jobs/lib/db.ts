@@ -1,35 +1,41 @@
 import { createClient } from "@libsql/client/web";
 import { drizzle } from "drizzle-orm/libsql";
-import { sql } from "drizzle-orm";
 import { text, integer, sqliteTable } from "drizzle-orm/sqlite-core";
 
-export const opportunities = sqliteTable("opportunities", {
-  id: integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
-  title: text("title").notNull(),
-  company: text("company"),
-  type: text("type", { enum: ["VA", "freelance", "project", "full-time", "part-time"] }).notNull().default("freelance"),
-  sourceUrl: text("source_url").notNull().unique(),
-  sourcePlatform: text("source_platform").notNull(),
-  tags: text("tags", { mode: "json" }).$type<string[]>().default([]),
-  locationType: text("location_type", { enum: ["remote", "hybrid", "onsite"] }).default("remote"),
-  payRange: text("pay_range"),
-  description: text("description"),
-  postedAt: text("posted_at"),
-  scrapedAt: text("scraped_at").notNull().default(sql`(datetime('now'))`),
-  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
-  contentHash: text("content_hash").notNull(),
+export const agencies = sqliteTable('agencies', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  slug: text('slug').unique().notNull(),
+  websiteUrl: text('website_url'),
+  hiringUrl: text('hiring_url').notNull(),
+  logoUrl: text('logo_url'),
+  description: text('description'),
+  status: text('status').default('active'),
+  lastSync: integer('last_sync', { mode: 'timestamp' }).notNull(),
+  verifiedAt: integer('verified_at', { mode: 'timestamp' }),
+  metadata: text('metadata', { mode: 'json' }),
+  score: integer('score'),
+  buzzScore: integer('buzz_score').default(0),
+  hiringHeat: integer('hiring_heat').default(1),
+  frictionLevel: integer('friction_level').default(3),
+  createdAt: integer('created_at', { mode: 'timestamp' }),
 });
 
-export const vaDirectory = sqliteTable("va_directory", {
-  id: integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
-  companyName: text("company_name").notNull(),
-  website: text("website"),
-  hiresFilipinosf: integer("hires_filipinos", { mode: "boolean" }).notNull().default(true),
-  niche: text("niche").default("admin"),
-  hiringPageUrl: text("hiring_page_url"),
-  verifiedAt: text("verified_at"),
-  notes: text("notes"),
-  createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+export const opportunities = sqliteTable('opportunities', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  company: text('company'),
+  type: text('type').default('agency'),
+  sourceUrl: text('source_url').notNull(),
+  sourcePlatform: text('source_platform'),
+  tags: text('tags', { mode: 'json' }).default('[]'),
+  locationType: text('location_type').default('remote'),
+  payRange: text('pay_range'),
+  description: text('description'),
+  postedAt: integer('posted_at', { mode: 'timestamp' }),
+  scrapedAt: integer('scraped_at', { mode: 'timestamp' }).notNull(),
+  isActive: integer('is_active', { mode: 'boolean' }).default(true),
+  contentHash: text('content_hash').unique(),
 });
 
 export type NewOpportunity = typeof opportunities.$inferInsert;
@@ -39,5 +45,5 @@ export function createDb() {
     url: process.env.TURSO_DATABASE_URL!,
     authToken: process.env.TURSO_AUTH_TOKEN!,
   });
-  return drizzle(client, { schema: { opportunities, vaDirectory } });
+  return drizzle(client, { schema: { opportunities, agencies } });
 }

@@ -19,15 +19,6 @@ export interface Source {
 }
 
 export const rssSources: Source[] = [
-  // --- LOCAL PHILIPPINES VOLUMES (Priority) ---
-  {
-    id: "indeed-ph",
-    name: "Indeed Philippines",
-    url: "https://ph.indeed.com/rss?q=virtual+assistant",
-    platform: "Indeed",
-    defaultJobType: "VA",
-    tags: ["philippines", "VA", "admin"],
-  },
   {
     id: "onlinejobs-blog",
     name: "OnlineJobs.ph Insiders",
@@ -36,8 +27,6 @@ export const rssSources: Source[] = [
     defaultJobType: "VA",
     tags: ["philippines", "tips", "hiring"],
   },
-  
-  // --- HIGH-FIDELITY REMOTE HARVEST ---
   {
     id: "himalayas",
     name: "Himalayas",
@@ -49,7 +38,7 @@ export const rssSources: Source[] = [
   {
     id: "we-work-remotely",
     name: "We Work Remotely",
-    url: "https://weworkremotely.com/categories/remote-jobs.rss",
+    url: "https://weworkremotely.com/remote-jobs.rss", // FIXED URL
     platform: "WeWorkRemotely",
     defaultJobType: "full-time",
     tags: ["remote", "global"],
@@ -57,7 +46,7 @@ export const rssSources: Source[] = [
   {
     id: "remotive",
     name: "Remotive",
-    url: "https://remotive.com/remote-jobs/feed/all",
+    url: "https://remotive.com/feed", // FIXED URL
     platform: "Remotive",
     defaultJobType: "full-time",
     tags: ["remote", "tech"],
@@ -99,9 +88,9 @@ function stripHtml(s: string | undefined) {
 export async function fetchRSSFeed(source: Source): Promise<NewOpportunity[]> {
   try {
     const res = await fetch(source.url, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; va-freelance-hub/1.0)" },
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" },
       redirect: "follow",
-      signal: AbortSignal.timeout(20_000),
+      signal: AbortSignal.timeout(15_000),
     });
     if (!res.ok) {
       console.log(`[rss] ${source.name}: HTTP ${res.status}`);
@@ -125,7 +114,10 @@ export async function fetchRSSFeed(source: Source): Promise<NewOpportunity[]> {
             : (item.link?.["@_href"] ?? item.id ?? "");
         const sourceUrl = link.trim();
         if (!title || !sourceUrl) return null;
+        
+        // Drizzle accepts crypto.randomUUID() for text fields safely now that DB schema is mapped correctly
         return {
+          id: crypto.randomUUID(), 
           title,
           company: stripHtml(item["dc:creator"] ?? item.author) || null,
           type: source.defaultJobType,
@@ -135,10 +127,12 @@ export async function fetchRSSFeed(source: Source): Promise<NewOpportunity[]> {
           locationType: "remote" as const,
           payRange: null,
           description: stripHtml(item.description ?? "").slice(0, 500) || null,
-          postedAt: item.pubDate ?? item.published ?? null,
+          postedAt: item.pubDate ? new Date(item.pubDate) : null,
+          scrapedAt: new Date(),
           isActive: true,
           contentHash: toHash(title, sourceUrl),
-        } satisfies NewOpportunity;
+        } as unknown as NewOpportunity;
+
       })
       .filter(Boolean) as NewOpportunity[];
   } catch (err) {
