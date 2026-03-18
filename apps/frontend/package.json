@@ -12,11 +12,13 @@
     "astro": "astro"
   },
   "dependencies": {
-    "astro": "^6.0.5",
     "@astrojs/vercel": "latest",
     "@libsql/client": "latest",
-    "drizzle-orm": "latest",
+    "@tailwindcss/vite": "^4.2.1",
+    "@va-hub/db": "workspace:*",
+    "astro": "^6.0.5",
     "dotenv": "latest",
-    "@va-hub/db": "workspace:*"
+    "drizzle-orm": "latest",
+    "tailwindcss": "^4.2.1"
   }
 }

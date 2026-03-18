@@ -29,24 +29,27 @@ const agencies = liveAgencies.map((agency) => ({
 
 <Layout title="Agencies | VA.INDEX">
   <main class="max-w-[1200px] mx-auto px-6 py-12">
-    <header class="mb-12">
-      <div class="flex items-center gap-2 mb-4">
+    <header class="mb-12 relative">
+      <div class="flex items-center gap-2 mb-4 group cursor-default">
         <div class="pulse-dot"></div>
-        <span class="text-[10px] font-black text-blue-500 tracking-[0.2em] uppercase">V5.2 LIVE</span>
+        <span class="text-[10px] font-black text-blue-500 tracking-[0.2em] uppercase transition-all group-hover:tracking-[0.4em]">V5.2 LIVE</span>
       </div>
-      <h1 class="text-4xl font-extrabold text-white tracking-tighter mb-4">Agency Directory</h1>
-      <p class="text-zinc-500 max-w-xl text-sm leading-relaxed">
+      <h1 class="text-4xl md:text-5xl font-black text-white tracking-tighter mb-4">Agency Directory</h1>
+      <p class="text-zinc-500 max-w-xl text-sm leading-relaxed font-medium">
         High-density directory of Filipino VA partners. Monitored for activity every 12 hours.
       </p>
 
-      <div class="mt-10 flex flex-col sm:flex-row gap-3">
-        <input 
-          type="text" 
-          id="agencySearch" 
-          placeholder="Filter agencies..." 
-          class="bg-[#0a0a0a] border border-white/5 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-all font-medium placeholder:text-zinc-800 w-full sm:w-64"
-        />
-        <button id="verifiedFilter" class="px-4 py-2 bg-[#0a0a0a] border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-white transition-all">
+      <div class="mt-10 flex flex-col sm:flex-row items-center gap-3">
+        <div class="relative w-full sm:w-96 group">
+          <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-700 w-4 h-4 transition-colors group-focus-within:text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+          <input 
+            type="text" 
+            id="agencySearch" 
+            placeholder="Search agencies..." 
+            class="bg-brand-dark border border-white/5 rounded-2xl pl-11 pr-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/30 focus:bg-[#0f0f0f] transition-all font-medium placeholder:text-zinc-800 w-full"
+          />
+        </div>
+        <button id="verifiedFilter" class="w-full sm:w-auto px-6 py-3 bg-brand-dark border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-white hover:border-blue-500/20 active:scale-95 transition-all">
           Hiring Now
         </button>
       </div>
@@ -57,66 +60,96 @@ const agencies = liveAgencies.map((agency) => ({
         QUERY_FAULT: {dbError}
       </div>
     ) : (
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3" id="agenciesGrid">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="agenciesGrid">
         {agencies.map((agency) => (
           <a 
             href={agency.hiringUrl} 
             target="_blank" 
-            class="glass-card rounded-xl p-5 group flex flex-col justify-between" 
+            class="glass-card flex flex-col justify-between group h-full" 
             data-name={agency.name.toLowerCase()} 
             data-status={agency.status}
           >
             <div>
               <div class="flex justify-between items-start mb-4">
-                <div class="text-xs font-black text-white tracking-tight group-hover:text-blue-500 transition-colors truncate pr-4">
+                <div class="text-sm font-black text-white tracking-tight group-hover:text-blue-500 transition-colors truncate pr-4 uppercase">
                   {agency.name}
                 </div>
-                <div class={`flex items-center gap-1.5`}>
+                <div class={`flex items-center gap-1.5 px-2 py-1 rounded-full ${agency.status === 'active' ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-white/5 border border-white/5'}`}>
                   <div class={agency.status === 'active' ? 'pulse-dot' : 'w-1.5 h-1.5 rounded-full bg-zinc-800'}></div>
                   <span class={`text-[8px] font-black uppercase tracking-tighter ${agency.status === 'active' ? 'text-blue-500' : 'text-zinc-600'}`}>
                     {agency.status === 'active' ? 'Hiring' : 'Quiet'}
                   </span>
                 </div>
               </div>
-              <p class="text-[11px] text-zinc-500 line-clamp-2 leading-relaxed">
+              <p class="text-[11px] text-zinc-500 line-clamp-3 leading-relaxed font-medium">
                 {agency.description}
               </p>
             </div>
-            <div class="mt-6 flex items-center justify-between text-zinc-700">
-              <span class="text-[9px] font-bold uppercase tracking-widest">{agency.sources[0]}</span>
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="group-hover:text-blue-500 transition-colors"><path d="M7 7h10v10"></path><path d="M7 17L17 7"></path></svg>
+            <div class="mt-8 flex items-center justify-between">
+              <div class="flex gap-2">
+                {agency.sources.map(source => (
+                  <span class="px-2 py-0.5 bg-white/5 rounded text-[8px] font-bold text-zinc-700 uppercase tracking-widest border border-white/5">{source}</span>
+                ))}
+              </div>
+              <div class="w-8 h-8 rounded-full bg-white/5 border border-white/10 group-hover:border-blue-500/20 group-hover:bg-blue-500/10 flex items-center justify-center transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="text-zinc-800 group-hover:text-blue-500 transition-colors"><path d="M7 7h10v10"></path><path d="M7 17L17 7"></path></svg>
+              </div>
             </div>
           </a>
         ))}
       </div>
     )}
+    
+    <div id="emptyState" class="hidden py-24 text-center">
+      <div class="w-16 h-16 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-zinc-700"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+      </div>
+      <h3 class="text-white font-black text-xl mb-2">No results found</h3>
+      <p class="text-zinc-600 text-sm">Try broadening your search or clearing filters.</p>
+    </div>
   </main>
 </Layout>
 
 <script>
-  const searchInput = document.getElementById('agencySearch');
-  const verifiedBtn = document.getElementById('verifiedFilter');
-  const grid = document.getElementById('agenciesGrid');
-  const cards = grid?.querySelectorAll('.glass-card');
+  function init() {
+    const searchInput = document.getElementById('agencySearch') as HTMLInputElement;
+    const verifiedBtn = document.getElementById('verifiedFilter');
+    const grid = document.getElementById('agenciesGrid');
+    const emptyState = document.getElementById('emptyState');
+    const cards = grid?.querySelectorAll('.glass-card');
 
-  let activeOnly = false;
+    let activeOnly = false;
 
-  function runFilter() {
-    const query = searchInput?.value.toLowerCase() || '';
-    cards?.forEach(card => {
-      const name = card.getAttribute('data-name') || '';
-      const status = card.getAttribute('data-status');
-      const matchesSearch = name.includes(query);
-      const matchesStatus = !activeOnly || status === 'active';
-      card.style.display = (matchesSearch && matchesStatus) ? 'flex' : 'none';
+    function runFilter() {
+      const query = searchInput?.value.toLowerCase() || '';
+      let hasResults = false;
+      
+      cards?.forEach((card: any) => {
+        const name = card.getAttribute('data-name') || '';
+        const status = card.getAttribute('data-status');
+        const matchesSearch = name.includes(query);
+        const matchesStatus = !activeOnly || status === 'active';
+        
+        const isVisible = matchesSearch && matchesStatus;
+        card.style.display = isVisible ? 'flex' : 'none';
+        if (isVisible) hasResults = true;
+      });
+
+      if (emptyState) emptyState.style.display = hasResults ? 'none' : 'block';
+    }
+
+    searchInput?.addEventListener('input', runFilter);
+    verifiedBtn?.addEventListener('click', () => {
+      activeOnly = !activeOnly;
+      verifiedBtn.classList.toggle('text-blue-500');
+      verifiedBtn.classList.toggle('bg-blue-500/10');
+      verifiedBtn.classList.toggle('border-blue-500/20');
+      verifiedBtn.classList.toggle('text-zinc-500');
+      runFilter();
     });
   }
 
-  searchInput?.addEventListener('input', runFilter);
-  verifiedBtn?.addEventListener('click', () => {
-    activeOnly = !activeOnly;
-    verifiedBtn.classList.toggle('text-blue-500');
-    verifiedBtn.classList.toggle('border-blue-500/20');
-    runFilter();
-  });
+  // Support for both initial load and view transitions
+  init();
+  document.addEventListener('astro:after-swap', init);
 </script>

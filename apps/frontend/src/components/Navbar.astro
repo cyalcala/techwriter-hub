@@ -1,31 +1,31 @@
 ---
 const currentPath = Astro.url.pathname;
+const isHome = currentPath === '/';
+const isOpp = currentPath === '/opportunities';
 ---
-<nav class="fixed top-0 left-0 right-0 z-50 bg-black/60 backdrop-blur-xl border-b border-white/5">
+<nav class="fixed top-0 left-0 right-0 z-50 transition-colors duration-500 border-b border-white/5 bg-black/60 backdrop-blur-xl">
   <div class="max-w-[1200px] mx-auto px-6 h-16 flex items-center justify-between">
-    <a href="/" class="text-white font-black text-sm tracking-tighter hover:text-blue-500 transition-colors">
-      VA.INDEX
+    <a href="/" class="flex items-center gap-2 text-white font-black text-sm tracking-tighter hover:scale-105 transition-all">
+      <div class="w-6 h-6 bg-blue-600 rounded flex items-center justify-center font-black text-xs">V</div>
+      <span>VA.INDEX</span>
     </a>
 
-    <div class="flex bg-[#0a0a0a] border border-white/5 rounded-full p-1 relative">
-      <div 
-        class={`absolute top-1 bottom-1 rounded-full bg-blue-500/10 border border-blue-500/20 transition-all duration-300 ease-out ${currentPath === '/opportunities' ? 'left-[calc(50%+4px)] right-1' : 'left-1 right-[calc(50%+4px)]'}`}
-      ></div>
+    <div class="p-1 border bg-zinc-900/50 border-white/5 rounded-2xl flex items-center gap-1">
       <a 
         href="/" 
-        class={`relative z-10 px-6 py-1.5 text-[10px] font-black uppercase tracking-widest transition-colors duration-300 ${currentPath === '/' ? 'text-blue-500' : 'text-zinc-600 hover:text-zinc-400'}`}
+        class={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 relative overflow-hidden group ${isHome ? 'text-blue-500 bg-white/5 shadow-[0_0_20px_-10px_rgba(59,130,246,0.5)]' : 'text-zinc-600 hover:text-zinc-400 hover:bg-white/5'}`}
       >
-        Agencies
+        <span class="relative z-10 font-black">Agencies</span>
       </a>
       <a 
         href="/opportunities" 
-        class={`relative z-10 px-6 py-1.5 text-[10px] font-black uppercase tracking-widest transition-colors duration-300 ${currentPath === '/opportunities' ? 'text-blue-500' : 'text-zinc-600 hover:text-zinc-400'}`}
+        class={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 relative overflow-hidden group ${isOpp ? 'text-blue-500 bg-white/5 shadow-[0_0_20px_-10px_rgba(59,130,246,0.5)]' : 'text-zinc-600 hover:text-zinc-400 hover:bg-white/5'}`}
       >
-        Feed
+        <span class="relative z-10 font-black">Feed</span>
       </a>
     </div>
     
-    <div class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/5 border border-blue-500/10 rounded-full">
+    <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 border bg-blue-500/5 border-blue-500/10 rounded-full">
       <div class="pulse-dot"></div>
       <span class="text-[8px] font-black text-blue-500 tracking-[0.2em] uppercase">SYNCING</span>
     </div>
