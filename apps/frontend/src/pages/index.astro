@@ -21,10 +21,14 @@ try {
 // Mapping for UI
 const agencies = liveAgencies.map((agency) => ({
   name: agency.name,
+  description: agency.description || 'No description available.',
   status: agency.status || 'active',
   lastSync: agency.lastSync ? new Date(agency.lastSync).toLocaleTimeString() : 'Never',
-  jobs: agency.score || 0, // Fallback score to jobs count for now
-  source: Object.keys(agency.metadata || {})[0] || 'unknown',
+  websiteUrl: agency.websiteUrl || '#',
+  hiringUrl: agency.hiringUrl || '#',
+  logoUrl: agency.logoUrl,
+  score: agency.score || 0,
+  sources: (agency.metadata as any)?.source?.split(',') || ['Aggregator'],
 }));
 
 const sourceColors: Record<string, string> = {
@@ -34,82 +38,75 @@ const sourceColors: Record<string, string> = {
   jobicy: '#8b5cf6',
   remotive: '#2ecc71',
   serpapi: '#4285f4',
+  aggregator: '#3b82f6',
 };
 ---
 
-<Layout title="The Filipino Agency Index">
+<Layout title="The Filipino Agency Index | V5.2">
 	<main class="container">
 		<header class="hero">
-			<h1 class="title">The Filipino Agency Index</h1>
+			<div class="badge-container">
+				<span class="version-badge">V5.2 EXTREME-SYNC</span>
+			</div>
+			<h1 class="title">Filipino Agency Index</h1>
 			<p class="subtitle">
-				Live aggregated signals for Filipino VAs. Upgraded to V5.2 Extreme-Sync Engine.
+				Premium directory of VA agencies hiring Filipinos. Live-monitored every 12 hours.
 			</p>
 		</header>
 
 		{dbError ? (
-          <div class="col-span-full py-12 text-center border border-red-900/50 rounded-xl bg-red-900/10">
-            <p class="text-red-400 font-mono text-sm mb-2">DATABASE_ERROR: {dbError}</p>
-            <p class="text-zinc-500 text-sm">Please ensure migrations have been run and environment variables are set.</p>
+          <div class="error-box">
+            <p class="error-title">DATABASE_OFFLINE</p>
+            <p class="error-msg">{dbError}</p>
           </div>
         ) : agencies.length === 0 ? (
-          <div class="col-span-full py-12 text-center border border-zinc-800 rounded-xl bg-zinc-900/50">
-            <p class="text-zinc-400">No agencies found yet. Running initial discovery...</p>
+          <div class="empty-box">
+            <div class="spinner"></div>
+            <p>Initializing discovery signals...</p>
           </div>
         ) : (
-          <div class="grid">
+          <div class="bento-grid">
             {agencies.map((agency) => (
-              <div class="company-card group">
-                <div class="flex items-start justify-between mb-4">
-                  <div class="w-12 h-12 bg-zinc-800 rounded-lg flex items-center justify-center overflow-hidden border border-zinc-700">
-                    {agency.logoUrl ? (
-                      <img src={agency.logoUrl} alt={agency.name} class="w-full h-full object-cover" />
-                    ) : (
-                      <span class="text-xl font-bold text-zinc-600">{agency.name.charAt(0)}</span>
-                    )}
+              <a href={agency.hiringUrl} target="_blank" class="company-card group">
+                <div class="card-glow"></div>
+                <div class="card-content">
+                  <div class="card-header">
+                    <div class="logo-area">
+                      {agency.logoUrl ? (
+                        <img src={agency.logoUrl} alt={agency.name} class="logo-img" />
+                      ) : (
+                        <div class="logo-placeholder">{agency.name.charAt(0)}</div>
+                      )}
+                    </div>
+                    <div class="source-pills">
+                      {agency.sources.map((src) => (
+                        <span class="source-pill" style={`--pill-color: ${sourceColors[src.toLowerCase().trim()] || '#3b82f6'}`}>
+                          {src.trim()}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                  <div class="flex flex-wrap gap-1 justify-end">
-                    {/* Source Badges */}
-                    {(agency.metadata as any)?.source?.split(',').map((src: string) => (
-                      <span class={`source-badge badge-${src.trim().toLowerCase()}`}>
-                        {src.trim()}
-                      </span>
-                    ))}
-                    {agency.status === 'verified' && (
-                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                        VERIFIED
-                      </span>
-                    )}
+                  
+                  <div class="body-area">
+                    <h3 class="agency-name">{agency.name}</h3>
+                    <p class="agency-desc">{agency.description}</p>
+                  </div>
+
+                  <div class="footer-area">
+                    <div class="meta-info">
+                      <span class="meta-label">Signal</span>
+                      <span class="meta-value">Hiring Now</span>
+                    </div>
+                    <div class="meta-info border-l">
+                      <span class="meta-label">Last Sync</span>
+                      <span class="meta-value text-blue-400">{agency.lastSync}</span>
+                    </div>
+                    <div class="arrow-container">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="arrow-icon"><path d="M7 7h10v10"></path><path d="M7 17L17 7"></path></svg>
+                    </div>
                   </div>
                 </div>
-                
-                <h3 class="text-lg font-bold text-white mb-2 group-hover:text-amber-500 transition-colors">
-                  {agency.name}
-                </h3>
-                
-                <p class="text-sm text-zinc-400 line-clamp-3 mb-6 flex-grow">
-                  {agency.description}
-                </p>
-                
-                <div class="flex items-center justify-between mt-auto pt-4 border-t border-zinc-800">
-                  <a 
-                    href={agency.websiteUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    class="text-xs font-mono text-zinc-500 hover:text-white transition-colors"
-                  >
-                    {agency.websiteUrl ? new URL(agency.websiteUrl).hostname : ''}
-                  </a>
-                  <a 
-                    href={agency.hiringUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    class="flex items-center gap-1 text-xs font-bold text-amber-500 hover:text-amber-400 transition-colors"
-                  >
-                    APPLY NOW
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
-                  </a>
-                </div>
-              </div>
+              </a>
             ))}
           </div>
         )}
@@ -117,31 +114,79 @@ const sourceColors: Record<string, string> = {
 </Layout>
 
 <style>
-	/* Same styles as before, kept for consistent "Linear" aesthetic */
-	.container { max-width: 1200px; margin: 0 auto; padding: 5rem 1.5rem; animation: fadeIn 0.8s ease-out; }
-	.hero { text-align: center; margin-bottom: 4rem; }
-	.title { font-size: 3.5rem; font-weight: 800; letter-spacing: -0.05em; background: linear-gradient(to bottom, #fff, #a1a1aa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 1rem; }
-	.subtitle { font-size: 1.125rem; color: #71717a; max-width: 42rem; margin: 0 auto; line-height: 1.6; }
-	.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
-	.card { position: relative; background: #18181b; border: 1px solid #27272a; border-radius: 1rem; padding: 1.5rem; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-	.card:hover { border-color: #3b82f644; background: #1c1c1f; transform: translateY(-4px); box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5); }
-	.card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem; }
-	.logo-box { width: 3rem; height: 3rem; background: #27272a; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; font-weight: 700; color: #ffffff; border: 1px solid #3f3f46; }
-	.meta-tags { display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem; }
-	.source-badge { font-size: 0.65rem; padding: 0.2rem 0.6rem; background: color-mix(in srgb, var(--source-color), transparent 85%); color: var(--source-color); border: 1px solid color-mix(in srgb, var(--source-color), transparent 70%); border-radius: 9999px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em; }
-	.status-container { display: flex; align-items: center; gap: 0.4rem; }
-	.status-dot { width: 0.4rem; height: 0.4rem; border-radius: 9999px; }
-	.active-dot { background: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.4); animation: pulse 2s infinite; }
-	.quiet-dot { background: #52525b; }
-	.status-label { font-size: 0.65rem; font-weight: 600; color: #52525b; text-transform: uppercase; letter-spacing: 0.1em; }
-	.agency-name { font-size: 1.25rem; font-weight: 600; color: #f4f4f5; margin-bottom: 0.5rem; }
-	.card-footer { display: flex; gap: 1rem; margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid #27272a; }
-	.stat-group { flex: 1; }
-	.stat-label { display: block; font-size: 0.65rem; color: #52525b; margin-bottom: 0.25rem; text-transform: uppercase; font-weight: 600; }
-	.stat-value { font-size: 0.875rem; color: #a1a1aa; }
-	.border-l { border-left: 1px solid #27272a; padding-left: 1rem; }
-	.card-overlay { position: absolute; inset: 0; z-index: 10; }
-	@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-	@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.1); } }
-	@media (max-width: 640px) { .title { font-size: 2.5rem; } }
+	.container { max-width: 1400px; margin: 0 auto; padding: 6rem 2rem; }
+	
+	.hero { margin-bottom: 6rem; text-align: left; }
+	.badge-container { margin-bottom: 1.5rem; }
+	.version-badge { font-size: 0.7rem; font-weight: 800; color: var(--accent-blue); padding: 0.35rem 0.75rem; border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 999px; letter-spacing: 0.1em; background: rgba(59, 130, 246, 0.05); }
+	
+	.title { font-size: 4.5rem; font-weight: 800; letter-spacing: -0.04em; margin-bottom: 1rem; color: #fff; line-height: 1; }
+	.subtitle { font-size: 1.25rem; color: var(--text-dim); max-width: 32rem; line-height: 1.5; }
+
+	.bento-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 1rem; }
+
+	.company-card { 
+		position: relative; 
+		background: var(--card-bg); 
+		border: 1px solid var(--card-border); 
+		border-radius: 20px; 
+		padding: 2rem; 
+		text-decoration: none;
+		transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+	}
+
+	.card-glow {
+		position: absolute;
+		inset: 0;
+		background: radial-gradient(circle at center, var(--accent-blue) 0%, transparent 70%);
+		opacity: 0;
+		transition: opacity 0.5s ease;
+		z-index: 1;
+		pointer-events: none;
+	}
+
+	.company-card:hover .card-glow { opacity: 0.08; }
+	.company-card:hover { border-color: rgba(59, 130, 246, 0.4); transform: translateY(-4px); box-shadow: 0 20px 40px -15px rgba(0,0,0,0.8); }
+
+	.card-content { position: relative; z-index: 2; height: 100%; display: flex; flex-direction: column; }
+
+	.card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; }
+	.logo-area { width: 3.5rem; height: 3.5rem; background: #111; border-radius: 14px; display: flex; align-items: center; justify-content: center; border: 1px solid #222; overflow: hidden; }
+	.logo-img { width: 100%; height: 100%; object-cover: cover; }
+	.logo-placeholder { font-size: 1.5rem; font-weight: 800; color: #333; }
+
+	.source-pills { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end; }
+	.source-pill { font-size: 0.6rem; font-weight: 900; color: var(--pill-color); background: color-mix(in srgb, var(--pill-color), transparent 90%); border: 1px solid color-mix(in srgb, var(--pill-color), transparent 70%); padding: 0.25rem 0.6rem; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+	.agency-name { font-size: 1.5rem; font-weight: 700; color: #fff; margin-bottom: 0.75rem; transition: color 0.3s ease; }
+	.company-card:hover .agency-name { color: var(--accent-blue); }
+	
+	.agency-desc { font-size: 0.93rem; color: var(--text-dim); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 2.5rem; }
+
+	.footer-area { margin-top: auto; display: flex; items-center; border-top: 1px solid #1a1a1a; padding-top: 1.5rem; gap: 1.5rem; }
+	.meta-info { flex: 1; }
+	.meta-label { display: block; font-size: 0.65rem; color: #52525b; margin-bottom: 0.25rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+	.meta-value { font-size: 0.85rem; font-weight: 600; color: #a1a1aa; }
+	.border-l { border-left: 1px solid #1a1a1a; padding-left: 1.5rem; }
+
+	.arrow-container { opacity: 0; transform: translateX(-10px); transition: all 0.3s ease; color: var(--accent-blue); }
+	.company-card:hover .arrow-container { opacity: 1; transform: translateX(0); }
+
+	.error-box { padding: 4rem; text-align: center; border: 1px solid #450a0a; background: #0c0000; border-radius: 20px; }
+	.error-title { color: #f87171; font-weight: 900; font-family: monospace; margin-bottom: 0.5rem; }
+	.error-msg { color: #7f1d1d; }
+
+	.empty-box { padding: 6rem; text-align: center; color: #3f3f46; }
+	.spinner { width: 40px; height: 40px; border: 3px solid #111; border-top-color: var(--accent-blue); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1.5rem; }
+
+	@keyframes spin { to { transform: rotate(360deg); } }
+
+	@media (max-width: 768px) {
+		.title { font-size: 3rem; }
+		.container { padding: 4rem 1.5rem; }
+		.bento-grid { grid-template-columns: 1fr; }
+	}
 </style>
