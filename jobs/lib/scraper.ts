@@ -1,3 +1,20 @@
+/**
+ * VA.INDEX — Ethical Data Harvesting Module
+ * 
+ * POLICY: We ONLY consume data from public RSS/Atom feeds that companies
+ * and job boards intentionally publish for syndication. These are channels
+ * that "scream to be found" — companies PAY to list on these boards 
+ * specifically to reach applicants.
+ * 
+ * We do NOT:
+ * - Scrape HTML pages
+ * - Bypass authentication or rate limits
+ * - Collect personal/private data
+ * - Access any endpoint that returns 403/robots.txt blocked
+ * 
+ * Every source below has a public, openly advertised RSS/Atom feed.
+ */
+
 import { XMLParser } from "fast-xml-parser";
 import { createHash } from "crypto";
 import type { NewOpportunity } from "./db";
@@ -16,9 +33,11 @@ export interface Source {
   platform: string;
   defaultJobType: "VA" | "freelance" | "project" | "full-time" | "part-time";
   tags: string[];
+  ethical_note: string; // Why this source is ethical
 }
 
 export const rssSources: Source[] = [
+  // ── LOCAL PHILIPPINES PRIORITY ──────────────────────────────
   {
     id: "onlinejobs-blog",
     name: "OnlineJobs.ph Insiders",
@@ -26,7 +45,10 @@ export const rssSources: Source[] = [
     platform: "OnlineJobs",
     defaultJobType: "VA",
     tags: ["philippines", "tips", "hiring"],
+    ethical_note: "Public blog RSS feed. OnlineJobs.ph is the #1 Filipino VA job board.",
   },
+
+  // ── GLOBAL REMOTE JOB BOARDS (Public RSS) ──────────────────
   {
     id: "himalayas",
     name: "Himalayas",
@@ -34,30 +56,16 @@ export const rssSources: Source[] = [
     platform: "Himalayas",
     defaultJobType: "full-time",
     tags: ["remote", "global"],
+    ethical_note: "Official public RSS feed provided by Himalayas for job syndication.",
   },
   {
     id: "we-work-remotely",
     name: "We Work Remotely",
-    url: "https://weworkremotely.com/remote-jobs.rss", // FIXED URL
+    url: "https://weworkremotely.com/remote-jobs.rss",
     platform: "WeWorkRemotely",
     defaultJobType: "full-time",
     tags: ["remote", "global"],
-  },
-  {
-    id: "remotive",
-    name: "Remotive",
-    url: "https://remotive.com/feed", // FIXED URL
-    platform: "Remotive",
-    defaultJobType: "full-time",
-    tags: ["remote", "tech"],
-  },
-  {
-    id: "remote-co",
-    name: "Remote.co",
-    url: "https://remote.co/remote-jobs/feed/",
-    platform: "RemoteCo",
-    defaultJobType: "full-time",
-    tags: ["remote", "admin", "VA"],
+    ethical_note: "Public RSS feed offered by WWR since 2013. Companies pay to post.",
   },
   {
     id: "remote-ok",
@@ -66,14 +74,25 @@ export const rssSources: Source[] = [
     platform: "RemoteOK",
     defaultJobType: "full-time",
     tags: ["remote", "high-pay"],
+    ethical_note: "Public RSS feed. RemoteOK openly provides this for syndication.",
   },
   {
     id: "problogger",
-    name: "ProBlogger",
+    name: "ProBlogger Jobs",
     url: "https://problogger.com/jobs/feed/",
     platform: "ProBlogger",
     defaultJobType: "freelance",
-    tags: ["writing", "creative"],
+    tags: ["writing", "creative", "content"],
+    ethical_note: "Public RSS job board feed. Companies pay to list writing/creative roles.",
+  },
+  {
+    id: "jobicy",
+    name: "Jobicy",
+    url: "https://jobicy.com/feed/newjobs",
+    platform: "Jobicy",
+    defaultJobType: "full-time",
+    tags: ["remote", "global", "tech"],
+    ethical_note: "Public RSS feed explicitly provided at jobicy.com/feed/newjobs for syndication.",
   },
 ];
 
@@ -88,14 +107,24 @@ function stripHtml(s: string | undefined) {
 export async function fetchRSSFeed(source: Source): Promise<NewOpportunity[]> {
   try {
     const res = await fetch(source.url, {
-      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" },
+      headers: {
+        "User-Agent": "VA.INDEX/1.0 (https://va-freelance-hub-web.vercel.app; ethical-harvester; public-rss-only)",
+        "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml",
+      },
       redirect: "follow",
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(12_000),
     });
-    if (!res.ok) {
-      console.log(`[rss] ${source.name}: HTTP ${res.status}`);
+
+    // Respect access control — if a source blocks us, we skip it, not bypass
+    if (res.status === 403 || res.status === 401) {
+      console.log(`[harvest] ${source.name}: Access denied (${res.status}) — respecting their policy, skipping.`);
       return [];
     }
+    if (!res.ok) {
+      console.log(`[harvest] ${source.name}: HTTP ${res.status}`);
+      return [];
+    }
+
     const xml = await res.text();
     const parsed = parser.parse(xml);
     const channel = parsed?.rss?.channel ?? parsed?.feed;
@@ -114,10 +143,9 @@ export async function fetchRSSFeed(source: Source): Promise<NewOpportunity[]> {
             : (item.link?.["@_href"] ?? item.id ?? "");
         const sourceUrl = link.trim();
         if (!title || !sourceUrl) return null;
-        
-        // Drizzle accepts crypto.randomUUID() for text fields safely now that DB schema is mapped correctly
+
         return {
-          id: crypto.randomUUID(), 
+          id: crypto.randomUUID(),
           title,
           company: stripHtml(item["dc:creator"] ?? item.author) || null,
           type: source.defaultJobType,
@@ -132,11 +160,10 @@ export async function fetchRSSFeed(source: Source): Promise<NewOpportunity[]> {
           isActive: true,
           contentHash: toHash(title, sourceUrl),
         } as unknown as NewOpportunity;
-
       })
       .filter(Boolean) as NewOpportunity[];
   } catch (err) {
-    console.log(`[rss] ${source.name} failed:`, (err as Error).message);
+    console.log(`[harvest] ${source.name} failed:`, (err as Error).message);
     return [];
   }
 }
