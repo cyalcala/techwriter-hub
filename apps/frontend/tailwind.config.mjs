@@ -5,9 +5,9 @@ export default {
     extend: {
       colors: {
         oat: {
-          50: '#FDFBF7',
-          100: '#F5F2E9',
-          200: '#E8E2D2',
+          50: '#F9F8F6',
+          100: '#F0EFEA',
+          200: '#E6E4DF',
         },
         blueberry: {
           50: '#E8EAF6',
