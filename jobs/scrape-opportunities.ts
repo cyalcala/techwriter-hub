@@ -1,7 +1,7 @@
 import { schedules } from "@trigger.dev/sdk/v3";
 import { db, schema } from "@va-hub/db";
 import { fetchRSSFeed, rssSources } from "./lib/scraper";
-import { count, desc, eq, sql } from "drizzle-orm";
+import { count, eq, sql } from "drizzle-orm";
 
 function normalizeTitle(title: string): string {
   return title
@@ -11,48 +11,68 @@ function normalizeTitle(title: string): string {
     .trim();
 }
 
+// Sources that are already PH-focused — skip relevancy filter for these
+const PH_NATIVE_SOURCES = new Set(["Indeed", "OnlineJobs"]);
+
 export const scrapeOpportunitiesTask = schedules.task({
   id: "scrape-opportunities",
   cron: "0 */2 * * *", // every 2 hours
   maxDuration: 120,
   run: async () => {
-    console.log("[scrape] Starting opportunity scrape...");
+    console.log("[harvest] Starting opportunity harvest...");
 
     const results = await Promise.allSettled(rssSources.map(fetchRSSFeed));
     const allItems = results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
-    console.log(`[scrape] Fetched ${allItems.length} items`);
+    console.log(`[harvest] Fetched ${allItems.length} items from ${rssSources.length} sources`);
 
-    if (allItems.length === 0) return { inserted: 0, skipped: 0 };
+    // Log per-source breakdown
+    results.forEach((r, i) => {
+      const src = rssSources[i];
+      const count = r.status === "fulfilled" ? r.value.length : 0;
+      const status = r.status === "fulfilled" ? "OK" : `FAIL: ${r.reason?.message}`;
+      console.log(`  → ${src.name}: ${count} items (${status})`);
+    });
 
+    if (allItems.length === 0) {
+      console.log("[harvest] Zero items fetched. All sources may be down.");
+      return { inserted: 0, skipped: 0, reason: "no_data_from_sources" };
+    }
+
+    // Dedup against existing data
     const existingItems = await db.select({ hash: schema.opportunities.contentHash, title: schema.opportunities.title }).from(schema.opportunities);
-    const existingHashes = new Set(existingItems.map((r) => r.hash));
-    const normalizedExisting = new Set(existingItems.map(r => normalizeTitle(r.title)));
+    const existingHashes = new Set(existingItems.map((r: any) => r.hash));
+    const normalizedExisting = new Set(existingItems.map((r: any) => normalizeTitle(r.title)));
 
     const newItems = allItems.filter((item) => {
       if (!item.contentHash || existingHashes.has(item.contentHash)) return false;
-      if (normalizedExisting.has(normalizeTitle(item.title))) return false; // Fuzzy dedup
+      if (normalizedExisting.has(normalizeTitle(item.title))) return false;
       return true;
     });
-    console.log(`[scrape] ${newItems.length} unique items after fuzzy dedup`);
+    console.log(`[harvest] ${newItems.length} unique items after dedup`);
 
-    // Scoring layer to filter out low-relevancy "noise"
+    // Smart filter: PH-native sources bypass the keyword filter entirely
     const relevantItems = newItems.filter(item => {
+      // If it came from Indeed PH or OnlineJobs, it's already relevant
+      if (item.sourcePlatform && PH_NATIVE_SOURCES.has(item.sourcePlatform)) {
+        return true;
+      }
+
+      // For global sources, check for any remote/hiring signal
       const text = `${item.title} ${item.description ?? ""}`.toLowerCase();
-      const phKeywords = ["philippines", "filipino", "pinoy", "ph", "pampanga", "manila", "cebu", "virtual assistant", "assistant", "va", "remote", "offshore", "outsourcing", "freelance"];
       
-      // Calculate score based on keyword presence
-      let score = 0;
-      phKeywords.forEach(kw => {
-        if (text.includes(kw)) score += 0.5; // Loosened for higher harvest
-      });
+      // Any of these keywords = relevant
+      const signals = [
+        "remote", "virtual", "assistant", "freelance", "outsource",
+        "offshore", "philippines", "filipino", "manila", "cebu",
+        "apply", "hiring", "urgent", "contract", "part-time",
+        "customer support", "data entry", "bookkeeping", "social media",
+        "admin", "executive assistant", "project manager"
+      ];
 
-      // Special boost for explicit hiring signals
-      if (text.includes("apply") || text.includes("hiring") || text.includes("urgent")) score += 2;
-
-      return score >= 0.5; // Harvest any remote/hiring signal
+      return signals.some(kw => text.includes(kw));
     });
 
-    console.log(`[scrape] ${relevantItems.length} passed relevancy filter`);
+    console.log(`[harvest] ${relevantItems.length} passed relevancy filter (${newItems.length - relevantItems.length} filtered out)`);
 
     let inserted = 0;
     for (let i = 0; i < relevantItems.length; i += 50) {
@@ -66,46 +86,33 @@ export const scrapeOpportunitiesTask = schedules.task({
         await db.insert(schema.opportunities).values(batch).onConflictDoNothing();
         inserted += batch.length;
       } catch (err) {
-        console.error("[scrape] Batch failed:", err);
+        console.error("[harvest] Batch insert failed:", err);
       }
     }
 
-    if (inserted > 0) await revalidate();
-    
     // --- INTELLIGENT STATUS SYNC ---
-    console.log("[scrape] Syncing agency hiring status...");
+    console.log("[harvest] Syncing agency hiring heat...");
     const activeAgencies = await db.select().from(schema.agencies);
     for (const agency of activeAgencies) {
-      const [{ count: jobCount }] = await db
-        .select({ count: count() })
-        .from(schema.opportunities)
-        .where(
-          sql`${schema.opportunities.company} = ${agency.name} AND ${schema.opportunities.isActive} = true`
-        );
-      
-      // If agency has jobs, boost heat; if 0 jobs, set to quiet
-      const newStatus = jobCount > 0 ? "active" : "quiet";
-      const newHeat = jobCount > 5 ? 3 : jobCount > 0 ? 2 : 1;
-      
-      await db.update(schema.agencies)
-        .set({ status: newStatus as any, hiringHeat: newHeat })
-        .where(eq(schema.agencies.id, agency.id));
+      try {
+        const [{ count: jobCount }] = await db
+          .select({ count: count() })
+          .from(schema.opportunities)
+          .where(
+            sql`${schema.opportunities.company} = ${agency.name} AND ${schema.opportunities.isActive} = true`
+          );
+        
+        const newHeat = (jobCount as number) > 5 ? 3 : (jobCount as number) > 0 ? 2 : 1;
+        
+        await db.update(schema.agencies)
+          .set({ hiringHeat: newHeat })
+          .where(eq(schema.agencies.id, agency.id));
+      } catch {
+        // Skip agencies that fail — don't crash the whole sync
+      }
     }
 
-    console.log(`[scrape] Done. Inserted ${inserted}`);
+    console.log(`[harvest] Complete. Inserted ${inserted} new opportunities.`);
     return { inserted, skipped: allItems.length - inserted };
   },
 });
-
-async function revalidate() {
-  const secret = process.env.ISR_SECRET || "fallback_sync_signal"; // Intelligent fallback
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-  if (!appUrl) return;
-  try {
-    await fetch(`${appUrl}/api/revalidate`, {
-      method: "POST",
-      headers: { "x-revalidate-secret": secret },
-      signal: AbortSignal.timeout(10_000),
-    });
-  } catch {}
-}
