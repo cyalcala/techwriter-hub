@@ -11,7 +11,7 @@ import { JobicyProvider } from "../lib/harvest/jobicy";
 import { RawAgency } from "../lib/harvest/types";
 
 export const dailySyncTask = task({
-  id: "daily-sync-v5-1",
+  id: "daily-sync-v5-2",
   run: async (payload: any, { ctx }) => {
     console.log("Starting Filipino Agency Index Multi-Source Sync (V5.1)...");
 
