@@ -1,5 +1,5 @@
 import { schedules } from "@trigger.dev/sdk/v3";
-import { db, schema } from "@va-hub/db";
+import { createDb, opportunities } from "./lib/db";
 import { eq } from "drizzle-orm";
 
 export const verifyLinksTask = schedules.task({
@@ -8,10 +8,12 @@ export const verifyLinksTask = schedules.task({
   maxDuration: 300,
   run: async () => {
     console.log("[verify-links] Checking opportunity links...");
+    const db = createDb();
+
     const active = await db
-      .select({ id: schema.opportunities.id, sourceUrl: schema.opportunities.sourceUrl })
-      .from(schema.opportunities)
-      .where(eq(schema.opportunities.isActive, true));
+      .select({ id: opportunities.id, sourceUrl: opportunities.sourceUrl })
+      .from(opportunities)
+      .where(eq(opportunities.isActive, true));
 
     console.log(`[verify-links] Checking ${active.length} links...`);
     let deactivated = 0;
@@ -22,7 +24,7 @@ export const verifyLinksTask = schedules.task({
         batch.map(async ({ id, sourceUrl }) => {
           try {
             const res = await fetch(sourceUrl, { 
-              method: "GET", // Use GET for redirect inspection
+              method: "GET",
               signal: AbortSignal.timeout(12_000), 
               redirect: "follow",
               headers: { "User-Agent": "Mozilla/5.0 (compatible; va-hub-verifier/1.0)" }
@@ -33,13 +35,13 @@ export const verifyLinksTask = schedules.task({
             const isHomepageRedirect = finalUrl.length < 30 && finalUrl !== originalUrl && (finalUrl.endsWith("/") || !finalUrl.includes("job"));
 
             if (res.status === 404 || res.status === 410 || isHomepageRedirect) {
-              console.log(`[verify-links] Deactivating ${id} (status: ${res.status}, redirect: ${isHomepageRedirect})`);
-              await db.update(schema.opportunities)
+              console.log(`[verify-links] Deactivating ${id} (status: ${res.status})`);
+              await db.update(opportunities)
                 .set({ isActive: false })
-                .where(eq(schema.opportunities.id, id));
+                .where(eq(opportunities.id, id));
               deactivated++;
             }
-          } catch (err) {
+          } catch {
             // Silently fail to avoid batch collapse
           }
         })

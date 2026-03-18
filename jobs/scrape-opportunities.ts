@@ -1,7 +1,6 @@
 import { schedules } from "@trigger.dev/sdk/v3";
-import { db, schema } from "@va-hub/db";
+import { createDb, opportunities } from "./lib/db";
 import { fetchRSSFeed, rssSources } from "./lib/scraper";
-import { count, eq, sql } from "drizzle-orm";
 
 function normalizeTitle(title: string): string {
   return title
@@ -11,7 +10,7 @@ function normalizeTitle(title: string): string {
     .trim();
 }
 
-// Sources that are already PH-focused — skip relevancy filter for these
+// Sources that are already PH-focused — skip relevancy filter
 const PH_NATIVE_SOURCES = new Set(["Indeed", "OnlineJobs"]);
 
 export const scrapeOpportunitiesTask = schedules.task({
@@ -21,6 +20,8 @@ export const scrapeOpportunitiesTask = schedules.task({
   run: async () => {
     console.log("[harvest] Starting opportunity harvest...");
 
+    const db = createDb();
+
     const results = await Promise.allSettled(rssSources.map(fetchRSSFeed));
     const allItems = results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
     console.log(`[harvest] Fetched ${allItems.length} items from ${rssSources.length} sources`);
@@ -28,9 +29,9 @@ export const scrapeOpportunitiesTask = schedules.task({
     // Log per-source breakdown
     results.forEach((r, i) => {
       const src = rssSources[i];
-      const count = r.status === "fulfilled" ? r.value.length : 0;
-      const status = r.status === "fulfilled" ? "OK" : `FAIL: ${r.reason?.message}`;
-      console.log(`  → ${src.name}: ${count} items (${status})`);
+      const cnt = r.status === "fulfilled" ? r.value.length : 0;
+      const status = r.status === "fulfilled" ? "OK" : `FAIL: ${(r.reason as Error)?.message}`;
+      console.log(`  → ${src.name}: ${cnt} items (${status})`);
     });
 
     if (allItems.length === 0) {
@@ -39,9 +40,13 @@ export const scrapeOpportunitiesTask = schedules.task({
     }
 
     // Dedup against existing data
-    const existingItems = await db.select({ hash: schema.opportunities.contentHash, title: schema.opportunities.title }).from(schema.opportunities);
-    const existingHashes = new Set(existingItems.map((r: any) => r.hash));
-    const normalizedExisting = new Set(existingItems.map((r: any) => normalizeTitle(r.title)));
+    const existingItems = await db.select({
+      hash: opportunities.contentHash,
+      title: opportunities.title
+    }).from(opportunities);
+
+    const existingHashes = new Set(existingItems.map((r) => r.hash));
+    const normalizedExisting = new Set(existingItems.map((r) => normalizeTitle(r.title)));
 
     const newItems = allItems.filter((item) => {
       if (!item.contentHash || existingHashes.has(item.contentHash)) return false;
@@ -50,17 +55,13 @@ export const scrapeOpportunitiesTask = schedules.task({
     });
     console.log(`[harvest] ${newItems.length} unique items after dedup`);
 
-    // Smart filter: PH-native sources bypass the keyword filter entirely
+    // Smart filter: PH-native sources bypass relevancy check
     const relevantItems = newItems.filter(item => {
-      // If it came from Indeed PH or OnlineJobs, it's already relevant
       if (item.sourcePlatform && PH_NATIVE_SOURCES.has(item.sourcePlatform)) {
         return true;
       }
 
-      // For global sources, check for any remote/hiring signal
       const text = `${item.title} ${item.description ?? ""}`.toLowerCase();
-      
-      // Any of these keywords = relevant
       const signals = [
         "remote", "virtual", "assistant", "freelance", "outsource",
         "offshore", "philippines", "filipino", "manila", "cebu",
@@ -68,47 +69,19 @@ export const scrapeOpportunitiesTask = schedules.task({
         "customer support", "data entry", "bookkeeping", "social media",
         "admin", "executive assistant", "project manager"
       ];
-
       return signals.some(kw => text.includes(kw));
     });
 
-    console.log(`[harvest] ${relevantItems.length} passed relevancy filter (${newItems.length - relevantItems.length} filtered out)`);
+    console.log(`[harvest] ${relevantItems.length} passed relevancy filter`);
 
     let inserted = 0;
     for (let i = 0; i < relevantItems.length; i += 50) {
       try {
-        const batch = relevantItems.slice(i, i + 50).map(item => ({
-          ...item,
-          id: crypto.randomUUID(),
-          scrapedAt: new Date(),
-          postedAt: item.postedAt ? new Date(item.postedAt) : null,
-        }));
-        await db.insert(schema.opportunities).values(batch).onConflictDoNothing();
+        const batch = relevantItems.slice(i, i + 50);
+        await db.insert(opportunities).values(batch).onConflictDoNothing();
         inserted += batch.length;
       } catch (err) {
-        console.error("[harvest] Batch insert failed:", err);
-      }
-    }
-
-    // --- INTELLIGENT STATUS SYNC ---
-    console.log("[harvest] Syncing agency hiring heat...");
-    const activeAgencies = await db.select().from(schema.agencies);
-    for (const agency of activeAgencies) {
-      try {
-        const [{ count: jobCount }] = await db
-          .select({ count: count() })
-          .from(schema.opportunities)
-          .where(
-            sql`${schema.opportunities.company} = ${agency.name} AND ${schema.opportunities.isActive} = true`
-          );
-        
-        const newHeat = (jobCount as number) > 5 ? 3 : (jobCount as number) > 0 ? 2 : 1;
-        
-        await db.update(schema.agencies)
-          .set({ hiringHeat: newHeat })
-          .where(eq(schema.agencies.id, agency.id));
-      } catch {
-        // Skip agencies that fail — don't crash the whole sync
+        console.error("[harvest] Batch insert failed:", (err as Error).message);
       }
     }
 
