@@ -11,20 +11,32 @@ let dbError = null;
 try {
   liveAgencies = await db.select()
     .from(agenciesTable)
-    .orderBy(desc(agenciesTable.lastSync))
+    .orderBy(desc(agenciesTable.buzzScore), desc(agenciesTable.createdAt))
     .limit(100);
 } catch (e) {
   console.error("Database fetch failed:", e);
   dbError = e.message;
 }
 
-const agencies = liveAgencies.map((agency) => ({
-  name: agency.name,
-  description: agency.description || 'Verified Filipino Agency Partner',
-  status: agency.status || 'active',
-  hiringUrl: agency.hiringUrl || '#',
-  sources: (agency.metadata as any)?.source?.split(',') || ['Web'],
-}));
+const agencies = liveAgencies.map((agency) => {
+  const isNew = agency.createdAt && (new Date().getTime() - new Date(agency.createdAt).getTime()) < 30 * 24 * 60 * 60 * 1000;
+  
+  // Calculate pizza rating based on buzzScore
+  // 0-10: 1 pizza, 11-30: 2 pizza, 30+: 3 pizza
+  const buzzStr = "🍕".repeat(
+    (agency.buzzScore ?? 0) > 30 ? 3 : (agency.buzzScore ?? 0) > 10 ? 2 : 1
+  );
+
+  return {
+    name: agency.name,
+    description: agency.description || 'Verified Filipino Agency Partner',
+    status: agency.status || 'active',
+    hiringUrl: agency.hiringUrl || '#',
+    sources: (agency.metadata as any)?.source?.split(',') || ['Web'],
+    isNew,
+    pizza: buzzStr,
+  };
+});
 ---
 
 <Layout title="Agencies | VA.INDEX">
@@ -74,11 +86,19 @@ const agencies = liveAgencies.map((agency) => ({
                 <div class="text-base font-black text-white tracking-tight group-hover:text-blue-500 transition-colors uppercase pr-4">
                   {agency.name}
                 </div>
-                <div class={`flex items-center gap-1.5 px-3 py-1.5 rounded-full ${agency.status === 'active' ? 'bg-blue-500/10 border border-blue-500/20 shadow-[0_0_20px_-5px_rgba(59,130,246,0.3)]' : 'bg-zinc-900/50 border border-white/5'}`}>
-                  <div class={agency.status === 'active' ? 'pulse-dot scale-75' : 'w-1.5 h-1.5 rounded-full bg-zinc-800'}></div>
-                  <span class={`text-[9px] font-black uppercase tracking-tighter ${agency.status === 'active' ? 'text-blue-500' : 'text-zinc-600'}`}>
-                    {agency.status === 'active' ? 'Hiring Now' : 'Quiet Signal'}
-                  </span>
+                <div class="flex flex-col items-end gap-2">
+                  <div class={`flex items-center gap-1.5 px-3 py-1.5 rounded-full ${agency.status === 'active' ? 'bg-blue-500/10 border border-blue-500/20 shadow-[0_0_20px_-5px_rgba(59,130,246,0.3)]' : 'bg-zinc-900/50 border border-white/5'}`}>
+                    <div class={agency.status === 'active' ? 'pulse-dot scale-75' : 'w-1.5 h-1.5 rounded-full bg-zinc-800'}></div>
+                    <span class={`text-[9px] font-black uppercase tracking-tighter ${agency.status === 'active' ? 'text-blue-500' : 'text-zinc-600'}`}>
+                      {agency.status === 'active' ? 'Hiring Now' : 'Quiet Signal'}
+                    </span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    {agency.isNew && (
+                      <span class="text-[8px] font-black bg-blue-600 text-white px-2 py-0.5 rounded-md tracking-widest shadow-[0_0_10px_rgba(59,130,246,0.5)]">NEW</span>
+                    )}
+                    <span class="text-sm grayscale-[0.5] group-hover:grayscale-0 transition-all drop-shadow-[0_0_5px_rgba(255,255,255,0.1)]">{agency.pizza}</span>
+                  </div>
                 </div>
               </div>
               <p class="text-[12px] text-zinc-500 line-clamp-3 leading-relaxed font-medium">
