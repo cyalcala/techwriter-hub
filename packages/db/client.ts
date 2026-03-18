@@ -2,17 +2,18 @@ import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import * as schema from "./schema";
 
-if (!process.env.TURSO_DATABASE_URL) {
-  throw new Error("TURSO_DATABASE_URL is not set");
-}
-if (!process.env.TURSO_AUTH_TOKEN) {
-  throw new Error("TURSO_AUTH_TOKEN is not set");
+const url = process.env.TURSO_DATABASE_URL;
+const authToken = process.env.TURSO_AUTH_TOKEN;
+
+if (!url || !authToken) {
+  console.error(`[va-hub/db] CRITICAL: Missing env vars — TURSO_DATABASE_URL=${url ? 'SET' : 'MISSING'}, TURSO_AUTH_TOKEN=${authToken ? 'SET' : 'MISSING'}`);
 }
 
 const client = createClient({
-  url: process.env.TURSO_DATABASE_URL,
-  authToken: process.env.TURSO_AUTH_TOKEN,
+  url: url || "file:///dev/null",  // Graceful fallback — queries will fail but import won't crash
+  authToken: authToken || "",
 });
 
 export const db = drizzle(client, { schema });
 export { schema };
+

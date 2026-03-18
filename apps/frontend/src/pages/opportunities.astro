@@ -8,15 +8,20 @@ import { desc } from 'drizzle-orm';
 let liveOpportunities = [];
 let dbError = null;
 
-try {
-  liveOpportunities = await db.select()
-    .from(opportunitiesTable)
-    .orderBy(desc(opportunitiesTable.postedAt))
-    .limit(100);
-} catch (e) {
-  console.error("Database fetch failed:", e);
-  dbError = e.message;
+if (!process.env.TURSO_DATABASE_URL || !process.env.TURSO_AUTH_TOKEN) {
+  dbError = `ENV_MISSING: Database credentials not configured. Add TURSO_DATABASE_URL and TURSO_AUTH_TOKEN in Vercel Dashboard → Settings → Environment Variables.`;
+} else {
+  try {
+    liveOpportunities = await db.select()
+      .from(opportunitiesTable)
+      .orderBy(desc(opportunitiesTable.postedAt))
+      .limit(100);
+  } catch (e) {
+    console.error("Database fetch failed:", e);
+    dbError = e.message;
+  }
 }
+
 
 const opportunities = liveOpportunities.map((opp) => ({
   title: opp.title,

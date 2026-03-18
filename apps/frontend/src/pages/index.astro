@@ -8,19 +8,29 @@ import { desc } from 'drizzle-orm';
 let liveAgencies = [];
 let dbError = null;
 
-try {
-  liveAgencies = await db.select()
-    .from(agenciesTable)
-    .orderBy(
-      agenciesTable.frictionLevel,  // Easiest (1) first
-      desc(agenciesTable.hiringHeat), // Hottest (3) next
-      desc(agenciesTable.createdAt)
-    )
-    .limit(100);
-} catch (e) {
-  console.error("Database fetch failed:", e);
-  dbError = e.message;
+// Pre-flight: check env vars exist
+if (!process.env.TURSO_DATABASE_URL || !process.env.TURSO_AUTH_TOKEN) {
+  dbError = `ENV_MISSING: TURSO_DATABASE_URL=${process.env.TURSO_DATABASE_URL ? 'SET' : 'MISSING'}, TURSO_AUTH_TOKEN=${process.env.TURSO_AUTH_TOKEN ? 'SET' : 'MISSING'}. Add these in Vercel Dashboard → Settings → Environment Variables.`;
+} else {
+  try {
+    liveAgencies = await db.select()
+      .from(agenciesTable)
+      .orderBy(
+        agenciesTable.frictionLevel,  // Easiest (1) first
+        desc(agenciesTable.hiringHeat), // Hottest (3) next
+        desc(agenciesTable.createdAt)
+      )
+      .limit(100);
+    
+    if (liveAgencies.length === 0) {
+      console.warn("DB connected but returned 0 agencies — table may be empty.");
+    }
+  } catch (e) {
+    console.error("Database fetch failed:", e);
+    dbError = e.message;
+  }
 }
+
 
 const agencies = liveAgencies.map((agency) => {
   const isNew = agency.createdAt && (new Date().getTime() - new Date(agency.createdAt).getTime()) < 30 * 24 * 60 * 60 * 1000;
