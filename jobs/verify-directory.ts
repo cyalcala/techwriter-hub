@@ -18,20 +18,33 @@ export const verifyDirectoryTask = schedules.task({
 
     for (const entry of entries) {
       if (!entry.hiringUrl) continue;
+      
       try {
         const res = await fetch(entry.hiringUrl, { 
-          method: "HEAD", 
-          signal: AbortSignal.timeout(10_000), 
+          method: "GET", 
+          signal: AbortSignal.timeout(15_000), 
           redirect: "follow",
-          headers: { "User-Agent": "Mozilla/5.0 (compatible; va-hub-verifier/1.0)" }
+          headers: { "User-Agent": "Mozilla/5.0 (compatible; va-hub-verifier/1.2; +https://va-index.com)" }
         });
-        if (res.ok) {
+
+        // FULL BODY INSPECTION to prevent "Homepage Redirect" fakery
+        const html = (await res.text()).toLowerCase();
+        const recruitmentKeywords = ["apply", "career", "job", "hiring", "portal", "opportunity", "opening", "resume", "cv"];
+        const hasRecruitmentSignal = recruitmentKeywords.some(kw => html.includes(kw));
+
+        if (res.ok && hasRecruitmentSignal) {
           await db.update(schema.agencies)
             .set({ verifiedAt: new Date() })
             .where(eq(schema.agencies.id, entry.id));
           verified++;
-        } else { failed++; }
-      } catch { failed++; }
+        } else { 
+          console.log(`[verify-directory] Potential Fakery/Mismatch: ${entry.name} - No recruitment signal in body.`);
+          failed++; 
+        }
+      } catch (err) {
+        console.log(`[verify-directory] Link Failed: ${entry.name} - ${err.message}`);
+        failed++;
+      }
     }
 
     console.log(`[verify-directory] verified=${verified} failed=${failed}`);
