@@ -1,6 +1,9 @@
 import { schedules } from "@trigger.dev/sdk/v3";
 import { createDb, opportunities } from "./lib/db";
 import { fetchRSSFeed, rssSources } from "./lib/scraper";
+import { fetchRedditJobs } from "./lib/reddit";
+import { fetchHNJobs } from "./lib/hackernews";
+import { fetchJobicyJobs } from "./lib/jobicy";
 
 function normalizeTitle(title: string): string {
   return title
@@ -10,36 +13,50 @@ function normalizeTitle(title: string): string {
     .trim();
 }
 
-// Sources that are already PH-focused — skip relevancy filter
-const PH_NATIVE_SOURCES = new Set(["Indeed", "OnlineJobs"]);
+const PH_NATIVE_SOURCES = new Set(["OnlineJobs", "Reddit r/phcareers"]);
 
 export const scrapeOpportunitiesTask = schedules.task({
   id: "scrape-opportunities",
-  cron: "0 */2 * * *", // every 2 hours
+  cron: "0 */2 * * *",
   maxDuration: 120,
   run: async () => {
-    console.log("[harvest] Starting opportunity harvest...");
-
+    console.log("[harvest] ═══ Starting Multi-Source Harvest ═══");
     const db = createDb();
 
-    const results = await Promise.allSettled(rssSources.map(fetchRSSFeed));
-    const allItems = results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
-    console.log(`[harvest] Fetched ${allItems.length} items from ${rssSources.length} sources`);
+    // ── LAYER 1: RSS Feeds ──────────────────────────────────
+    console.log("[harvest] Layer 1: RSS Feeds...");
+    const rssResults = await Promise.allSettled(rssSources.map(fetchRSSFeed));
+    const rssItems = rssResults.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
 
-    // Log per-source breakdown
-    results.forEach((r, i) => {
+    rssResults.forEach((r, i) => {
       const src = rssSources[i];
       const cnt = r.status === "fulfilled" ? r.value.length : 0;
-      const status = r.status === "fulfilled" ? "OK" : `FAIL: ${(r.reason as Error)?.message}`;
-      console.log(`  → ${src.name}: ${cnt} items (${status})`);
+      const status = r.status === "fulfilled" ? "OK" : `FAIL`;
+      console.log(`  → ${src.name}: ${cnt} (${status})`);
     });
 
+    // ── LAYER 2: Reddit Public JSON ─────────────────────────
+    console.log("[harvest] Layer 2: Reddit JSON...");
+    const redditItems = await fetchRedditJobs();
+
+    // ── LAYER 3: Hacker News API ────────────────────────────
+    console.log("[harvest] Layer 3: Hacker News API...");
+    const hnItems = await fetchHNJobs();
+
+    // ── LAYER 4: Jobicy REST API ────────────────────────────
+    console.log("[harvest] Layer 4: Jobicy API...");
+    const jobicyItems = await fetchJobicyJobs();
+
+    // ── COMBINE ALL SOURCES ─────────────────────────────────
+    const allItems = [...rssItems, ...redditItems, ...hnItems, ...jobicyItems];
+    console.log(`[harvest] Total fetched: ${allItems.length} (RSS: ${rssItems.length}, Reddit: ${redditItems.length}, HN: ${hnItems.length}, Jobicy: ${jobicyItems.length})`);
+
     if (allItems.length === 0) {
-      console.log("[harvest] Zero items fetched. All sources may be down.");
-      return { inserted: 0, skipped: 0, reason: "no_data_from_sources" };
+      console.log("[harvest] Zero items from all sources.");
+      return { inserted: 0, skipped: 0 };
     }
 
-    // Dedup against existing data
+    // ── DEDUP ───────────────────────────────────────────────
     const existingItems = await db.select({
       hash: opportunities.contentHash,
       title: opportunities.title
@@ -53,14 +70,18 @@ export const scrapeOpportunitiesTask = schedules.task({
       if (normalizedExisting.has(normalizeTitle(item.title))) return false;
       return true;
     });
-    console.log(`[harvest] ${newItems.length} unique items after dedup`);
+    console.log(`[harvest] ${newItems.length} unique after dedup`);
 
-    // Smart filter: PH-native sources bypass relevancy check
+    // ── RELEVANCY FILTER ────────────────────────────────────
     const relevantItems = newItems.filter(item => {
-      if (item.sourcePlatform && PH_NATIVE_SOURCES.has(item.sourcePlatform)) {
-        return true;
-      }
+      // PH-native and curated sources bypass filter
+      if (item.sourcePlatform && PH_NATIVE_SOURCES.has(item.sourcePlatform)) return true;
+      // Reddit & HN already pre-filtered for hiring signals
+      if (item.sourcePlatform?.startsWith("Reddit") || item.sourcePlatform === "HackerNews") return true;
+      // Jobicy is already a curated remote board
+      if (item.sourcePlatform === "Jobicy") return true;
 
+      // Global RSS: check for remote/hiring signals
       const text = `${item.title} ${item.description ?? ""}`.toLowerCase();
       const signals = [
         "remote", "virtual", "assistant", "freelance", "outsource",
@@ -74,6 +95,7 @@ export const scrapeOpportunitiesTask = schedules.task({
 
     console.log(`[harvest] ${relevantItems.length} passed relevancy filter`);
 
+    // ── INSERT ──────────────────────────────────────────────
     let inserted = 0;
     for (let i = 0; i < relevantItems.length; i += 50) {
       try {
@@ -81,11 +103,11 @@ export const scrapeOpportunitiesTask = schedules.task({
         await db.insert(opportunities).values(batch).onConflictDoNothing();
         inserted += batch.length;
       } catch (err) {
-        console.error("[harvest] Batch insert failed:", (err as Error).message);
+        console.error("[harvest] Batch failed:", (err as Error).message);
       }
     }
 
-    console.log(`[harvest] Complete. Inserted ${inserted} new opportunities.`);
+    console.log(`[harvest] ═══ Complete: ${inserted} new opportunities inserted ═══`);
     return { inserted, skipped: allItems.length - inserted };
   },
 });

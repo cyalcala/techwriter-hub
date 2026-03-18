@@ -1,0 +1,92 @@
+/**
+ * Reddit Public JSON Harvester
+ * 
+ * Uses Reddit's official public JSON endpoints (no API key required).
+ * Every subreddit provides .json — this is Reddit's intended public data format.
+ * We only harvest posts tagged [Hiring] from career-focused subreddits.
+ */
+
+import { createHash } from "crypto";
+import type { NewOpportunity } from "./db";
+
+const SUBREDDITS = [
+  { name: "forhire", label: "r/forhire" },
+  { name: "remotejobs", label: "r/remotejobs" },
+  { name: "phcareers", label: "r/phcareers" },
+  { name: "VirtualAssistant", label: "r/VirtualAssistant" },
+];
+
+function toHash(title: string, url: string) {
+  return createHash("sha256").update(`${title}::${url}`).digest("hex").slice(0, 16);
+}
+
+export async function fetchRedditJobs(): Promise<NewOpportunity[]> {
+  const allJobs: NewOpportunity[] = [];
+
+  for (const sub of SUBREDDITS) {
+    try {
+      const res = await fetch(`https://www.reddit.com/r/${sub.name}/new.json?limit=50`, {
+        headers: {
+          "User-Agent": "VA.INDEX/1.0 (ethical-harvester; public-json; contact: va-index.com)",
+        },
+        signal: AbortSignal.timeout(10_000),
+      });
+
+      if (!res.ok) {
+        console.log(`[reddit] ${sub.label}: HTTP ${res.status}`);
+        continue;
+      }
+
+      const data = await res.json();
+      const posts = data?.data?.children || [];
+
+      for (const post of posts) {
+        const p = post.data;
+        if (!p || !p.title) continue;
+
+        const title = p.title.trim();
+        const titleLower = title.toLowerCase();
+
+        // Only harvest posts that are hiring signals
+        const isHiring = 
+          titleLower.includes("[hiring]") ||
+          titleLower.includes("hiring") ||
+          titleLower.includes("looking for") ||
+          titleLower.includes("we need") ||
+          titleLower.includes("job opening") ||
+          p.link_flair_text?.toLowerCase()?.includes("hiring");
+
+        if (!isHiring) continue;
+
+        const sourceUrl = p.url?.startsWith("http") 
+          ? p.url 
+          : `https://www.reddit.com${p.permalink}`;
+
+        const description = (p.selftext || "").slice(0, 500).replace(/\n/g, " ").trim();
+
+        allJobs.push({
+          id: crypto.randomUUID(),
+          title: title.replace(/\[hiring\]/gi, "").trim(),
+          company: p.author || "Direct Hire",
+          type: "freelance",
+          sourceUrl,
+          sourcePlatform: `Reddit ${sub.label}`,
+          tags: ["reddit", sub.name],
+          locationType: "remote",
+          payRange: null,
+          description: description || null,
+          postedAt: p.created_utc ? new Date(p.created_utc * 1000) : new Date(),
+          scrapedAt: new Date(),
+          isActive: true,
+          contentHash: toHash(title, sourceUrl),
+        } as unknown as NewOpportunity);
+      }
+
+      console.log(`[reddit] ${sub.label}: ${posts.length} posts → ${allJobs.length} hiring signals`);
+    } catch (err) {
+      console.log(`[reddit] ${sub.label} failed:`, (err as Error).message);
+    }
+  }
+
+  return allJobs;
+}
