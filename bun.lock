@@ -19,7 +19,7 @@
       "version": "0.0.1",
       "dependencies": {
         "@astrojs/vercel": "latest",
-        "@libsql/client": "latest",
+        "@libsql/client": "^0.17.0",
         "@tailwindcss/vite": "^4.2.1",
         "@va-hub/db": "workspace:*",
         "astro": "^6.0.5",
