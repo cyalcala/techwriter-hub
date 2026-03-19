@@ -15,10 +15,12 @@
     "trigger:deploy": "bunx trigger.dev@latest deploy",
     "save": "bun run scripts/save.ts",
     "restore": "bun run scripts/restore.ts",
-    "sync:framework": "bun run scripts/sync-framework.ts"
+    "sync:framework": "bun run scripts/sync-framework.ts",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "husky": "^9.1.7",
     "typescript": "^5.4.0"
   },
   "dependencies": {
