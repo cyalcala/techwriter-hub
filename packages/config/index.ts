@@ -46,7 +46,7 @@ export const defaultConfig: NicheConfig = {
 
   target_signals: {
     region: ["philippines", "filipino", "pinoy", "tagalog", "manila", "cebu", "ph", "sea", "southeast asia"],
-    role: ["virtual assistant", "va", "data entry", "bookkeeping", "executive assistant", "admin assistant", "customer service", "customer support", "sales", "bdr", "sdr", "marketing", "seo", "social media", "copywriter", "video editor", "graphic designer"],
+    role: ["virtual assistant", "va", "data entry", "bookkeeping", "executive assistant", "admin assistant", "customer service", "customer support", "sales", "bdr", "sdr", "marketing", "seo", "social media", "copywriter", "video editor", "graphic designer", "researcher", "moderator", "transcription", "translator", "operations", "clerk", "office", "administrative", "operations specialist", "hr assistant", "recruiter"],
     remote: ["remote", "global", "worldwide", "anywhere", "work from home", "wfh"]
   },
 

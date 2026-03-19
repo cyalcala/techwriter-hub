@@ -19,7 +19,7 @@ async function getLatestOpportunities() {
     .from(opportunities)
     .where(eq(opportunities.isActive, true))
     .orderBy(desc(opportunities.scrapedAt))
-    .limit(9);
+    .limit(100);
 }
 
 export default async function HomePage() {

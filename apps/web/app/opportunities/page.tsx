@@ -16,7 +16,7 @@ export default async function OpportunitiesPage() {
     .from(opportunities)
     .where(eq(opportunities.isActive, true))
     .orderBy(desc(opportunities.scrapedAt))
-    .limit(100);
+    .limit(1000);
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-12">

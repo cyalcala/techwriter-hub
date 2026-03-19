@@ -20,8 +20,8 @@ const REMOTE_SIGNALS = config.target_signals.remote;
 const ROLE_SIGNALS = config.target_signals.role;
 
 export function siftOpportunity(title: string, company: string, description: string, sourcePlatform?: string): OpportunityTier {
-  const t = title.toLowerCase();
-  const c = company.toLowerCase();
+  const t = (title || "").toLowerCase();
+  const c = (company || "").toLowerCase();
   const d = (description || "").toLowerCase();
   const s = (sourcePlatform || "").toLowerCase();
   const body = `${t} ${c} ${d} ${s}`;
@@ -39,7 +39,7 @@ export function siftOpportunity(title: string, company: string, description: str
 
   // 3. Absolute Leadership Kill (C-Suite/Global Exec)
   const cSuite = ["ceo", "cto", "vp", "vice president", "director", "president", "head of", "principal", "staff", "researcher"];
-  if (cSuite.some(l => t.includes(l)) && !vaSignals.some(va => t.includes(va))) return OpportunityTier.TRASH;
+  if (cSuite.some(l => t.includes(l)) && !ROLE_SIGNALS.some(va => t.includes(va))) return OpportunityTier.TRASH;
 
   // 4. Regional Kill
   if (REGIONAL_KILLS.some(k => body.includes(k) && !SEA_SIGNALS.some(sea => body.includes(sea)) && !REMOTE_SIGNALS.some(r => body.includes(r)))) return OpportunityTier.TRASH;
@@ -56,6 +56,9 @@ export function siftOpportunity(title: string, company: string, description: str
     if (isGlobalLeadership) return OpportunityTier.SILVER;
     return isPhContext ? OpportunityTier.GOLD : OpportunityTier.SILVER;
   }
+
+  // Final Bronze Fallback: If it's remote but not a target category (and not trashed by tech kills)
+  if (hasRemoteSignal) return OpportunityTier.BRONZE;
 
   return OpportunityTier.TRASH;
 }

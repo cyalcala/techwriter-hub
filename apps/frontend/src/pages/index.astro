@@ -5,7 +5,7 @@ import { opportunities as opportunitiesTable } from '@va-hub/db/schema';
 import { desc, asc, and, not, eq } from 'drizzle-orm';
 
 export const prerender = false;
-Astro.response.headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate, s-maxage=60, stale-while-revalidate=59');
+Astro.response.headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate, s-maxage=1, stale-while-revalidate=59');
 
 let liveOpportunities = [];
 let dbError = null;
@@ -15,7 +15,7 @@ try {
     .from(opportunitiesTable)
     .where(not(eq(opportunitiesTable.tier, 4)))
     .orderBy(asc(opportunitiesTable.tier), desc(opportunitiesTable.scrapedAt))
-    .limit(1000); 
+    .limit(3000); 
 } catch (e) {
   dbError = e.message;
 }
@@ -72,32 +72,27 @@ const companyUsage = new Map();
 const finalFeed = [];
 
 for (const opp of scored) {
-  const normTitle = opp.title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 30);
-  const normCompany = (opp.company || 'unknown').toLowerCase().trim();
-  const fingerprint = `${normTitle}|${normCompany}`;
+  const normTitle = (opp.title || '').toLowerCase().trim();
+  const fingerprint = `${normTitle}|${opp.sourcePlatform}`;
   
   if (seenFingerprints.has(fingerprint)) continue;
 
-  // Dynamic Slot Budget
-  const slotLimit = opp.tier === 1 ? 3 : 1;
-  const currentUsage = companyUsage.get(normCompany) || 0;
+  seenFingerprints.add(fingerprint);
+  
+  // Final UI Prep
+  const safePosted = opp.postedAt ? new Date(opp.postedAt).getTime() : 0;
+  const safeScraped = opp.scrapedAt ? new Date(opp.scrapedAt).getTime() : Date.now();
+  const latestDate = new Date(Math.max(safePosted, safeScraped));
+  
+  const ageHrs = (Date.now() - latestDate.getTime()) / (1000 * 60 * 60);
 
-  if (currentUsage < slotLimit) {
-    seenFingerprints.add(fingerprint);
-    companyUsage.set(normCompany, currentUsage + 1);
-    
-    // Final UI Prep
-    const latestDate = new Date(Math.max(new Date(opp.postedAt || 0).getTime(), new Date(opp.scrapedAt).getTime()));
-    const ageHrs = (Date.now() - latestDate.getTime()) / (1000 * 60 * 60);
+  finalFeed.push({
+    ...opp,
+    displayDate: formatRelativeTime(latestDate),
+    ageHrs
+  });
 
-    finalFeed.push({
-      ...opp,
-      displayDate: formatRelativeTime(latestDate),
-      ageHrs
-    });
-  }
-
-  if (finalFeed.length >= 200) break;
+  if (finalFeed.length >= 3000) break;
 }
 ---
 
