@@ -2,6 +2,7 @@
  * Intelligent Job Sifter (JS Version)
  * Categorizes and filters jobs before they reach the database.
  */
+import { siftNative, OpportunityTier as NativeTier } from "../../packages/sifter-native/index";
 
 export enum OpportunityTier {
   GOLD = 1,      // PH-focused / High-Accessibility
@@ -33,6 +34,11 @@ export function siftOpportunity(title: string, company: string, description: str
   const d = (description || "").toLowerCase();
   const s = (sourcePlatform || "").toLowerCase();
   const body = `${t} ${c} ${d} ${s}`;
+
+  // 0. TITANIUM HARD PURGE (Zig-Powered)
+  // This kills 100% of tech/exec noise before we even run regex.
+  const nativeResult = siftNative(title, company, description || "");
+  if (nativeResult === NativeTier.TRASH) return OpportunityTier.TRASH;
 
   // 1. Target Categories
   const vaSignals = ["virtual assistant", "va", "data entry", "bookkeeping", "executive assistant", "admin assistant", "assistant", "clerk", "receptionist", "transcription", "moderator"];

@@ -55,15 +55,19 @@ export async function harvest() {
   const allItems = [...rssItems, ...redditItems, ...hnItems, ...jobicyItems, ...atsItems];
   
   // ── RECORD HEALTH ───────────────────────────────────────
-  const sourcesToLog = [
-    ...rssSources.map((s, i) => ({ name: s.name, status: rssResults[i].status === "fulfilled" ? "OK" : "FAIL", error: rssResults[i].status === "rejected" ? (rssResults[i] as PromiseRejectedResult).reason?.message : null })),
-    { name: "Reddit", status: "OK", error: null }, // Reddit/HN/Jobicy could be more granular but starting here
-    { name: "HackerNews", status: "OK", error: null },
-    { name: "Jobicy", status: "OK", error: null },
-    { name: "ATS", status: "OK", error: null }
+  const healthMetrics: Array<{ name: string; status: "OK" | "FAIL"; error: string | null }> = [
+    ...rssSources.map((s, i) => ({ 
+      name: s.name, 
+      status: rssResults[i].status === "fulfilled" ? "OK" as const : "FAIL" as const, 
+      error: rssResults[i].status === "rejected" ? (rssResults[i] as PromiseRejectedResult).reason?.message : null 
+    })),
+    { name: "Reddit", status: redditItems.length > 0 ? "OK" : "FAIL", error: redditItems.length > 0 ? null : "No signals found" },
+    { name: "HackerNews", status: hnItems.length > 0 ? "OK" : "FAIL", error: hnItems.length > 0 ? null : "No signals found" },
+    { name: "Jobicy", status: jobicyItems.length > 0 ? "OK" : "FAIL", error: jobicyItems.length > 0 ? null : "API Error or No signals" },
+    { name: "ATS", status: atsItems.length > 0 ? "OK" : "FAIL", error: atsItems.length > 0 ? null : "No signals found" }
   ];
 
-  for (const log of sourcesToLog) {
+  for (const log of healthMetrics) {
     await db.insert(systemHealth).values({
       id: crypto.randomUUID(),
       sourceName: log.name,
@@ -72,7 +76,7 @@ export async function harvest() {
       errorMessage: log.error,
       updatedAt: new Date()
     }).onConflictDoUpdate({
-      target: [systemHealth.id], // Note: this id-based upsert is just to have a log, better to key by name
+      target: [systemHealth.id],
       set: { status: log.status, lastSuccess: log.status === "OK" ? new Date() : undefined, errorMessage: log.error, updatedAt: new Date() }
     });
   }
