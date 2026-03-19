@@ -21,7 +21,13 @@ const FILES_TO_SYNC = [
   'jobs/lib/trust.ts',
   'scripts/save.ts',
   'scripts/restore.ts',
+  'scripts/failsafe.ts',
+  'scripts/guardrail.ts',
+  'scripts/documenter.ts',
   'ARCHITECTURE.md',
+  'MISSION.md',
+  'CHANGELOG.md',
+  'README.md',
   'trigger.config.ts'
 ];
 
