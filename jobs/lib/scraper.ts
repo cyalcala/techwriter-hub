@@ -94,6 +94,26 @@ export const rssSources: Source[] = [
     tags: ["remote", "global", "tech"],
     ethical_note: "Public RSS feed explicitly provided at jobicy.com/feed/newjobs for syndication.",
   },
+  
+  // ── HIGH-VOLUME FREELANCE NETWORKS (Public RSS) ────────────────
+  {
+    id: "upwork-va",
+    name: "Upwork - Virtual Assistant",
+    url: "https://www.upwork.com/ab/feed/jobs/rss?q=virtual+assistant",
+    platform: "Upwork",
+    defaultJobType: "freelance",
+    tags: ["freelance", "contract", "va"],
+    ethical_note: "Public Custom Query RSS explicitly provided by Upwork for external distribution.",
+  },
+  {
+    id: "upwork-cs",
+    name: "Upwork - Customer Service",
+    url: "https://www.upwork.com/ab/feed/jobs/rss?q=customer+service",
+    platform: "Upwork",
+    defaultJobType: "freelance",
+    tags: ["freelance", "customer support"],
+    ethical_note: "Public Custom Query RSS explicitly provided by Upwork for external distribution.",
+  }
 ];
 
 function toHash(title: string, url: string) {

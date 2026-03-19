@@ -4,6 +4,7 @@ import { fetchRSSFeed, rssSources } from "./lib/scraper";
 import { fetchRedditJobs } from "./lib/reddit";
 import { fetchHNJobs } from "./lib/hackernews";
 import { fetchJobicyJobs } from "./lib/jobicy";
+import { fetchATSJobs } from "./lib/ats";
 import { sql } from "drizzle-orm";
 import { isLikelyScam } from "./lib/trust";
 
@@ -46,9 +47,13 @@ export const scrapeOpportunitiesTask = {
     console.log("[harvest] Layer 4: Jobicy API...");
     const jobicyItems = await fetchJobicyJobs();
 
+    // ── LAYER 5: Direct ATS Harvest (Greenhouse + Lever) ───
+    console.log("[harvest] Layer 5: ATS Direct Harvest...");
+    const atsItems = await fetchATSJobs();
+
     // ── COMBINE ALL SOURCES ─────────────────────────────────
-    const allItems = [...rssItems, ...redditItems, ...hnItems, ...jobicyItems];
-    console.log(`[harvest] Total fetched: ${allItems.length} (RSS: ${rssItems.length}, Reddit: ${redditItems.length}, HN: ${hnItems.length}, Jobicy: ${jobicyItems.length})`);
+    const allItems = [...rssItems, ...redditItems, ...hnItems, ...jobicyItems, ...atsItems];
+    console.log(`[harvest] Total fetched: ${allItems.length} (RSS: ${rssItems.length}, Reddit: ${redditItems.length}, HN: ${hnItems.length}, Jobicy: ${jobicyItems.length}, ATS: ${atsItems.length})`);
 
     if (allItems.length === 0) {
       console.log("[harvest] Zero items from all sources.");
@@ -89,6 +94,10 @@ export const scrapeOpportunitiesTask = {
       if (item.sourcePlatform?.startsWith("Reddit") || item.sourcePlatform === "HackerNews") return true;
       // Jobicy is already a curated remote board
       if (item.sourcePlatform === "Jobicy") return true;
+      // ATS Direct-Harvest: verified company job boards
+      if (item.sourcePlatform === "Greenhouse" || item.sourcePlatform === "Lever") return true;
+      // Upwork is already a curated freelance marketplace
+      if (item.sourcePlatform === "Upwork") return true;
 
       // Global RSS: check for remote/hiring signals
       const text = `${item.title} ${item.description ?? ""}`.toLowerCase();
