@@ -5,6 +5,21 @@
 **Status: AUTO-PROCESSED**
 
 ### ✨ Major Features
+* feat: implement anti-domination diversity engine to prevent company flooding (a8451fd)
+* feat: implement recency-slicer and hot badges for real-time feed filtering (4bc5077)
+
+### 🛡️ Reliability & Fixes
+* fix: unify discovery/posting times and harden feed filtering script (82d758f)
+* fix: ats harvester constraints and date hydration to enable fresh data injection (eee511f)
+* fix: prioritize discovery window in opportunities feed to ensure just-now visibility (443180d)
+
+---
+
+
+## [2026-03-19] — [Opportunities: 1155 | Agencies: 95]
+**Status: AUTO-PROCESSED**
+
+### ✨ Major Features
 * feat: implement recency-slicer and hot badges for real-time feed filtering (4bc5077)
 * feat: complete architectural solidification with cross-repository sync manifest update (9d42753)
 
