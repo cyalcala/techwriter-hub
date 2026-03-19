@@ -136,18 +136,18 @@ for (const opp of scored) {
       </div>
 
       <div class="flex flex-col sm:flex-row items-center gap-4">
-        <div class="relative w-full max-w-md group">
+        <div class="relative w-full sm:max-w-md group">
           <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blueberry-800/40 group-focus-within:text-blueberry-500 transition-colors"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
           </div>
           <input 
             type="text" 
             id="oppSearch" 
-            placeholder="Search roles, companies, or tech..." 
+            placeholder="Search roles or companies..." 
             class="bg-white/80 border border-blueberry-800/10 rounded-3xl pl-12 pr-6 py-4 text-sm text-blueberry-900 focus:outline-none focus:border-blueberry-500/40 focus:bg-white backdrop-blur-xl transition-all font-medium placeholder:text-blueberry-800/40 w-full shadow-sm"
           />
         </div>
-        <div class="flex items-center gap-1.5 p-1 bg-white border border-blueberry-800/10 rounded-3xl shadow-sm overflow-hidden" id="timeFilters">
+        <div class="flex items-center gap-1.5 p-1 bg-white border border-blueberry-800/10 rounded-3xl shadow-sm overflow-hidden shrink-0" id="timeFilters">
           <button data-filter="all" class="time-btn active">All</button>
           <button data-filter="24" class="time-btn text-emerald-600">24h</button>
           <button data-filter="72" class="time-btn">3d</button>
@@ -174,10 +174,10 @@ for (const opp of scored) {
               ) : null}
             </div>
             <div class="h-10 w-[1px] bg-blueberry-800/5 hidden sm:block"></div>
-            <div>
-              <h3 class="text-[15px] font-black text-blueberry-900 group-hover:text-blueberry-500 transition-colors leading-tight mb-1 uppercase tracking-tight">{opp.title}</h3>
+            <div class="min-w-0 flex-1">
+              <h3 class="text-[15px] font-black text-blueberry-900 group-hover:text-blueberry-500 transition-colors leading-tight mb-1 uppercase tracking-tight break-words">{opp.title}</h3>
               <div class="flex items-center gap-2">
-                <span class="text-[10px] text-blueberry-800/60 font-bold uppercase tracking-widest">{opp.company}</span>
+                <span class="text-[10px] text-blueberry-800/60 font-bold uppercase tracking-widest truncate">{opp.company}</span>
                 {opp.relevancyScore > 1000000 && <span class="text-[10px]">🔥</span>}
               </div>
             </div>

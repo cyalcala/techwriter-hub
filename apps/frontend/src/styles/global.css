@@ -4,27 +4,23 @@
 
 @layer base {
   body {
-    @apply bg-black text-zinc-100 antialiased;
+    @apply bg-oat-50 text-blueberry-900 antialiased overflow-x-hidden;
     font-family: 'Geist', sans-serif;
   }
 }
 
 @layer components {
-  .glass-card {
-    @apply bg-[#0a0a0a] border border-white/5 rounded-xl p-5 transition-all duration-300 hover:border-blue-500/30 hover:bg-[#0f0f0f] hover:shadow-[0_0_30px_-10px_rgba(59,130,246,0.1)];
-  }
-
   .pulse-dot {
     @apply relative flex h-2 w-2;
   }
 
   .pulse-dot::before {
     content: '';
-    @apply absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-500 opacity-75;
+    @apply absolute inline-flex h-full w-full animate-ping rounded-full bg-blueberry-500 opacity-75;
   }
 
   .pulse-dot::after {
     content: '';
-    @apply relative inline-flex h-2 w-2 rounded-full bg-blue-500;
+    @apply relative inline-flex h-2 w-2 rounded-full bg-blueberry-500;
   }
 }
