@@ -43,6 +43,7 @@ export async function fetchATSJobs(): Promise<NewOpportunity[]> {
       if (!data.jobs) return [];
       
       return data.jobs.map((job: any) => ({
+        id: crypto.randomUUID(),
         contentHash: toHash(job.title, job.absolute_url),
         title: job.title,
         company: data.name || board,
@@ -51,8 +52,8 @@ export async function fetchATSJobs(): Promise<NewOpportunity[]> {
         sourceUrl: job.absolute_url,
         sourcePlatform: "Greenhouse",
         originalData: job,
-        scrapedAt: Math.floor(Date.now() / 1000),
-        postedAt: job.updated_at || new Date().toISOString(), 
+        scrapedAt: new Date(),
+        postedAt: job.updated_at ? new Date(job.updated_at) : new Date(), 
         tags: job.location?.name ? [job.location.name] : [],
       }));
     } catch (e) {
@@ -68,6 +69,7 @@ export async function fetchATSJobs(): Promise<NewOpportunity[]> {
       const jobs = await res.json();
       
       return jobs.map((job: any) => ({
+        id: crypto.randomUUID(),
         contentHash: toHash(job.text, job.hostedUrl),
         title: job.text,
         company: board,
@@ -76,8 +78,8 @@ export async function fetchATSJobs(): Promise<NewOpportunity[]> {
         sourceUrl: job.hostedUrl,
         sourcePlatform: "Lever",
         originalData: job,
-        scrapedAt: Math.floor(Date.now() / 1000),
-        postedAt: job.createdAt ? new Date(job.createdAt).toISOString() : new Date().toISOString(),
+        scrapedAt: new Date(),
+        postedAt: job.createdAt ? new Date(job.createdAt) : new Date(),
         tags: job.categories?.location ? [job.categories.location] : [],
       }));
     } catch (e) {
