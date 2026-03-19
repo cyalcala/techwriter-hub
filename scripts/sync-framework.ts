@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { execSync } from 'child_process';
 
 const SRC = path.resolve(__dirname, '..');
 const DEST = path.resolve(__dirname, '../../niche-directory-framework');
@@ -9,11 +10,26 @@ if (!fs.existsSync(DEST)) {
   process.exit(1);
 }
 
+// 🛡️ PROTECTED FILES: These define the "Niche Identity" and should NEVER be overwritten.
+const PROTECTED_FILES = [
+  'packages/config/index.ts',
+  'apps/web/.env',
+  'apps/frontend/.env',
+  '.env'
+];
+
+// 🚀 CORE INFRASTRUCTURE: These are the "Titanium" parts to mirror.
 const FILES_TO_SYNC = [
+  'packages/db/client.ts',
+  'packages/db/schema.ts',
+  'packages/sifter-native/sifter.zig',
+  'packages/sifter-native/index.ts',
   'jobs/system-audit.ts',
   'jobs/database-watchdog.ts',
+  'jobs/resilience-watchdog.ts',
   'jobs/scrape-opportunities.ts',
   'jobs/lib/scraper.ts',
+  'jobs/lib/sifter.ts',
   'jobs/lib/reddit.ts',
   'jobs/lib/hackernews.ts',
   'jobs/lib/jobicy.ts',
@@ -21,62 +37,49 @@ const FILES_TO_SYNC = [
   'jobs/lib/trust.ts',
   'scripts/save.ts',
   'scripts/restore.ts',
-  'scripts/failsafe.ts',
-  'scripts/guardrail.ts',
-  'scripts/documenter.ts',
+  'scripts/resurrect.ts',
+  'scripts/automation-audit.ts',
   'ARCHITECTURE.md',
-  'MISSION.md',
-  'CHANGELOG.md',
-  'README.md',
-  'trigger.config.ts'
+  'HEALTH_CHECK.md',
+  'trigger.config.ts',
+  'package.json',
+  'tsconfig.json'
 ];
 
-console.log('[sync] ═══ Initiating Cross-Repository Architecture Clone ═══');
+console.log('[sync] ═══ Initiating Titanium Core Upgrade ═══');
 
 for (const p of FILES_TO_SYNC) {
   const srcPath = path.join(SRC, p);
   const destPath = path.join(DEST, p);
 
+  if (PROTECTED_FILES.includes(p)) {
+    if (fs.existsSync(destPath)) {
+      console.log(`[sync] Skipping Protected Identity: ${p}`);
+      continue;
+    }
+  }
+
   if (fs.existsSync(srcPath)) {
-    // Ensure destination directory exists strictly before copying
     fs.mkdirSync(path.dirname(destPath), { recursive: true });
     fs.copyFileSync(srcPath, destPath);
-    console.log(`[sync] System Layer Synced: ${p}`);
-  } else {
-    console.warn(`[sync] WARNING: Source file not found: ${p}`);
+    console.log(`[sync] Core Layer Synced: ${p}`);
   }
 }
 
-// ── CUSTOM HEURISTIC ABSTRACTION (opportunities.astro) ──────────────
-// Stripping explicit demographic parameters natively out of the generic boilerplate
-const oppAstroPath = path.join(SRC, 'apps/frontend/src/pages/opportunities.astro');
-if (fs.existsSync(oppAstroPath)) {
-  let content = fs.readFileSync(oppAstroPath, 'utf-8');
-  
-  // Strip Hardcoded Strings
-  content = content.replace(/const boostKw = \[.*?\];/g, 'const boostKw = ["<NICHE_SKILL_1>", "<NICHE_SKILL_2>"];');
-  content = content.replace(/const inclusionKw = \[.*?\];/g, 'const inclusionKw = ["<TARGET_REGION_1>", "<TARGET_REGION_2>"];');
-  content = content.replace(/if \(text\.includes\("virtual assistant"\) \|\| text\.includes\("filipino"\)\)/g, 'if (text.includes("<PRIMARY_NICHE>") || text.includes("<PRIMARY_REGION>"))');
-  
-  const destOppPath = path.join(DEST, 'apps/frontend/src/pages/opportunities.astro');
-  fs.mkdirSync(path.dirname(destOppPath), { recursive: true });
-  fs.writeFileSync(destOppPath, content);
-  console.log('[sync] UI Layer Synced & Parameterized: /opportunities.astro');
+// ── NATIVE REBUILD ────────────────────────────────────────────────
+console.log('[sync] Rebuilding Native Sifter in Destination...');
+try {
+  // Use absolute path to the known zig binary for consistency
+  const zigPath = 'C:\\zig\\zig-windows-x86_64-0.13.0\\zig.exe';
+  const buildCmd = `${zigPath} build-lib -dynamic sifter.zig -O ReleaseSafe`;
+  execSync(buildCmd, { 
+    cwd: path.join(DEST, 'packages/sifter-native'),
+    stdio: 'inherit' 
+  });
+  console.log('[sync] Native Sifter Rebuilt Successfully.');
+} catch (err) {
+  console.error('[sync] FAILED to rebuild native sifter in destination:', err);
 }
 
-// ── CUSTOM HEURISTIC ABSTRACTION (index.astro) ──────────────────────
-// Scaling the relevancyBoost algorithm specifically away from the word 'virtual'
-const indexAstroPath = path.join(SRC, 'apps/frontend/src/pages/index.astro');
-if (fs.existsSync(indexAstroPath)) {
-  let content = fs.readFileSync(indexAstroPath, 'utf-8');
-  
-  content = content.replace(/const isVirtual = n\.includes\('virtual'\);/g, "const isNicheTarget = n.includes('PRIMARY_KEYWORD');");
-  content = content.replace(/if \(isVirtual\) boost \+= 1000;/g, "if (isNicheTarget) boost += 1000;");
-  
-  const destIndexPath = path.join(DEST, 'apps/frontend/src/pages/index.astro');
-  fs.mkdirSync(path.dirname(destIndexPath), { recursive: true });
-  fs.writeFileSync(destIndexPath, content);
-  console.log('[sync] UI Layer Synced & Parameterized: /index.astro');
-}
-
-console.log('[sync] ═══ Synchronization Complete ═══');
+console.log('[sync] ═══ Core Upgrade Complete ═══');
+console.log('[sync] NOTE: Identity preserved in /packages/config/index.ts');

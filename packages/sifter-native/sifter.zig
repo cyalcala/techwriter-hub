@@ -1,7 +1,7 @@
 const std = @import("std");
 
-// VA.INDEX TITANIUM SIEVE - Native Sifter Module
-// Purpose: Multi-threaded, Zero-GC substring matching for job purity.
+// VA.INDEX TITANIUM SIEVE - Parametric Native Sifter Module
+// Purpose: Dynamic, zero-recompile sifting for the Niche Factory.
 
 const SiftResult = enum(u8) {
     GOLD = 1,
@@ -10,50 +10,34 @@ const SiftResult = enum(u8) {
     TRASH = 4,
 };
 
-// Hard Kill Lists (Zero Tolerance)
-const TECH_KILLS = [_][]const u8{
-    "engineer", "developer", "software", "devops", "sre", "data scientist",
-    "architect", "coder", "technical", "java", "python", "php", "rust", "golang",
-};
-
-const EXEC_KILLS = [_][]const u8{
-    "ceo", "cto", "vp", "director", "president", "head of", "principal",
-    "executive", "lead", "staff", "senior", "manager", "strategist", "researcher",
-};
-
-const CONTENT_KILLS = [_][]const u8{
-    "reading this", "success story", "how to", "hiring tips", "interview with",
-    "why it matters", "stability matters", "insiders", "blog", "guide to",
-};
-
-// Target Categories (Positive Signals)
-const TARGET_SIGNALS = [_][]const u8{
-    "virtual assistant", "va", "customer service", "admin", "design", "support",
-    "sales", "marketing", "content", "writer", "moderator", "appointment setter",
-};
-
-export fn sift_job(title_ptr: [*c]const u8, company_ptr: [*c]const u8, desc_ptr: [*c]const u8) u8 {
+export fn sift_job(
+    title_ptr: [*c]const u8, 
+    company_ptr: [*c]const u8, 
+    desc_ptr: [*c]const u8,
+    kills_ptr: [*c]const u8,   // pipe-delimited: "eng|dev|ceo"
+    signals_ptr: [*c]const u8  // pipe-delimited: "va|admin|support"
+) u8 {
     const title = std.mem.span(title_ptr);
     const company = std.mem.span(company_ptr);
     const desc = std.mem.span(desc_ptr);
+    const kills_raw = std.mem.span(kills_ptr);
+    const signals_raw = std.mem.span(signals_ptr);
 
     var buf: [2048]u8 = undefined;
     const lower_title = std.ascii.lowerString(&buf, title);
     
-    // 1. HARD KILL CHECK (Tech/Exec)
-    for (TECH_KILLS) |kill| {
-        if (std.mem.indexOf(u8, lower_title, kill) != null) return @intFromEnum(SiftResult.TRASH);
-    }
-    for (EXEC_KILLS) |kill| {
-        if (std.mem.indexOf(u8, lower_title, kill) != null) return @intFromEnum(SiftResult.TRASH);
-    }
-    for (CONTENT_KILLS) |kill| {
+    // 1. DYNAMIC HARD KILL CHECK
+    var kill_iter = std.mem.splitSequence(u8, kills_raw, "|");
+    while (kill_iter.next()) |kill| {
+        if (kill.len == 0) continue;
         if (std.mem.indexOf(u8, lower_title, kill) != null) return @intFromEnum(SiftResult.TRASH);
     }
 
-    // 2. TARGET MATCHING
+    // 2. DYNAMIC TARGET MATCHING
     var matches: u32 = 0;
-    for (TARGET_SIGNALS) |signal| {
+    var signal_iter = std.mem.splitSequence(u8, signals_raw, "|");
+    while (signal_iter.next()) |signal| {
+        if (signal.len == 0) continue;
         if (std.mem.indexOf(u8, lower_title, signal) != null) {
             matches += 1;
         }
@@ -62,7 +46,7 @@ export fn sift_job(title_ptr: [*c]const u8, company_ptr: [*c]const u8, desc_ptr:
     // 3. TIER DETERMINATION
     if (matches >= 1) return @intFromEnum(SiftResult.GOLD);
     
-    // Fallback search in company/desc if needed (simplified for prototype)
+    // Fallback info
     _ = company;
     _ = desc;
 

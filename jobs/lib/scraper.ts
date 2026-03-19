@@ -18,6 +18,7 @@
 import { XMLParser } from "fast-xml-parser";
 import { createHash } from "crypto";
 import type { NewOpportunity } from "./db";
+import { config } from "@va-hub/config";
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -36,65 +37,7 @@ export interface Source {
   ethical_note: string; // Why this source is ethical
 }
 
-export const rssSources: Source[] = [
-  // ── GLOBAL REMOTE JOB BOARDS (Public RSS) ──────────────────
-  {
-    id: "himalayas",
-    name: "Himalayas",
-    url: "https://himalayas.app/jobs/rss",
-    platform: "Himalayas",
-    defaultJobType: "full-time",
-    tags: ["remote", "global"],
-    ethical_note: "Official public RSS feed provided by Himalayas for job syndication.",
-  },
-  {
-    id: "we-work-remotely",
-    name: "We Work Remotely",
-    url: "https://weworkremotely.com/remote-jobs.rss",
-    platform: "WeWorkRemotely",
-    defaultJobType: "full-time",
-    tags: ["remote", "global"],
-    ethical_note: "Public RSS feed offered by WWR since 2013. Companies pay to post.",
-  },
-  {
-    id: "remote-ok",
-    name: "Remote OK",
-    url: "https://remoteok.com/remote-jobs.rss",
-    platform: "RemoteOK",
-    defaultJobType: "full-time",
-    tags: ["remote", "high-pay"],
-    ethical_note: "Public RSS feed. RemoteOK openly provides this for syndication.",
-  },
-  {
-    id: "problogger",
-    name: "ProBlogger Jobs",
-    url: "https://problogger.com/jobs/feed/",
-    platform: "ProBlogger",
-    defaultJobType: "freelance",
-    tags: ["writing", "creative", "content"],
-    ethical_note: "Public RSS job board feed. Companies pay to list writing/creative roles.",
-  },
-  {
-    id: "jobicy",
-    name: "Jobicy",
-    url: "https://jobicy.com/feed/newjobs",
-    platform: "Jobicy",
-    defaultJobType: "full-time",
-    tags: ["remote", "global", "tech"],
-    ethical_note: "Public RSS feed explicitly provided at jobicy.com/feed/newjobs for syndication.",
-  },
-  
-  // ── HIGH-FIDELITY VA & SUPPORT SOURCES ────────────────
-  {
-    id: "jobspresso-support",
-    name: "Jobspresso - Support",
-    url: "https://jobspresso.co/category/marketing-customer-support/feed/",
-    platform: "Jobspresso",
-    defaultJobType: "VA",
-    tags: ["customer support", "marketing", "va"],
-    ethical_note: "Public RSS feed provided by Jobspresso for remote job syndication.",
-  }
-];
+export const rssSources = config.rss_sources;
 
 function toHash(title: string, url: string) {
   return createHash("sha256").update(`${title}::${url}`).digest("hex").slice(0, 16);

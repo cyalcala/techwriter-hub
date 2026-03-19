@@ -3,6 +3,7 @@
  * Categorizes and filters jobs before they reach the database.
  */
 import { siftNative, OpportunityTier as NativeTier } from "../../packages/sifter-native/index";
+import { config } from "@va-hub/config";
 
 export enum OpportunityTier {
   GOLD = 1,      // PH-focused / High-Accessibility
@@ -11,22 +12,12 @@ export enum OpportunityTier {
   TRASH = 4      // Regional-locked / Ultra-Senior Tech / Non-English
 }
 
-const C_LEVEL_KILLS = [
-  "ceo", "cto", "cfo", "cio", "coo", "vp", "vice president", "director", "president", "head of", "principal", "leadership", "executive"
-];
-
-const TECH_KILLS = [
-  "engineer", "developer", "software", "devops", "sre", "data scientist", "programmer", "architect", "fullstack", "backend", "frontend", "coder", "systems", "tech", "technical", "coding", "javascript", "typescript", "python", "java", "react", "vue", "angular", "node", "aws", "cloud", "infrastructure", "cybersecurity", "security", "ai", "machine learning", "ml", "data science"
-];
-
-const REGIONAL_KILLS = [
-  "beijing", "shanghai", "tokyo", "london", "paris", "berlin", "moscow", "riyadh",
-  "dubai", "new york", "san francisco", "chicago", "hong kong", "singapore",
-  "china", "europe", "emea", "latam", "portuguese", "spanish", "german", "french"
-];
-
-const SEA_SIGNALS = ["philippines", "filipino", "pinoy", "tagalog", "manila", "cebu", "ph", "sea", "southeast asia", "asean", "vietnam", "thailand", "indonesia", "malaysia", "singapore"];
-const REMOTE_SIGNALS = ["remote", "global", "worldwide", "anywhere", "work from home", "wfh"];
+const C_LEVEL_KILLS = config.kill_lists.titles; // Shared with tech/exec in config
+const TECH_KILLS = config.kill_lists.titles;   // Simplified for now
+const REGIONAL_KILLS = config.kill_lists.content;
+const SEA_SIGNALS = config.target_signals.region;
+const REMOTE_SIGNALS = config.target_signals.remote;
+const ROLE_SIGNALS = config.target_signals.role;
 
 export function siftOpportunity(title: string, company: string, description: string, sourcePlatform?: string): OpportunityTier {
   const t = title.toLowerCase();
@@ -41,13 +32,7 @@ export function siftOpportunity(title: string, company: string, description: str
   if (nativeResult === NativeTier.TRASH) return OpportunityTier.TRASH;
 
   // 1. Target Categories
-  const vaSignals = ["virtual assistant", "va", "data entry", "bookkeeping", "executive assistant", "admin assistant", "assistant", "clerk", "receptionist", "transcription", "moderator"];
-  const supportSignals = ["customer service", "customer support", "support specialist", "support agent", "help desk"];
-  const salesSignals = ["sales", "bdr", "sdr", "account manager", "appointment setter", "lead generation", "business development"];
-  const marketingSignals = ["marketing", "seo", "social media", "copywriter", "content creator", "growth", "strategist"];
-  const designSignals = ["designer", "ui", "ux", "creative", "video editor", "graphic designer", "illustrator"];
-  
-  const isTargetCategory = [...vaSignals, ...supportSignals, ...salesSignals, ...marketingSignals, ...designSignals].some(sig => t.includes(sig));
+  const isTargetCategory = ROLE_SIGNALS.some(sig => t.includes(sig));
 
   // 2. Hard Tech Kill
   if (TECH_KILLS.some(tk => t.includes(tk)) && !t.includes("support")) return OpportunityTier.TRASH;
@@ -65,9 +50,7 @@ export function siftOpportunity(title: string, company: string, description: str
   const phFocusedSource = ["reddit", "onlinejobs", "direct", "manual", "pinoy", "filipino"];
   const isPhContext = hasSeaSignal || phFocusedSource.some(src => s.includes(src));
   
-  // Leadership prefixes in global corporate contexts are demoted to Tier 2
-  const leadershipPrefix = ["senior", "manager", "lead", "specialist"];
-  const isGlobalLeadership = leadershipPrefix.some(l => t.includes(l)) && !phFocusedSource.some(src => s.includes(src)) && !vaSignals.some(va => t.includes(va));
+  const isGlobalLeadership = ["senior", "manager", "lead", "specialist"].some(l => t.includes(l)) && !phFocusedSource.some(src => s.includes(src)) && !config.target_signals.role.some(va => t.includes(va));
 
   if (isTargetCategory && (isPhContext || hasRemoteSignal)) {
     if (isGlobalLeadership) return OpportunityTier.SILVER;
