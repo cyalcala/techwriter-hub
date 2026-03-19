@@ -17,7 +17,7 @@ if (!process.env.TURSO_DATABASE_URL || !process.env.TURSO_AUTH_TOKEN) {
   try {
     liveOpportunities = await db.select()
       .from(opportunitiesTable)
-      .orderBy(desc(opportunitiesTable.postedAt))
+      .orderBy(desc(opportunitiesTable.scrapedAt))
       .limit(100);
   } catch (e) {
     console.error("Database fetch failed:", e);
@@ -48,7 +48,10 @@ function calculateRelevance(opp: any) {
   
   const now = Date.now();
   const postedAt = opp.postedAt ? new Date(opp.postedAt).getTime() : 0;
+  const scrapedAt = opp.scrapedAt ? new Date(opp.scrapedAt).getTime() : 0;
+  
   const ageHours = postedAt ? (now - postedAt) / (1000 * 60 * 60) : 999;
+  const discoveryHours = (now - scrapedAt) / (1000 * 60 * 60);
   
   // 1. Core Penalty (-50,000 Pts)
   const penaltyKw = ["senior", "vp", "president", "director", "principal", "staff", "head of", "lead", "usa only", "us only", "strictly us", "americas"];
@@ -65,11 +68,12 @@ function calculateRelevance(opp: any) {
   // 4. Absolute Peak Boost (+20,000 Pts)
   if (text.includes("virtual assistant") || text.includes("filipino")) score += 20000;
   
-  // 5. The "JUST NOW" Recency Velocity (+1,000 to +5,000 Pts)
-  if (ageHours <= 4) {
-    score += 5000; 
-  } else if (ageHours <= 24) {
-    score += 1000;
+  // 5. The "JUST NOW" Recency Velocity (+100,000 Pts)
+  // This ensures that either "Just Posted" OR "Just Scraped" signals ALWAYS float to the top
+  if (ageHours <= 4 || discoveryHours <= 4) {
+    score += 100000; 
+  } else if (ageHours <= 24 || discoveryHours <= 24) {
+    score += 10000;
   }
 
   return score;
@@ -80,7 +84,11 @@ const scoredOpps = liveOpportunities.map(opp => ({
   relevancyScore: calculateRelevance(opp)
 })).sort((a, b) => {
   if (a.relevancyScore !== b.relevancyScore) return b.relevancyScore - a.relevancyScore;
-  return new Date(b.postedAt || 0).getTime() - new Date(a.postedAt || 0).getTime();
+  
+  // Secondary: Sort by Discovery Time within the same relevance bracket
+  const aTime = Math.max(new Date(a.postedAt || 0).getTime(), new Date(a.scrapedAt).getTime());
+  const bTime = Math.max(new Date(b.postedAt || 0).getTime(), new Date(b.scrapedAt).getTime());
+  return bTime - aTime;
 });
 
 const opportunities = scoredOpps.map((opp) => ({

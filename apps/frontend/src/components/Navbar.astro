@@ -11,16 +11,22 @@ const isAbout = currentPath === '/about';
       <span class="hidden sm:inline">VA.INDEX (V5.2)</span>
     </a>
 
-    <div class="p-1.5 border bg-white border-blueberry-800/10 rounded-2xl flex items-center gap-1 shadow-sm">
+    <div class="p-1.5 border bg-white border-blueberry-800/10 rounded-2xl flex items-center gap-1 shadow-sm relative overflow-hidden" transition:persist transition:name="navbar-tabs">
+      <div 
+        class={`absolute inset-y-1.5 rounded-xl bg-oat-50 shadow-sm border border-blueberry-800/5 transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${isHome ? 'left-1.5 w-[calc(50%-6px)]' : 'left-[calc(50%+1.5px)] w-[calc(50%-6px)]'}`}
+        transition:name="active-pill"
+      ></div>
       <a 
         href="/" 
-        class={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 ${isHome ? 'text-blueberry-900 bg-oat-50 shadow-sm border border-blueberry-800/5' : 'text-blueberry-800/70 hover:text-blueberry-900 hover:bg-oat-50/50'}`}
+        data-astro-prefetch
+        class={`relative z-10 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 w-1/2 text-center ${isHome ? 'text-blueberry-900' : 'text-blueberry-800/70 hover:text-blueberry-900'}`}
       >
         Agencies
       </a>
       <a 
         href="/opportunities" 
-        class={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 ${isOpp ? 'text-blueberry-900 bg-oat-50 shadow-sm border border-blueberry-800/5' : 'text-blueberry-800/70 hover:text-blueberry-900 hover:bg-oat-50/50'}`}
+        data-astro-prefetch
+        class={`relative z-10 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 w-1/2 text-center ${isOpp ? 'text-blueberry-900' : 'text-blueberry-800/70 hover:text-blueberry-900'}`}
       >
         Feed
       </a>
