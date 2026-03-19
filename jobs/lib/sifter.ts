@@ -13,8 +13,10 @@ export enum OpportunityTier {
 const STRICT_KILLS = [
   "strictly us", "usa only", "us only", "americas only", "citizens only", 
   "uk only", "united kingdom only", "canada only", "europe only", "china only",
-  "u.s. cities", "united states only", "us based", "usa based"
+  "u.s. cities", "united states only", "us based", "usa based",
+  "ceo", "cto", "cfo", "cio", "coo", "vp", "vice president", "director", "president", "head of", "principal", "lead", "leadership", "executive", "staff", "senior", "strategist", "manager", "researcher"
 ];
+
 
 const REGIONAL_KILLS = [
   "beijing", "shanghai", "tokyo", "london", "paris", "berlin", "moscow", "riyadh",
@@ -22,16 +24,14 @@ const REGIONAL_KILLS = [
   "china", "europe", "emea", "latam", "portuguese", "spanish", "german", "french"
 ];
 
+const TECH_KILLS = [
+  "engineer", "developer", "software", "devops", "sre", "data scientist", "programmer", "architect", "fullstack", "backend", "frontend", "coder", "systems", "tech", "technical", "coding", "javascript", "typescript", "python", "java", "react", "vue", "angular", "node", "aws", "cloud", "infrastructure", "cybersecurity", "security", "ai", "machine learning", "ml", "data science"
+];
+
+
+const SEA_SIGNALS = ["philippines", "filipino", "pinoy", "tagalog", "manila", "cebu", "ph", "sea", "southeast asia", "asean", "vietnam", "thailand", "indonesia", "malaysia", "singapore"];
+
 const REMOTE_SIGNALS = ["remote", "global", "worldwide", "anywhere", "work from home", "wfh"];
-
-const GOLD_KEYWORDS = [
-  "philippines", "filipino", "pinoy", "tagalog", "remote ph",
-  "virtual assistant", "va", "data entry", "bookkeeping", "admin", "executive assistant"
-];
-
-const SENIOR_TECH_SIGNALS = [
-  "senior", "lead", "principal", "staff engineer", "architect", "manager", "vp", "director", "head of cloud", "cloud alliances"
-];
 
 export function siftOpportunity(title: string, company: string, description: string, sourcePlatform?: string): OpportunityTier {
   const t = title.toLowerCase();
@@ -41,57 +41,40 @@ export function siftOpportunity(title: string, company: string, description: str
   const body = `${t} ${c} ${d} ${s}`;
 
   // 0. Hard Kill (Trash Tier)
-  // A. Strict Kills (Exclusions override Remote)
-  if (STRICT_KILLS.some(k => body.includes(k) && !body.includes("philippines"))) {
+  // A. Strict Kills (Exclusions or Tech/Exec override everything)
+  if (STRICT_KILLS.some(k => t.includes(k) || (body.includes(k) && !body.includes("assistant")))) {
     return OpportunityTier.TRASH;
   }
 
-  // B. Regional Kills (Spared by Remote)
-  if (REGIONAL_KILLS.some(k => body.includes(k) && !body.includes("philippines") && !REMOTE_SIGNALS.some(r => body.includes(r)))) {
+  // B. Tech Hard Kill
+  if (TECH_KILLS.some(tk => t.includes(tk)) && !body.includes("junior") && !body.includes("support")) {
     return OpportunityTier.TRASH;
   }
 
-  // 1. Tech & Corporate Neutralization (Prevents infiltration into Gold)
-  const highEndTech = ["engineer", "developer", "software", "devops", "sre", "data scientist", "programmer", "architect", "fullstack", "backend", "frontend", "coder", "systems"];
-  const isHighEndTech = highEndTech.some(ht => t.includes(ht)) && !body.includes("junior") && !body.includes("entry");
-  
-  const corporateNoise = ["analyst", "manager", "executive", "specialist", "counsel", "payroll", "recruiter", "strategist", "consultant", "account executive", "legal", "compliance"];
-  const isCorporateNoise = corporateNoise.some(cn => t.includes(cn)) && !t.includes("assistant") && !t.includes("support");
-
-  if (SENIOR_TECH_SIGNALS.some(st => t.includes(st)) && !body.includes("philippines")) {
+  // C. Regional Kills (Spared by Remote/Global)
+  if (REGIONAL_KILLS.some(k => body.includes(k) && !SEA_SIGNALS.some(sea => body.includes(sea)) && !REMOTE_SIGNALS.some(r => body.includes(r)))) {
     return OpportunityTier.TRASH;
   }
 
-  if (s.includes("hackernews") || s.includes("hiring.cafe")) {
-    return isHighEndTech || isCorporateNoise ? OpportunityTier.BRONZE : OpportunityTier.SILVER;
-  }
-
-  // 2. Accessibility & PH-Native (The True Gold)
+  // 1. Gold Tier (The Hyper-Strict Gold)
+  // Categories: VA, CS, Admin, Design, Sales, Marketing
   const vaSignals = ["virtual assistant", "va", "data entry", "bookkeeping", "executive assistant", "admin assistant", "customer service", "customer support", "moderator", "transcription", "clerk", "receptionist"];
-  if (GOLD_KEYWORDS.some(g => body.includes(g)) || vaSignals.some(vs => t.includes(vs))) {
-    if (isHighEndTech || isCorporateNoise) return OpportunityTier.SILVER; // Even an "Admin" role that is high-tech is Silver at best
-    return OpportunityTier.GOLD;
-  }
-
-  // 3. Source Elevation (Secondary Gold / Silver)
-  const prioritySources = ["reddit", "brave", "upwork", "hubstaff"];
-  if (prioritySources.some(ps => s.includes(ps))) {
-    if (isHighEndTech || isCorporateNoise) return OpportunityTier.SILVER;
-    return OpportunityTier.GOLD; 
-  }
-
-  if (isHighEndTech || isCorporateNoise) {
-    return OpportunityTier.BRONZE;
-  }
-
-  // 2. SILVER TIER
-  const globalSignals = ["worldwide", "global", "anywhere", "remote"];
-  const accessibilitySignals = ["assistant", "marketing", "social media", "support", "sales", "entry level", "no experience"];
+  const salesSignals = ["sales", "bdr", "sdr", "account executive", "account manager", "appointment setter"];
+  const marketingSignals = ["marketing", "seo", "social media", "copywriter", "content creator", "growth"];
+  const designSignals = ["designer", "ui", "ux", "creative", "video editor", "graphic designer", "illustrator"];
   
-  if (globalSignals.some(g => body.includes(g)) && accessibilitySignals.some(a => t.includes(a))) {
-    return OpportunityTier.SILVER;
+  const isTargetCategory = [...vaSignals, ...salesSignals, ...marketingSignals, ...designSignals].some(sig => t.includes(sig));
+  const hasSeaSignal = SEA_SIGNALS.some(sea => body.includes(sea));
+  
+  // Prioritize Reddit, Brave Search, and Direct (NoRepublic, etc.)
+  const highFidelitySource = ["reddit", "brave", "direct", "manual", "upwork"];
+
+  if (isTargetCategory && (hasSeaSignal || REMOTE_SIGNALS.some(r => body.includes(r)))) {
+    if (highFidelitySource.some(src => s.includes(src))) return OpportunityTier.GOLD;
+    return hasSeaSignal ? OpportunityTier.GOLD : OpportunityTier.SILVER;
   }
 
-  // 3. BRONZE TIER
-  return OpportunityTier.BRONZE;
+  // 2. Trash (Vague or Non-Target)
+  return OpportunityTier.TRASH; // If not a target category or no sea/remote signal, it's trash.
 }
+

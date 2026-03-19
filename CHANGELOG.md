@@ -5,6 +5,21 @@
 **Status: AUTO-PROCESSED**
 
 ### ✨ Major Features
+* feat: absolute VA-Purity & corporate noise neutralization (37cb6bb)
+* feat: source prioritization & perfected regional filtering (eb4672d)
+* feat: surgical pivot - Feed as Home, new Branding Copy (e73907d)
+* feat: complete Intelligent Ranking, Diversity Engine, and Mobile-First Optimization (846d643)
+
+### 🛡️ Reliability & Fixes
+* fix: kill horizontal overflow and unify mobile design system (72a7e54)
+
+---
+
+
+## [2026-03-19] — [Opportunities: 1155 | Agencies: 95]
+**Status: AUTO-PROCESSED**
+
+### ✨ Major Features
 * feat: source prioritization & perfected regional filtering (eb4672d)
 * feat: surgical pivot - Feed as Home, new Branding Copy (e73907d)
 * feat: complete Intelligent Ranking, Diversity Engine, and Mobile-First Optimization (846d643)

@@ -50,57 +50,45 @@ function getTier(opp: any) {
   const strictKills = [
     "strictly us", "usa only", "us only", "americas only", "citizens only", 
     "uk only", "united kingdom only", "canada only", "europe only", "china only",
-    "u.s. cities", "united states only", "us based", "usa based"
+    "u.s. cities", "united states only", "us based", "usa based",
+    "ceo", "cto", "cfo", "cio", "coo", "vp", "vice president", "director", "president", "head of", "principal", "lead", "leadership", "executive", "staff", "senior", "strategist", "manager", "researcher"
   ];
+
+  const techKills = [
+    "engineer", "developer", "software", "devops", "sre", "data scientist", "programmer", "architect", "fullstack", "backend", "frontend", "coder", "systems", "tech", "technical", "coding", "javascript", "typescript", "python", "java", "react", "vue", "angular", "node", "aws", "cloud", "infrastructure", "cybersecurity", "security", "ai", "machine learning", "ml", "data science"
+  ];
+
   const regionalKills = [
     "beijing", "shanghai", "tokyo", "london", "paris", "berlin", "moscow", "riyadh",
     "dubai", "new york", "san francisco", "chicago", "hong kong", "singapore",
     "china", "europe", "emea", "latam"
   ];
 
-  if (strictKills.some(k => text.includes(k) && !text.includes("philippines"))) return 4;
-  if (regionalKills.some(k => text.includes(k) && !text.includes("philippines") && !text.includes("remote") && !text.includes("global"))) return 4;
-
-  const techSenior = ["senior", "lead", "principal", "staff engineer", "architect", "manager", "vp", "director", "head of cloud", "cloud alliances"];
-  if (techSenior.some(s => title.includes(s)) && !text.includes("philippines")) return 4;
-
-  // 1. Tech & Corporate Neutralization (Prevents tech/corporate infiltration into Gold)
-  const highEndTech = ["engineer", "developer", "software", "devops", "sre", "data scientist", "programmer", "architect", "fullstack", "backend", "frontend", "coder", "systems"];
-  const isHighEndTech = highEndTech.some(ht => title.includes(ht)) && !text.includes("junior") && !text.includes("entry");
+  if (strictKills.some(k => title.includes(k) || (text.includes(k) && !text.includes("assistant")))) return 4;
+  if (techKills.some(tk => title.includes(tk)) && !text.includes("junior") && !text.includes("support")) return 4;
   
-  const corporateNoise = ["analyst", "manager", "executive", "specialist", "counsel", "payroll", "recruiter", "strategist", "consultant", "account executive", "legal", "compliance"];
-  const isCorporateNoise = corporateNoise.some(cn => title.includes(cn)) && !title.includes("assistant") && !title.includes("support");
+  const seaSignals = ["philippines", "filipino", "pinoy", "tagalog", "manila", "cebu", "ph", "sea", "southeast asia", "asean", "vietnam", "thailand", "indonesia", "malaysia", "singapore"];
+  if (regionalKills.some(k => text.includes(k) && !seaSignals.some(s => text.includes(s)) && !text.includes("remote") && !text.includes("global"))) return 4;
 
-  if (source.includes("hackernews") || source.includes("hiring.cafe")) {
-    return isHighEndTech || isCorporateNoise ? 3 : 2;
-  }
-
-  // 2. Accessibility & PH-Native (The True Gold)
-  const phSignals = ["philippines", "filipino", "pinoy", "tagalog", "remote ph"];
+  // 1. Gold Tier (Hyper-Strict VA & Non-Tech)
   const vaSignals = ["virtual assistant", "va", "data entry", "bookkeeping", "executive assistant", "admin assistant", "customer service", "customer support", "moderator", "transcription", "clerk", "receptionist"];
+  const salesSignals = ["sales", "bdr", "sdr", "account executive", "account manager", "appointment setter"];
+  const marketingSignals = ["marketing", "seo", "social media", "copywriter", "content creator", "growth"];
+  const designSignals = ["designer", "ui", "ux", "creative", "video editor", "graphic designer", "illustrator"];
   
-  if (phSignals.some(s => text.includes(s)) || vaSignals.some(r => title.includes(r))) {
-     if (isHighEndTech || isCorporateNoise) return 2; // Tech/Corp mixed with VA signals is Silver
-     return 1;
-  }
-  if (PH_FRIENDLY_COMPANIES.some(c => company.includes(c))) return 1;
+  const isTargetCategory = [...vaSignals, ...salesSignals, ...marketingSignals, ...designSignals].some(sig => title.includes(sig));
+  const hasSeaSignal = seaSignals.some(s => text.includes(s));
+  const hasRemoteSignal = ["remote", "global", "anywhere", "worldwide"].some(r => text.includes(r));
 
-  // 3. Source Elevation (Secondary Gold / Silver)
-  const prioritySources = ["reddit", "brave", "upwork", "hubstaff"];
-  if (prioritySources.some(s => source.includes(s))) {
-    if (isHighEndTech || isCorporateNoise) return 2;
-    return 1; // High-fidelity community role (non-tech/corp) is Gold
+  const highFidelitySource = ["reddit", "brave", "direct", "manual", "upwork"];
+
+  if (isTargetCategory && (hasSeaSignal || hasRemoteSignal)) {
+    if (highFidelitySource.some(src => source.includes(src))) return 1;
+    return hasSeaSignal ? 1 : 2;
   }
 
-  if (isHighEndTech || isCorporateNoise) return 3; // Corporate/Tech from generic source is Bronze
-
-  // 4. SILVER TIER (Global Remote / Non-Techy)
-  const accessibilitySignals = ["assistant", "marketing", "social media", "support", "sales", "entry level", "no experience"];
-  const globalSignals = ["worldwide", "global", "anywhere", "remote"];
-  if (globalSignals.some(g => text.includes(g)) && accessibilitySignals.some(a => title.includes(a))) return 2;
-
-  // 5. BRONZE TIER (Everything Else)
-  return 3;
+  // Everything else is demoted or trash
+  return 4;
 }
 
 function getFreshnessScore(opp: any) {
@@ -175,7 +163,7 @@ for (const opp of scored) {
             <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-500">Your Next Job, Found.</span>
           </h1>
           <p class="text-lg text-blueberry-800/70 font-medium leading-relaxed max-w-xl">
-            Stop chasing every lead and start winning the right ones. Our engine sifts through thousands of global opportunities every hour, filtering out the noise to prioritize the roles where Filipinos are already the top choice.
+            Stop chasing every lead and start winning the right ones. Our engine surgically sifts through global opportunities, purging tech noise and executive roles to prioritize accessible VA and non-tech positions for Filipinos.
           </p>
         </div>
       </div>
