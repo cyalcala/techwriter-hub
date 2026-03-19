@@ -145,46 +145,51 @@ const opportunities = [...topTier, ...bottomTier].slice(0, 150).map(opp => {
 
 <script is:inline>
   function setupFeed() {
-    console.log("FEED_INIT");
-    const search = document.getElementById('oppSearch');
-    const filters = document.getElementById('timeFilters');
-    const grid = document.getElementById('oppsGrid');
-    const empty = document.getElementById('emptyState');
-    
-    if (!search || !filters || !grid) return;
+    console.log("[Feed] SYNC_INTERACTION_LAYER");
+    setTimeout(() => {
+      const search = document.getElementById('oppSearch');
+      const filters = document.getElementById('timeFilters');
+      const grid = document.getElementById('oppsGrid');
+      const empty = document.getElementById('emptyState');
+      
+      if (!search || !filters || !grid) {
+        console.warn("[Feed] Elements missing, retrying...");
+        return;
+      }
 
-    const items = grid.querySelectorAll('.opp-item');
-    const btns = filters.querySelectorAll('.time-btn');
-    let ageLimit = Infinity;
+      const items = grid.querySelectorAll('.opp-item');
+      const btns = filters.querySelectorAll('.time-btn');
+      let ageLimit = Infinity;
 
-    function refresh() {
-      const q = search.value.toLowerCase();
-      let visible = 0;
-      items.forEach(item => {
-        const text = item.getAttribute('data-search') || '';
-        const age = parseFloat(item.getAttribute('data-age') || '999');
-        const show = text.includes(q) && age <= ageLimit;
-        item.style.display = show ? 'flex' : 'none';
-        if (show) visible++;
+      function refresh() {
+        const q = search.value.toLowerCase();
+        let visible = 0;
+        items.forEach(item => {
+          const text = item.getAttribute('data-search') || '';
+          const age = parseFloat(item.getAttribute('data-age') || '999');
+          const show = text.includes(q) && age <= ageLimit;
+          item.style.display = show ? 'flex' : 'none';
+          if (show) visible++;
+        });
+        if (empty) empty.style.display = visible > 0 ? 'none' : 'block';
+      }
+
+      search.oninput = refresh;
+      
+      btns.forEach(btn => {
+        btn.onclick = (e) => {
+          e.preventDefault();
+          btns.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const f = btn.getAttribute('data-filter');
+          ageLimit = (f === 'all') ? Infinity : parseFloat(f);
+          refresh();
+        };
       });
-      if (empty) empty.style.display = visible > 0 ? 'none' : 'block';
-    }
-
-    search.addEventListener('input', refresh);
-    
-    btns.forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        btns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        const f = btn.getAttribute('data-filter');
-        ageLimit = (f === 'all') ? Infinity : parseFloat(f);
-        refresh();
-      });
-    });
+      console.log(`[Feed] BINDING_SUCCESS: ${items.length} items bound.`);
+    }, 50);
   }
 
-  // Double-tap initialization for reliability
   setupFeed();
   document.addEventListener('astro:page-load', setupFeed);
   document.addEventListener('astro:after-swap', setupFeed);
