@@ -54,7 +54,10 @@ function getRelevanceMetadata(opp: any) {
 const scored = liveOpportunities.map(opp => {
   const meta = getRelevanceMetadata(opp);
   return { ...opp, relevancyScore: meta.score, isVaFriendly: meta.isVaFriendly };
-}).sort((a, b) => (b.relevancyScore - a.relevancyScore));
+}).sort((a, b) => {
+  if (b.relevancyScore !== a.relevancyScore) return b.relevancyScore - a.relevancyScore;
+  return new Date(b.scrapedAt).getTime() - new Date(a.scrapedAt).getTime();
+});
 
 const companyCount = new Map();
 const topTier = [];

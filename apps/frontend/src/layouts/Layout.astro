@@ -30,98 +30,105 @@ const { title } = Astro.props;
 		</div>
 
 		<script is:inline>
-			// UNIVERSAL INTERACTION ENGINE (VA.INDEX)
+			// ATOMIC INTERACTION ENGINE V2 (VA.INDEX)
 			(function() {
-				let state = {
-					query: "",
-					ageLimit: Infinity,
-					activeOnly: false
-				};
+				const state = { query: "", ageLimit: 'all', activeOnly: false };
 
-				function sync() {
+				function syncUI() {
 					const path = window.location.pathname;
-					const isFeed = path.includes('/opportunities');
-					const isAgencies = path === '/';
+					const searchInput = document.getElementById('oppSearch') || document.getElementById('agencySearch');
+					if (searchInput) searchInput.value = state.query;
 
-					if (isFeed) {
-						const grid = document.getElementById('oppsGrid');
-						const empty = document.getElementById('oppsEmpty');
-						if (!grid) return;
-						const items = grid.querySelectorAll('.opp-item');
-						let count = 0;
+					// 1. Sync Feed
+					const fGrid = document.getElementById('oppsGrid');
+					if (fGrid) {
+						fGrid.dataset.filterAge = state.ageLimit;
+						const items = fGrid.querySelectorAll('.opp-item');
+						let visible = 0;
 						items.forEach(item => {
 							const text = item.getAttribute('data-search') || '';
 							const age = parseFloat(item.getAttribute('data-age') || '999');
-							const show = text.includes(state.query) && age <= state.ageLimit;
-							item.style.display = show ? 'flex' : 'none';
-							if (show) count++;
+							const ageMatch = state.ageLimit === 'all' || age <= parseFloat(state.ageLimit);
+							const show = text.includes(state.query) && ageMatch;
+							item.classList.toggle('hidden-by-search', !show);
+							if (show) visible++;
 						});
-						if (empty) empty.style.display = count > 0 ? 'none' : 'block';
+						const fEmpty = document.getElementById('oppsEmpty');
+						if (fEmpty) fEmpty.style.display = visible > 0 ? 'none' : 'block';
 					}
 
-					if (isAgencies) {
-						const grid = document.getElementById('agenciesGrid');
-						const empty = document.getElementById('agenciesEmpty');
-						if (!grid) return;
-						const cards = grid.querySelectorAll('.glass-card');
-						let count = 0;
+					// 2. Sync Agencies
+					const aGrid = document.getElementById('agenciesGrid');
+					if (aGrid) {
+						aGrid.dataset.filterActive = state.activeOnly;
+						const cards = aGrid.querySelectorAll('.glass-card');
+						let visible = 0;
 						cards.forEach(card => {
 							const name = card.getAttribute('data-name') || '';
 							const status = card.getAttribute('data-status');
-							const show = name.includes(state.query) && (!state.activeOnly || status === 'active');
-							card.style.display = show ? 'flex' : 'none';
-							if (show) count++;
+							const statusMatch = !state.activeOnly || status === 'active';
+							const show = name.includes(state.query) && statusMatch;
+							card.classList.toggle('hidden-by-search', !show);
+							if (show) visible++;
 						});
-						if (empty) empty.style.display = count > 0 ? 'none' : 'block';
+						const aEmpty = document.getElementById('agenciesEmpty');
+						if (aEmpty) aEmpty.style.display = visible > 0 ? 'none' : 'block';
 					}
 				}
 
-				// IMMORTAL LISTENERS
 				document.addEventListener('input', (e) => {
 					if (e.target.id === 'oppSearch' || e.target.id === 'agencySearch') {
 						state.query = e.target.value.toLowerCase().trim();
-						sync();
+						syncUI();
 					}
 				});
 
 				document.addEventListener('click', (e) => {
-					// Time Filters (Feed)
 					const ageBtn = e.target.closest('[data-age-filter]');
 					if (ageBtn) {
-						e.preventDefault();
 						const container = ageBtn.closest('#timeFilters');
 						container.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
 						ageBtn.classList.add('active');
-						const val = ageBtn.getAttribute('data-age-filter');
-						state.ageLimit = (val === 'all') ? Infinity : parseFloat(val);
-						sync();
+						state.ageLimit = ageBtn.getAttribute('data-age-filter');
+						syncUI();
 					}
 
-					// Hiring Toggle (Agencies)
 					const hireBtn = e.target.closest('[data-toggle-hiring]');
 					if (hireBtn) {
-						e.preventDefault();
 						state.activeOnly = !state.activeOnly;
 						hireBtn.classList.toggle('active-filter', state.activeOnly);
 						hireBtn.innerText = state.activeOnly ? '✓ Showing Hiring' : 'Hiring Now Only';
-						sync();
+						syncUI();
 					}
 				});
 
-				// LIFECYCLE SYNC
 				document.addEventListener('astro:page-load', () => {
-					// Restore input values if they were swapped out
-					const search = document.getElementById('oppSearch') || document.getElementById('agencySearch');
-					if (search) search.value = state.query;
-					sync();
+					syncUI();
 				});
-
-				// Initial run
-				sync();
+				
+				syncUI();
 			})();
 		</script>
 
 		<style is:global>
+			/* Zero-Blink CSS Filter System */
+			.hidden-by-search { display: none !important; }
+
+			/* Feed Age Filtering */
+			#oppsGrid[data-filter-age="24"] .opp-item { display: none; }
+			#oppsGrid[data-filter-age="24"] .opp-item[data-age] { 
+				display: flex; /* overridden by specific age */
+			}
+			/* This is complex in CSS, so we'll stick to a hybrid: 
+			   discrete categories are easy, numeric comparisons are hard.
+			   Since we only have 24 and 72, I'll keep the JS toggle 
+			   but optimize it to be flicker-free via classes. */
+
+			/* Agencies Status Filtering (This is 100% CSS) */
+			#agenciesGrid[data-filter-active="true"] .glass-card[data-status="quiet"] {
+				display: none !important;
+			}
+
 			::-webkit-scrollbar {
 				width: 8px;
 			}
