@@ -1,7 +1,7 @@
 ---
 const currentPath = Astro.url.pathname;
 const isHome = currentPath === '/';
-const isOpp = currentPath === '/opportunities';
+const isAgencies = currentPath === '/agencies';
 const isAbout = currentPath === '/about';
 ---
 <nav class="fixed top-0 left-0 right-0 z-50 border-b border-blueberry-800/10 bg-oat-50/80 backdrop-blur-2xl">
@@ -21,14 +21,14 @@ const isAbout = currentPath === '/about';
         data-astro-prefetch
         class={`relative z-10 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 w-1/2 text-center ${isHome ? 'text-blueberry-900' : 'text-blueberry-800/70 hover:text-blueberry-900'}`}
       >
-        Agencies
+        Feed
       </a>
       <a 
-        href="/opportunities" 
+        href="/agencies" 
         data-astro-prefetch
-        class={`relative z-10 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 w-1/2 text-center ${isOpp ? 'text-blueberry-900' : 'text-blueberry-800/70 hover:text-blueberry-900'}`}
+        class={`relative z-10 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 w-1/2 text-center ${isAgencies ? 'text-blueberry-900' : 'text-blueberry-800/70 hover:text-blueberry-900'}`}
       >
-        Feed
+        Agencies
       </a>
     </div>
     
