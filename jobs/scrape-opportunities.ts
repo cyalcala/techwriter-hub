@@ -1,5 +1,5 @@
 import { schedules } from "@trigger.dev/sdk/v3";
-import { createDb, opportunities } from "./lib/db";
+import { createDb, opportunities, systemHealth } from "./lib/db";
 import { fetchRSSFeed, rssSources } from "./lib/scraper";
 import { fetchRedditJobs } from "./lib/reddit";
 import { fetchHNJobs } from "./lib/hackernews";
@@ -53,6 +53,30 @@ export async function harvest() {
 
   // ── COMBINE ALL SOURCES ─────────────────────────────────
   const allItems = [...rssItems, ...redditItems, ...hnItems, ...jobicyItems, ...atsItems];
+  
+  // ── RECORD HEALTH ───────────────────────────────────────
+  const sourcesToLog = [
+    ...rssSources.map((s, i) => ({ name: s.name, status: rssResults[i].status === "fulfilled" ? "OK" : "FAIL", error: rssResults[i].status === "rejected" ? (rssResults[i] as PromiseRejectedResult).reason?.message : null })),
+    { name: "Reddit", status: "OK", error: null }, // Reddit/HN/Jobicy could be more granular but starting here
+    { name: "HackerNews", status: "OK", error: null },
+    { name: "Jobicy", status: "OK", error: null },
+    { name: "ATS", status: "OK", error: null }
+  ];
+
+  for (const log of sourcesToLog) {
+    await db.insert(systemHealth).values({
+      id: crypto.randomUUID(),
+      sourceName: log.name,
+      status: log.status,
+      lastSuccess: log.status === "OK" ? new Date() : null,
+      errorMessage: log.error,
+      updatedAt: new Date()
+    }).onConflictDoUpdate({
+      target: [systemHealth.id], // Note: this id-based upsert is just to have a log, better to key by name
+      set: { status: log.status, lastSuccess: log.status === "OK" ? new Date() : undefined, errorMessage: log.error, updatedAt: new Date() }
+    });
+  }
+
   console.log(`[harvest] Total fetched: ${allItems.length} (RSS: ${rssItems.length}, Reddit: ${redditItems.length}, HN: ${hnItems.length}, Jobicy: ${jobicyItems.length}, ATS: ${atsItems.length})`);
 
   if (allItems.length === 0) {

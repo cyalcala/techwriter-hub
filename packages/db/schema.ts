@@ -37,7 +37,18 @@ export const opportunities = sqliteTable('opportunities', {
   contentHash: text('content_hash').unique(),
 });
 
+export const systemHealth = sqliteTable('system_health', {
+  id: text('id').primaryKey(),
+  sourceName: text('source_name').notNull(), // e.g. 'Upwork', 'Reddit'
+  status: text('status').notNull(), // 'OK', 'FAIL', 'STALE'
+  lastSuccess: integer('last_success', { mode: 'timestamp' }),
+  errorMessage: text('error_message'),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+});
+
 export type Agency = typeof agencies.$inferSelect;
 export type NewAgency = typeof agencies.$inferInsert;
 export type Opportunity = typeof opportunities.$inferSelect;
 export type NewOpportunity = typeof opportunities.$inferInsert;
+export type SystemHealth = typeof systemHealth.$inferSelect;
+export type NewSystemHealth = typeof systemHealth.$inferInsert;

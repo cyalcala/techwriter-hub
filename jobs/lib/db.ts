@@ -39,12 +39,23 @@ export const opportunities = sqliteTable('opportunities', {
   contentHash: text('content_hash').unique(),
 });
 
+export const systemHealth = sqliteTable('system_health', {
+  id: text('id').primaryKey(),
+  sourceName: text('source_name').notNull(),
+  status: text('status').notNull(),
+  lastSuccess: integer('last_success', { mode: 'timestamp' }),
+  errorMessage: text('error_message'),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }),
+});
+
 export type NewOpportunity = typeof opportunities.$inferInsert;
+export type SystemHealth = typeof systemHealth.$inferSelect;
+export type NewSystemHealth = typeof systemHealth.$inferInsert;
 
 export function createDb() {
   const client = createClient({
     url: process.env.TURSO_DATABASE_URL!,
     authToken: process.env.TURSO_AUTH_TOKEN!,
   });
-  return drizzle(client, { schema: { opportunities, agencies } });
+  return drizzle(client, { schema: { opportunities, agencies, systemHealth } });
 }

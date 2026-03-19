@@ -95,24 +95,15 @@ export const rssSources: Source[] = [
     ethical_note: "Public RSS feed explicitly provided at jobicy.com/feed/newjobs for syndication.",
   },
   
-  // ── HIGH-VOLUME FREELANCE NETWORKS (Public RSS) ────────────────
+  // ── HIGH-FIDELITY VA & SUPPORT SOURCES ────────────────
   {
-    id: "upwork-va",
-    name: "Upwork - Virtual Assistant",
-    url: "https://www.upwork.com/ab/feed/jobs/rss?q=virtual+assistant",
-    platform: "Upwork",
-    defaultJobType: "freelance",
-    tags: ["freelance", "contract", "va"],
-    ethical_note: "Public Custom Query RSS explicitly provided by Upwork for external distribution.",
-  },
-  {
-    id: "upwork-cs",
-    name: "Upwork - Customer Service",
-    url: "https://www.upwork.com/ab/feed/jobs/rss?q=customer+service",
-    platform: "Upwork",
-    defaultJobType: "freelance",
-    tags: ["freelance", "customer support"],
-    ethical_note: "Public Custom Query RSS explicitly provided by Upwork for external distribution.",
+    id: "jobspresso-support",
+    name: "Jobspresso - Support",
+    url: "https://jobspresso.co/category/marketing-customer-support/feed/",
+    platform: "Jobspresso",
+    defaultJobType: "VA",
+    tags: ["customer support", "marketing", "va"],
+    ethical_note: "Public RSS feed provided by Jobspresso for remote job syndication.",
   }
 ];
 
