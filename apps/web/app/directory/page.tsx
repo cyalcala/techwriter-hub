@@ -2,7 +2,8 @@ import { db, vaDirectory } from "@/lib/db";
 import { desc } from "drizzle-orm";
 import { DirectoryCard } from "@/components/directory-card";
 
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export const metadata = {
   title: "VA Directory — Remote PH",

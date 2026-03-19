@@ -3,7 +3,8 @@ import { eq, desc, count } from "drizzle-orm";
 import Link from "next/link";
 import { OpportunityCard } from "@/components/opportunity-card";
 
-export const revalidate = 3600; // ISR: revalidate every hour
+export const dynamic = 'force-dynamic';
+export const revalidate = 0; 
 
 async function getStats() {
   const [oppCount] = await db.select({ count: count() }).from(opportunities).where(eq(opportunities.isActive, true));

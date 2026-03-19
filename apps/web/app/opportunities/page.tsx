@@ -2,7 +2,8 @@ import { db, opportunities } from "@/lib/db";
 import { eq, desc } from "drizzle-orm";
 import { OpportunityCard } from "@/components/opportunity-card";
 
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export const metadata = {
   title: "Opportunities — Remote PH",
@@ -22,7 +23,7 @@ export default async function OpportunitiesPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight mb-2">Opportunities</h1>
         <p className="text-zinc-400 text-sm">
-          {items.length} active listings · auto-updated every 2 hours
+          {items.length} active listings · auto-updated in real-time
         </p>
       </div>
 
