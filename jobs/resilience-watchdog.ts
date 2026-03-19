@@ -67,8 +67,23 @@ export const resilienceWatchdogTask = schedules.task({
     
     vitals.sourcesDegraded = unhealthySources.map(s => s.sourceName);
     
-    if (vitals.sourcesDegraded.length > 0) {
-      logger.error(`[watchdog] DEGRADED SOURCES DETECTED: ${vitals.sourcesDegraded.join(", ")}`);
+    // 🛠️ PHASE 4: AUTONOMOUS SELF-HEALING
+    if (vitals.pulseOk && !vitals.purityOk) {
+      logger.info("[watchdog] 🏥 SELF-HEALING: Imbalance detected. Forcing Flag Synchronization...");
+      // Logic for sync-flags.ts inside the task
+      await db.run(sql`UPDATE opportunities SET is_active = 0 WHERE tier = 4`);
+      await db.run(sql`UPDATE opportunities SET is_active = 1 WHERE tier IN (1, 2, 3)`);
+      logger.info("[watchdog] Flags synchronized successfully.");
+    }
+
+    // 🆘 PHASE 5: EMERGENCY RECOVERY
+    if (!vitals.pulseOk) {
+      logger.error("[watchdog] 🆘 ALARM: Multi-hour blackout detected. Triggering Emergency Recovery Crawl...");
+      // Trigger the main scraper task programmatically
+      // In Trigger.dev v3, we'd use tasks.trigger("scrape-opportunities")
+      // For now, we log the intent as this requires the task import which might cause circular deps
+      const { tasks } = await import("@trigger.dev/sdk/v3");
+      await tasks.trigger("scrape-opportunities", { source: "watchdog-emergency" });
     }
 
     // 4. SUMMARY
@@ -76,7 +91,10 @@ export const resilienceWatchdogTask = schedules.task({
     
     logger.info(`[watchdog] Audit Complete. Resilience Score: ${score}/100`);
     
+    const status = score === 100 ? "TITANIUM 🛡️" : score > 70 ? "STABLE ✅" : "DEGRADED ⚠️";
+
     return {
+      status,
       score,
       vitals,
       recommendation: score < 80 ? "Manual intervention or source replacement required." : "System healthy."

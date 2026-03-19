@@ -1,6 +1,11 @@
-import type { APIRoute } from 'astro';
+import { NextResponse } from "next/server";
+import { db, opportunities } from "@/lib/db";
+import { eq, desc } from "drizzle-orm";
 
-export const GET: APIRoute = async () => {
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+export async function GET() {
   const diagnostics: Record<string, any> = {
     timestamp: new Date().toISOString(),
     status: "HEALTHY",
@@ -8,10 +13,6 @@ export const GET: APIRoute = async () => {
   };
 
   try {
-    const { db } = await import('@va-hub/db/client');
-    const { opportunities } = await import('@va-hub/db/schema');
-    const { sql, eq, desc, not } = await import('drizzle-orm');
-    
     // 1. Density Audit
     const allActive = await db.select().from(opportunities).where(eq(opportunities.isActive, true));
     const tiers = {
@@ -34,7 +35,7 @@ export const GET: APIRoute = async () => {
       tierDistribution: tiers,
       lastHeartbeat: lastHeartbeat || "NEVER",
       stalenessHrs: Number(stalenessHrs.toFixed(2)),
-      isFaithful: allActive.length >= 200, // Alert if density drops below threshold
+      isFaithful: allActive.length >= 200, 
       isStale: stalenessHrs > 6
     };
 
@@ -47,11 +48,9 @@ export const GET: APIRoute = async () => {
     diagnostics.error = err.message;
   }
 
-  return new Response(JSON.stringify(diagnostics, null, 2), {
-    status: 200,
-    headers: { 
-      "Content-Type": "application/json",
-      "Cache-Control": "no-store, max-age=0" 
-    },
+  return NextResponse.json(diagnostics, {
+    headers: {
+      "Cache-Control": "no-store, max-age=0"
+    }
   });
-};
+}

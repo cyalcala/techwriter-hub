@@ -25,7 +25,7 @@ export async function harvest() {
 
   // ── LAYER 1: RSS Feeds ──────────────────────────────────
   console.log("[harvest] Layer 1: RSS Feeds...");
-  const rssResults = await Promise.allSettled(rssSources.map(fetchRSSFeed));
+  const rssResults = await Promise.allSettled(rssSources.map(s => fetchRSSFeed(s as any)));
   const rssItems = rssResults.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
 
   rssResults.forEach((r, i) => {
@@ -137,7 +137,7 @@ export async function harvest() {
           target: [opportunities.contentHash],
           set: { 
             scrapedAt: sql`excluded.scraped_at`,
-            isActive: true,
+            isActive: sql`CASE WHEN excluded.tier != 4 THEN 1 ELSE 0 END`,
             tier: sql`excluded.tier`
           }
         });
@@ -165,7 +165,9 @@ export async function harvest() {
 export const scrapeOpportunitiesTask = schedules.task({
   id: "harvest-opportunities",
   cron: "0 */2 * * *", // Runs every 2 hours
-  maxDuration: 120,
-  concurrencyLimit: 1,
+  queue: {
+    name: "high-purity-scrapers",
+    concurrencyLimit: 1,
+  },
   run: harvest
 });
