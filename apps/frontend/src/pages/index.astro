@@ -1,11 +1,16 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { db } from '@va-hub/db/client';
-import { opportunities as opportunitiesTable } from '@va-hub/db/schema';
-import { desc, asc, and, not, eq } from 'drizzle-orm';
+import { db, sql } from '@va-hub/db';
+import { opportunities } from '@va-hub/db/schema';
+import { desc, eq, gt, gte, and, or, count } from 'drizzle-orm';
 
+// 1. Force No-Cache
+Astro.response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+Astro.response.headers.set('Pragma', 'no-cache');
+Astro.response.headers.set('Surrogate-Control', 'no-store');
+
+// 2. Aggregate Purity Distribution
 export const prerender = false;
-Astro.response.headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate, s-maxage=1, stale-while-revalidate=59');
 
 let liveOpportunities = [];
 let dbError = null;

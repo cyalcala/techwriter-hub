@@ -5,6 +5,19 @@
 **Status: AUTO-PROCESSED**
 
 ### 🛡️ Reliability & Fixes
+* fix: restore vercel.json and frontend deployment config [VA.INDEX] (d2c12f7)
+* fix: restore working astro and vercel adapter versions from last good state [VA.INDEX] (0786dcd)
+* fix: downgrade vite to v5 for vercel linux build [VA.INDEX] (4b139d8)
+* fix: correct vercel output directory for astro SSR (760b002)
+* fix: restore default vercel output mapping for SSR [VA.INDEX] (cc9acc1)
+
+---
+
+
+## [2026-03-20] — [Opportunities: 355 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
 * fix: restore working astro and vercel adapter versions from last good state [VA.INDEX] (0786dcd)
 * fix: downgrade vite to v5 for vercel linux build [VA.INDEX] (4b139d8)
 * fix: correct vercel output directory for astro SSR (760b002)

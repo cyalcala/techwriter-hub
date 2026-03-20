@@ -4,7 +4,9 @@ import { db } from '@va-hub/db/client';
 import { agencies as agenciesTable } from '@va-hub/db/schema';
 import { desc } from 'drizzle-orm';
 
-Astro.response.headers.set('Cache-Control', 'max-age=0, s-maxage=60, stale-while-revalidate=59');
+Astro.response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+Astro.response.headers.set('Pragma', 'no-cache');
+Astro.response.headers.set('Surrogate-Control', 'no-store');
 export const prerender = false;
 
 // Fetch live agencies
