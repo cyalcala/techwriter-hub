@@ -17,9 +17,9 @@ let dbError = null;
 
 try {
   liveOpportunities = await db.select()
-    .from(opportunitiesTable)
-    .where(not(eq(opportunitiesTable.tier, 4)))
-    .orderBy(asc(opportunitiesTable.tier), desc(opportunitiesTable.scrapedAt))
+    .from(opportunities)
+    .where(not(eq(opportunities.tier, 4)))
+    .orderBy(asc(opportunities.tier), desc(opportunities.scrapedAt))
     .limit(3000); 
 } catch (e) {
   dbError = e.message;
