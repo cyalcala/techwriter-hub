@@ -2,7 +2,7 @@ import { config } from "dotenv";
 import { resolve } from "path";
 config({ path: resolve(__dirname, "../../.env") });
 
-import { createClient } from "@libsql/client";
+import { createClient } from "@libsql/client/http";
 
 async function dropAll() {
   const client = createClient({

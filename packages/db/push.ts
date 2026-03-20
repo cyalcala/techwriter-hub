@@ -3,7 +3,7 @@
  * Bypasses drizzle-kit's broken auth for Turso on v0.21.
  * Run from repo root: bun --env-file=.env run packages/db/push.ts
  */
-import { createClient } from "@libsql/client";
+import { createClient } from "@libsql/client/http";
 
 const client = createClient({
   url: process.env.TURSO_DATABASE_URL!,

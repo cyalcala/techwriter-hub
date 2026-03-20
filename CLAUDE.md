@@ -1,5 +1,17 @@
 # VA Freelance Hub — Project Context
 
+## MANDATORY READING BEFORE ANY ACTION
+
+Read these files in this order before doing anything else in this codebase:
+
+1. `docs/AI_GUARDRAILS.md` — what you must never do and why
+2. `docs/KNOWN_ISSUES.md` — what has broken before and how it was fixed
+3. `docs/SESSION_INIT.md` — checklist to run before every session
+
+These documents exist because an AI agent caused 4 hours of production downtime on 2026-03-20 by violating basic rules. Do not skip this reading. Do not assume you already know the rules. Read them every session.
+
+---
+
 ## What This Is
 A personal portfolio project and public resource site for Filipino freelancers.
 Self-updating aggregator of VA job opportunities, a curated VA-friendly company

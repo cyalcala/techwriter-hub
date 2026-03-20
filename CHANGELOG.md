@@ -9,6 +9,18 @@
 * fix: restore vercel.json and frontend deployment config [VA.INDEX] (d2c12f7)
 * fix: restore working astro and vercel adapter versions from last good state [VA.INDEX] (0786dcd)
 * fix: downgrade vite to v5 for vercel linux build [VA.INDEX] (4b139d8)
+
+---
+
+
+## [2026-03-20] — [Opportunities: 355 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: disable caching on SSR/API routes for real-time listings [VA.INDEX] (95d7b04)
+* fix: restore vercel.json and frontend deployment config [VA.INDEX] (d2c12f7)
+* fix: restore working astro and vercel adapter versions from last good state [VA.INDEX] (0786dcd)
+* fix: downgrade vite to v5 for vercel linux build [VA.INDEX] (4b139d8)
 * fix: correct vercel output directory for astro SSR (760b002)
 
 ---

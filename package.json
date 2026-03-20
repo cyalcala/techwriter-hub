@@ -28,6 +28,7 @@
   "dependencies": {
     "@trigger.dev/sdk": "4.4.3",
     "drizzle-orm": "latest",
-    "@libsql/client": "latest"
+    "@libsql/client": "latest",
+    "fast-xml-parser": "^5.5.6"
   }
 }

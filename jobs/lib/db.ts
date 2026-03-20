@@ -1,4 +1,4 @@
-import { createClient } from "@libsql/client/web";
+import { createClient } from "@libsql/client/http";
 import { drizzle } from "drizzle-orm/libsql";
 import { text, integer, sqliteTable } from "drizzle-orm/sqlite-core";
 
