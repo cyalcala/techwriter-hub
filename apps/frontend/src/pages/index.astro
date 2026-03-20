@@ -179,7 +179,7 @@ for (const opp of scored) {
     </div>
 
     <div id="emptyState" class="hidden py-40 text-center text-blueberry-800/30 font-black uppercase tracking-widest text-sm italic">
-      No matching signals found.
+      {dbError ? `SYSTEM_ERROR: ${dbError}` : "No matching signals found."}
     </div>
   </main>
 </Layout>
