@@ -2,7 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import { db, sql } from '@va-hub/db';
 import { opportunities } from '@va-hub/db/schema';
-import { desc, eq, gt, gte, and, or, count } from 'drizzle-orm';
+import { desc, asc, eq, not, gt, gte, and, or, count } from 'drizzle-orm';
 
 // 1. Force No-Cache
 Astro.response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
