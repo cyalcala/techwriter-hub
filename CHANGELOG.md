@@ -1,6 +1,48 @@
 # Internal Engineering Changelog
 
 
+## [2026-03-20] — [Opportunities: 354 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: correct vercel output directory for astro SSR (760b002)
+* fix: restore default vercel output mapping for SSR [VA.INDEX] (cc9acc1)
+* fix: trigger vercel redeploy with correct astro settings (6bd1e60)
+* fix: downgrade vite to v5 for vercel bun workspace compatibility [VA.INDEX] (e36c91e)
+
+---
+
+
+## [2026-03-20] — [Opportunities: 354 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: restore default vercel output mapping for SSR [VA.INDEX] (cc9acc1)
+* fix: trigger vercel redeploy with correct astro settings (6bd1e60)
+* fix: downgrade vite to v5 for vercel bun workspace compatibility [VA.INDEX] (e36c91e)
+
+---
+
+
+## [2026-03-20] — [Opportunities: 354 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: trigger vercel redeploy with correct astro settings (6bd1e60)
+* fix: downgrade vite to v5 for vercel bun workspace compatibility [VA.INDEX] (e36c91e)
+
+---
+
+
+## [2026-03-20] — [Opportunities: 354 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: downgrade vite to v5 for vercel bun workspace compatibility [VA.INDEX] (e36c91e)
+
+---
+
+
 ## [2026-03-19] — [Opportunities: 312 | Agencies: 95]
 **Status: AUTO-PROCESSED**
 
