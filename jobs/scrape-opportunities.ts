@@ -133,24 +133,33 @@ export async function harvest() {
     return true;
   });
   const newCount = newItems.length;
-  const relevantItems = allItems.map(item => {
+  // 3. Multi-Level Deduplication (Prevent Hash Explosion)
+  const processedFingerprints = new Set();
+  const dedupedRelevant = [];
+  
+  for (const item of allItems) {
+    if (!item) continue;
+    
     // 1. Security Layer: Drop scams
-    if (isLikelyScam(item.title, item.description ?? "")) return null;
+    if (isLikelyScam(item.title, item.description ?? "")) continue;
 
-    // 2. Intelligent Sifting & Tiering
-    const tier = siftOpportunity(item.title, item.company || "", item.description || "");
-    if (tier === OpportunityTier.TRASH) return null;
+    // 2. Semantic Fingerprint Check
+    const fingerprint = `${normalizeTitle(item.title)}|${(item.company || '').toLowerCase()}`;
+    if (processedFingerprints.has(fingerprint)) continue;
+    if (normalizedExisting.has(fingerprint) && !existingHashes.has(item.contentHash)) {
+      // If title|company exists but hash is different, it's a "Zombie" (Hash Drift)
+      // We skip it to prevent row explosion.
+      continue;
+    }
+    
+    // 3. Intelligent Sifting & Tiering
+    const tier = siftOpportunity(item.title, item.company || "", item.description ?? "");
+    if (tier === OpportunityTier.TRASH) continue;
 
-    // 3. Source-level overrides
+    // 4. Source-level overrides
     if (item.sourcePlatform === "OnlineJobs") {
       const t = (item.title || "").toLowerCase();
       const isJob = ["hire", "hiring", "job", "apply", "career", "opening", "vacancy", "role"].some(k => t.includes(k));
-      if (!isJob) return null;
-    }
-
-    return { ...item, tier, scrapedAt: new Date() }; // Pulse: new scrapedAt
-  }).filter((item): item is NonNullable<typeof item> => item !== null);
-
   console.log(`[harvest] ${relevantItems.length} passed sifter funnel (${newCount} are brand new)`);
 
   // ── UPSERT (INSERT OR REFRESH) ──────────────────────────
