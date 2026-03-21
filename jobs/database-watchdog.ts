@@ -33,7 +33,27 @@ export const databaseWatchdogTask = schedules.task({
         return { status: "REPAIRED", missing };
       }
 
-      // 2. Data Health Check
+      // ====== TRIGGER.DEV PIPELINE VERSION CHECK ======
+      // Monitor version staleness after deployments
+      try {
+        const tasksResponse = await fetch("https://api.trigger.dev/api/v3/tasks", {
+          headers: { "Authorization": `Bearer ${process.env.TRIGGER_SECRET_KEY}` }
+        });
+        if (tasksResponse.ok) {
+          const tasks = await tasksResponse.json();
+          const harvest = tasks.data?.find((t: any) => t.slug === "harvest-opportunities");
+          if (harvest) {
+            console.log("VERSION_CHECK", {
+              currentVersion: harvest.currentVersion,
+              checkedAt: new Date().toISOString()
+            });
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch Trigger.dev task version", e);
+      }
+
+      // ====== DATABASE HEALTH PIPELINE ======
       const agencyCount = await db.run(sql`SELECT COUNT(*) as cnt FROM agencies`);
       const oppCount = await db.run(sql`SELECT COUNT(*) as cnt FROM opportunities`);
       
