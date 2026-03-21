@@ -60,15 +60,20 @@ function getFreshnessScore(opp: any) {
   return 50000;
 }
 
-// 1. Tier & Score & Initial Sort
-const scored = liveOpportunities.map(opp => ({
-  ...opp,
-  tier: getTier(opp),
-  freshnessScore: getFreshnessScore(opp),
-  relevancyScore: (4 - getTier(opp)) * 1000000 + getFreshnessScore(opp)
-})).sort((a, b) => {
+// 1. Tier & Initial Sort (Continuous Freshness)
+const scored = liveOpportunities.map(opp => {
+  const safePosted = opp.postedAt ? new Date(opp.postedAt).getTime() : 0;
+  const safeScraped = opp.scrapedAt ? new Date(opp.scrapedAt).getTime() : Date.now();
+  const latestDateMs = Math.max(safePosted, safeScraped);
+  
+  return {
+    ...opp,
+    latestDateMs,
+    tier: getTier(opp)
+  };
+}).sort((a, b) => {
   if (a.tier !== b.tier) return a.tier - b.tier; // Lower tier (1) wins
-  return b.freshnessScore - a.freshnessScore; // Newer wins within tier
+  return b.latestDateMs - a.latestDateMs; // Precise newest wins
 });
 
 // 2. Fuzzy Dedup & Company Diversity

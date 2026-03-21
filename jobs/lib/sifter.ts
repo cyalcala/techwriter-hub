@@ -45,16 +45,18 @@ export function siftOpportunity(title: string, company: string, description: str
   if (REGIONAL_KILLS.some(k => body.includes(k) && !SEA_SIGNALS.some(sea => body.includes(sea)) && !REMOTE_SIGNALS.some(r => body.includes(r)))) return OpportunityTier.TRASH;
 
   // 5. Tiering with Contextual Demotion
+  const phSignals = ["philippines", "filipino", "pinoy", "tagalog", "manila", "cebu", "ph", "pampanga", "davao"];
+  const hasPhSignal = phSignals.some(sig => body.includes(sig));
   const hasSeaSignal = SEA_SIGNALS.some(sea => body.includes(sea));
   const hasRemoteSignal = REMOTE_SIGNALS.some(r => body.includes(r));
-  const phFocusedSource = ["reddit", "onlinejobs", "direct", "manual", "pinoy", "filipino"];
-  const isPhContext = hasSeaSignal || phFocusedSource.some(src => s.includes(src));
+  const phFocusedSource = ["reddit", "onlinejobs", "direct", "manual", "pinoy", "filipino", "vajobsph"];
   
+  const isPhContext = hasPhSignal || phFocusedSource.some(src => s.includes(src));
   const isSpecialistRole = ["senior", "manager", "lead", "specialist"].some(l => t.includes(l));
   
-  if (isTargetCategory && (isPhContext || hasRemoteSignal)) {
-    if (isSpecialistRole && !isPhContext) return OpportunityTier.SILVER;
-    return isPhContext ? OpportunityTier.GOLD : OpportunityTier.SILVER;
+  if (isTargetCategory && (isPhContext || hasSeaSignal || hasRemoteSignal)) {
+    if (isPhContext && !isSpecialistRole) return OpportunityTier.GOLD;
+    return OpportunityTier.SILVER;
   }
 
   // Final Bronze Fallback: If it's remote but not a target category (and not trashed by tech kills)
