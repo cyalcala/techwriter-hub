@@ -2,7 +2,7 @@ import { defineConfig } from "@trigger.dev/sdk/v3";
 
 export default defineConfig({
   project: "proj_hzeuykzmhlzwmqeljfft",
-  runtime: "node",
+  runtime: "bun",
   logLevel: "log",
   dirs: ["./jobs"],
   maxDuration: 300,
@@ -15,5 +15,7 @@ export default defineConfig({
       factor: 2,
     },
   },
-
+  build: {
+    external: ["@libsql/linux-x64-gnu", "@libsql/linux-x64-musl", "bun:ffi"],
+  },
 });

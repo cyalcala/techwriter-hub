@@ -52,10 +52,17 @@ export type NewOpportunity = typeof opportunities.$inferInsert;
 export type SystemHealth = typeof systemHealth.$inferSelect;
 export type NewSystemHealth = typeof systemHealth.$inferInsert;
 
+let _db: any = null;
+
 export function createDb() {
+  if (_db) return _db;
+  
   const client = createClient({
     url: process.env.TURSO_DATABASE_URL!,
     authToken: process.env.TURSO_AUTH_TOKEN!,
   });
-  return drizzle(client, { schema: { opportunities, agencies, systemHealth } });
+  
+  _db = drizzle(client, { schema: { opportunities, agencies, systemHealth } });
+  return _db;
 }
+
