@@ -20,6 +20,8 @@ jobs:
         run: bun install --frozen-lockfile
         
       - name: Deploy to Trigger.dev
-        run: bunx trigger.dev@latest deploy
+        run: |
+          bunx trigger.dev@latest deploy \
+          --project-ref proj_hzeuykzmhlzwmqeljfft
         env:
           TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
