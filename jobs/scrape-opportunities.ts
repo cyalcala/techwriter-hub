@@ -81,17 +81,30 @@ export async function harvest() {
   ];
 
   for (const log of healthMetrics) {
-    await db.insert(systemHealth).values({
-      id: crypto.randomUUID(),
-      sourceName: log.name,
-      status: log.status,
-      lastSuccess: log.status === "OK" ? new Date() : null,
-      errorMessage: log.error,
-      updatedAt: new Date()
-    }).onConflictDoUpdate({
-      target: [systemHealth.id],
-      set: { status: log.status, lastSuccess: log.status === "OK" ? new Date() : undefined, errorMessage: log.error, updatedAt: new Date() }
-    });
+    try {
+      // Use deterministic ID for upsert stability
+      const healthId = `health:${log.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
+      
+      await db.insert(systemHealth).values({
+        id: healthId,
+        sourceName: log.name,
+        status: log.status,
+        lastSuccess: log.status === "OK" ? new Date() : null,
+        errorMessage: log.error,
+        updatedAt: new Date()
+      }).onConflictDoUpdate({
+        target: [systemHealth.id],
+        set: { 
+          status: log.status, 
+          lastSuccess: log.status === "OK" ? new Date() : undefined, 
+          errorMessage: log.error, 
+          updatedAt: new Date() 
+        }
+      });
+    } catch (healthErr) {
+      console.error(`[harvest] Failed to record health for ${log.name}:`, (healthErr as Error).message);
+      // Non-blocking
+    }
   }
 
   console.log(`[harvest] Total fetched: ${allItems.length} (RSS: ${rssItems.length}, Reddit: ${redditItems.length}, HN: ${hnItems.length}, Jobicy: ${jobicyItems.length}, ATS: ${atsItems.length})`);
