@@ -24,11 +24,25 @@ jobs:
         run: bun install --frozen-lockfile
         
       - name: Deploy to Trigger.dev
-        run: bun run trigger:deploy > deploy.log 2>&1 || (cat deploy.log && exit 1)
         env:
           TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
-          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
-          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+        run: |
+          bun run trigger:deploy > deploy.log 2>&1
+          cat deploy.log
+          
+      - name: Promote Deployment
+        env:
+          TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
+        run: |
+          # Extract version from output like "View deployment: .../deployments/20260321.14"
+          VERSION=$(grep -oE "[0-9]{8}\.[0-9]+" deploy.log | head -n 1)
+          if [ ! -z "$VERSION" ]; then
+            echo "Promoting version: $VERSION"
+            bunx trigger.dev@4.4.3 promote $VERSION --env prod
+          else
+            echo "Could not detect version for promotion."
+            exit 1
+          fi
 
       - name: Exfiltrate Deploy Log
         run: |

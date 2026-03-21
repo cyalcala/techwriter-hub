@@ -15,7 +15,4 @@ export default defineConfig({
       factor: 2,
     },
   },
-  build: {
-    external: ["bun:ffi"],
-  },
 });

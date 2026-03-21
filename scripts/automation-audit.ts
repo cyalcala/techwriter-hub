@@ -2,7 +2,7 @@ import { createDb } from "../jobs/lib/db";
 import { sql } from "drizzle-orm";
 
 async function audit() {
-  const db = createDb();
+  const db = await createDb();
   console.log("🔍 Automation Vital Signs Audit...");
 
   // 1. Check last 10 inserted items and their scrape times

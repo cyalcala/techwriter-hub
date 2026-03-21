@@ -1,6 +1,326 @@
 # Internal Engineering Changelog
 
 
+## [2026-03-21] — [Opportunities: 363 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: final de-optimization to restore cloud stability [VA.INDEX] (7b134be)
+* fix: restore native bundling & add cloud diagnostics [VA.INDEX] (ad18e4b)
+
+---
+
+
+## [2026-03-21] — [Opportunities: 363 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: final de-optimization to restore cloud stability [VA.INDEX] (7b134be)
+* fix: restore native bundling & add cloud diagnostics [VA.INDEX] (ad18e4b)
+* fix: sync turso secrets to trigger.dev during deploy [VA.INDEX] (e6883f8)
+
+---
+
+
+## [2026-03-21] — [Opportunities: 363 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: final de-optimization to restore cloud stability [VA.INDEX] (7b134be)
+* fix: restore native bundling & add cloud diagnostics [VA.INDEX] (ad18e4b)
+* fix: sync turso secrets to trigger.dev during deploy [VA.INDEX] (e6883f8)
+
+---
+
+
+## [2026-03-21] — [Opportunities: 363 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: restore native bundling & add cloud diagnostics [VA.INDEX] (ad18e4b)
+* fix: sync turso secrets to trigger.dev during deploy [VA.INDEX] (e6883f8)
+
+---
+
+
+## [2026-03-21] — [Opportunities: 363 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: sync turso secrets to trigger.dev during deploy [VA.INDEX] (e6883f8)
+* fix: async database initialization to unblock trigger.dev indexing [VA.INDEX] (e30a8f4)
+
+---
+
+
+## [2026-03-21] — [Opportunities: 363 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: sync turso secrets to trigger.dev during deploy [VA.INDEX] (e6883f8)
+* fix: async database initialization to unblock trigger.dev indexing [VA.INDEX] (e30a8f4)
+* fix: resolve indexing import error with version pinning and isolated db [VA.INDEX] (b0dca23)
+
+---
+
+
+## [2026-03-21] — [Opportunities: 363 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: async database initialization to unblock trigger.dev indexing [VA.INDEX] (e30a8f4)
+* fix: resolve indexing import error with version pinning and isolated db [VA.INDEX] (b0dca23)
+* fix: switch to node runtime and remove native deps [VA.INDEX] (3b4f12f)
+
+---
+
+
+## [2026-03-21] — [Opportunities: 363 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: async database initialization to unblock trigger.dev indexing [VA.INDEX] (e30a8f4)
+* fix: resolve indexing import error with version pinning and isolated db [VA.INDEX] (b0dca23)
+* fix: switch to node runtime and remove native deps [VA.INDEX] (3b4f12f)
+* fix: explicit libsql linux native deps for deploy [VA.INDEX] (6bd7807)
+
+---
+
+
+## [2026-03-21] — [Opportunities: 363 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: async database initialization to unblock trigger.dev indexing [VA.INDEX] (e30a8f4)
+* fix: resolve indexing import error with version pinning and isolated db [VA.INDEX] (b0dca23)
+* fix: switch to node runtime and remove native deps [VA.INDEX] (3b4f12f)
+* fix: explicit libsql linux native deps for deploy [VA.INDEX] (6bd7807)
+
+---
+
+
+## [2026-03-21] — [Opportunities: 363 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: resolve indexing import error with version pinning and isolated db [VA.INDEX] (b0dca23)
+* fix: switch to node runtime and remove native deps [VA.INDEX] (3b4f12f)
+* fix: explicit libsql linux native deps for deploy [VA.INDEX] (6bd7807)
+
+---
+
+
+## [2026-03-21] — [Opportunities: 363 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: switch to node runtime and remove native deps [VA.INDEX] (3b4f12f)
+* fix: explicit libsql linux native deps for deploy [VA.INDEX] (6bd7807)
+
+---
+
+
+## [2026-03-21] — [Opportunities: 363 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: explicit libsql linux native deps for deploy [VA.INDEX] (6bd7807)
+
+---
+
+
+## [2026-03-21] — [Opportunities: 363 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+---
+
+
+## [2026-03-21] — [Opportunities: 363 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+---
+
+
+## [2026-03-21] — [Opportunities: 363 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+---
+
+
+## [2026-03-21] — [Opportunities: 363 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+---
+
+
+## [2026-03-21] — [Opportunities: 363 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+---
+
+
+## [2026-03-21] — [Opportunities: 363 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+---
+
+
+## [2026-03-21] — [Opportunities: 363 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+---
+
+
+## [2026-03-21] — [Opportunities: 363 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: version monitoring added to watchdog, silent blocker documented via escalation [VA.INDEX] (7169fe1)
+
+---
+
+
+## [2026-03-21] — [Opportunities: 363 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: version monitoring added to watchdog, silent blocker documented via escalation [VA.INDEX] (7169fe1)
+
+---
+
+
+## [2026-03-21] — [Opportunities: 363 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: version monitoring added to watchdog, silent blocker documented via escalation [VA.INDEX] (7169fe1)
+
+---
+
+
+## [2026-03-21] — [Opportunities: 363 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: version monitoring added to watchdog, silent blocker documented via escalation [VA.INDEX] (7169fe1)
+
+---
+
+
+## [2026-03-21] — [Opportunities: 363 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: version monitoring added to watchdog, silent blocker documented via escalation [VA.INDEX] (7169fe1)
+
+---
+
+
+## [2026-03-21] — [Opportunities: 363 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### ⚓ Internal Maintenance
+* chore: finalize feed restoration and hardening [VA.INDEX] (8449f60)
+
+---
+
+
+## [2026-03-21] — [Opportunities: 363 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### ⚓ Internal Maintenance
+* chore: finalize feed restoration and hardening [VA.INDEX] (8449f60)
+
+---
+
+
+## [2026-03-21] — [Opportunities: 363 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### ⚓ Internal Maintenance
+* chore: finalize feed restoration and hardening [VA.INDEX] (8449f60)
+
+---
+
+
+## [2026-03-21] — [Opportunities: 363 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: resolve secondary ReferenceErrors (not, asc) in feed [VA.INDEX] (91c06f1)
+
+### ⚓ Internal Maintenance
+* chore: finalize feed restoration and hardening [VA.INDEX] (8449f60)
+
+---
+
+
+## [2026-03-20] — [Opportunities: 362 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: resolve secondary ReferenceErrors (not, asc) in feed [VA.INDEX] (91c06f1)
+* fix: resolve ReferenceError (opportunitiesTable -> opportunities) in feed [VA.INDEX] (807359d)
+
+### ⚓ Internal Maintenance
+* chore: finalize feed restoration and hardening [VA.INDEX] (8449f60)
+
+---
+
+
+## [2026-03-20] — [Opportunities: 361 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: resolve secondary ReferenceErrors (not, asc) in feed [VA.INDEX] (91c06f1)
+* fix: resolve ReferenceError (opportunitiesTable -> opportunities) in feed [VA.INDEX] (807359d)
+
+---
+
+
+## [2026-03-20] — [Opportunities: 361 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: resolve secondary ReferenceErrors (not, asc) in feed [VA.INDEX] (91c06f1)
+* fix: resolve ReferenceError (opportunitiesTable -> opportunities) in feed [VA.INDEX] (807359d)
+
+---
+
+
+## [2026-03-20] — [Opportunities: 361 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: resolve secondary ReferenceErrors (not, asc) in feed [VA.INDEX] (91c06f1)
+* fix: resolve ReferenceError (opportunitiesTable -> opportunities) in feed [VA.INDEX] (807359d)
+* fix: disable caching on SSR/API routes for real-time listings [VA.INDEX] (95d7b04)
+
+---
+
+
+## [2026-03-20] — [Opportunities: 361 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: resolve ReferenceError (opportunitiesTable -> opportunities) in feed [VA.INDEX] (807359d)
+* fix: disable caching on SSR/API routes for real-time listings [VA.INDEX] (95d7b04)
+* fix: restore vercel.json and frontend deployment config [VA.INDEX] (d2c12f7)
+
+---
+
+
+## [2026-03-20] — [Opportunities: 361 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: disable caching on SSR/API routes for real-time listings [VA.INDEX] (95d7b04)
+* fix: restore vercel.json and frontend deployment config [VA.INDEX] (d2c12f7)
+* fix: restore working astro and vercel adapter versions from last good state [VA.INDEX] (0786dcd)
+
+---
+
+
 ## [2026-03-20] — [Opportunities: 355 | Agencies: 57]
 **Status: AUTO-PROCESSED**
 
