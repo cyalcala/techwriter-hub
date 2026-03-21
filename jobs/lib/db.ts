@@ -1,5 +1,3 @@
-import { createClient } from "@libsql/client/http";
-import { drizzle } from "drizzle-orm/libsql";
 import { text, integer, sqliteTable } from "drizzle-orm/sqlite-core";
 
 export const agencies = sqliteTable('agencies', {
@@ -54,8 +52,15 @@ export type NewSystemHealth = typeof systemHealth.$inferInsert;
 
 let _db: any = null;
 
-export function createDb() {
+/**
+ * Lazy-loaded database factory to avoid native module resolution during indexing
+ */
+export async function createDb() {
   if (_db) return _db;
+  
+  // Dynamic imports to hide from the Trigger.dev indexer
+  const { createClient } = await import("@libsql/client/http");
+  const { drizzle } = await import("drizzle-orm/libsql");
   
   const client = createClient({
     url: process.env.TURSO_DATABASE_URL!,
@@ -65,4 +70,5 @@ export function createDb() {
   _db = drizzle(client, { schema: { opportunities, agencies, systemHealth } });
   return _db;
 }
+
 

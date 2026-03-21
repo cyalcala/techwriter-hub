@@ -8,7 +8,7 @@ export const verifyDirectoryTask = schedules.task({
   maxDuration: 180,
   run: async () => {
     console.log("[verify-directory] Checking agency entries...");
-    const db = createDb();
+    const db = await createDb();
 
     const entries = await db.all(
       sql`SELECT id, name, hiring_url FROM agencies WHERE hiring_url IS NOT NULL`

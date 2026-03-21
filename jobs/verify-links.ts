@@ -18,7 +18,7 @@ export const verifyLinksTask = schedules.task({
   maxDuration: 120,
   run: async () => {
     console.log("[verify-links] Starting smart link verification...");
-    const db = createDb();
+    const db = await createDb();
 
     // Only check non-Reddit/HN links older than 7 days, limit to 50
     const sevenDaysAgo = Math.floor((Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000);

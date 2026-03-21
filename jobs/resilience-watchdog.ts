@@ -14,7 +14,7 @@ export const resilienceWatchdogTask = schedules.task({
   maxDuration: 60,
   run: async () => {
     logger.info("[watchdog] Initiating Strategic Vitals Audit...");
-    const db = createDb();
+    const db = await createDb();
     
     const now = new Date();
     const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);

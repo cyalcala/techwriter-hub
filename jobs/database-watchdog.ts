@@ -9,7 +9,7 @@ export const databaseWatchdogTask = schedules.task({
   run: async () => {
     console.log("[watchdog] Starting Deep Schema Audit (7h Interval)...");
 
-    const db = createDb();
+    const db = await createDb();
 
     try {
       // 1. Structural Integrity Check

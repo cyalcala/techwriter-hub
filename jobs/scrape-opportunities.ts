@@ -21,7 +21,7 @@ const PH_NATIVE_SOURCES = new Set(["OnlineJobs", "Reddit r/phcareers"]);
 
 export async function harvest() {
   console.log("[harvest] ═══ Starting Multi-Source Harvest ═══");
-  const db = createDb();
+  const db = await createDb();
 
   // ── LAYER 1: RSS Feeds ──────────────────────────────────
   console.log("[harvest] Layer 1: RSS Feeds...");

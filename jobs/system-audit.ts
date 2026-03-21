@@ -20,7 +20,7 @@ export const systemAuditTask = schedules.task({
   maxDuration: 180,
   run: async () => {
     logger.info("[deep-audit] Initiating surgical system audit...");
-    const db = createDb();
+    const db = await createDb();
     
     // Time Definitions
     const now = Math.floor(Date.now() / 1000);
