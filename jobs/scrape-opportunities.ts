@@ -111,7 +111,7 @@ export async function harvest() {
 
   if (allItems.length === 0) {
     console.log("[harvest] Zero items from all sources.");
-    return { inserted: 0, skipped: 0 };
+    return { processed: 0, newCount: 0, skipped: 0 };
   }
 
   // ── DEDUP ───────────────────────────────────────────────
@@ -128,9 +128,7 @@ export async function harvest() {
     if (normalizedExisting.has(normalizeTitle(item.title))) return false;
     return true;
   });
-  console.log(`[harvest] ${newItems.length} unique after dedup`);
-
-  // ── RELEVANCY FILTER & SIFTING ──────────────────────────
+  const newCount = newItems.length;
   const relevantItems = allItems.map(item => {
     // 1. Security Layer: Drop scams
     if (isLikelyScam(item.title, item.description ?? "")) return null;
@@ -149,7 +147,7 @@ export async function harvest() {
     return { ...item, tier, scrapedAt: new Date() }; // Pulse: new scrapedAt
   }).filter((item): item is NonNullable<typeof item> => item !== null);
 
-  console.log(`[harvest] ${relevantItems.length} passed sifter funnel`);
+  console.log(`[harvest] ${relevantItems.length} passed sifter funnel (${newCount} are brand new)`);
 
   // ── UPSERT (INSERT OR REFRESH) ──────────────────────────
   let processed = 0;
@@ -173,7 +171,8 @@ export async function harvest() {
     }
   }
 
-  console.log(`[harvest] ═══ Complete: ${processed} signals processed/refreshed ═══`);
+  const refreshedCount = processed - newCount;
+  console.log(`[harvest] ═══ Complete: ${processed} signals processed (${newCount} NEW, ${refreshedCount} REFRESHED) ═══`);
 
   // ── CLEANUP: Purge stale records older than 60 days ─────
   try {
@@ -184,7 +183,7 @@ export async function harvest() {
     // Non-critical — cleanup failure shouldn't break the harvest
   }
 
-  return { processed, skipped: allItems.length - processed };
+  return { processed, newCount, skipped: allItems.length - processed };
 }
 
 
@@ -198,7 +197,7 @@ export const scrapeOpportunitiesTask = schedules.task({
   run: async () => {
     try {
       const result = await harvest();
-      await logToNtfy(`SUCCESS: Processed ${result.processed} items.`);
+      await logToNtfy(`SUCCESS: ${result.newCount} NEW, ${result.processed - result.newCount} REFRESHED.`);
       return result;
     } catch (err: any) {
       await logToNtfy(`CRITICAL FAILURE: ${err.message}`, 5);

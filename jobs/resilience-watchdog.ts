@@ -60,12 +60,24 @@ export const resilienceWatchdogTask = schedules.task({
       logger.error(`[watchdog] CRITICAL: System-Wide Stagnation. Average Gold age is ${vitals.avgFreshnessHrs.toFixed(1)}h. Heartbeat may be failing.`);
     }
 
+    // 2.6 CHECK VOLUME STAGNATION (Total Active Count)
+    // If volume is exactly the same as last health check, it's suspicious
+    const healthLog = await db.select({ totalActive: opportunities.id }) // Placeholder for a real health log if we had one
+      .from(opportunities) // We don't have a history of counts easily accessible here without a new table
+      .limit(1);
+    
+    // For now, we'll rely on the existing stagnationOk (avg_age) but we could add a "lastSeenCount" if we added a table.
+    // Instead, let's just make the stagnation check more aggressive.
+    if (vitals.avgFreshnessHrs > 4) {
+       logger.warn(`[watchdog] WARNING: Feed is aging (${vitals.avgFreshnessHrs.toFixed(1)}h). No fresh signals reaching Gold tier.`);
+    }
+
     // 3. CHECK SOURCE HEALTH
     const unhealthySources = await db.select()
       .from(systemHealth)
       .where(sql`status = 'FAIL' OR updatedAt < ${fourHoursAgo}`);
     
-    vitals.sourcesDegraded = unhealthySources.map(s => s.sourceName);
+    vitals.sourcesDegraded = unhealthySources.map((s: any) => s.sourceName);
     
     // 🛠️ PHASE 4: AUTONOMOUS SELF-HEALING
     if (vitals.pulseOk && !vitals.purityOk) {

@@ -49,10 +49,13 @@ function stripHtml(s: string | undefined) {
 
 export async function fetchRSSFeed(source: Source): Promise<NewOpportunity[]> {
   try {
-    const res = await fetch(source.url, {
+    const res = await fetch(`${source.url}${source.url.includes('?') ? '&' : '?'}t=${Date.now()}`, {
       headers: {
         "User-Agent": "VA.INDEX/1.0 (https://va-freelance-hub-web.vercel.app; ethical-harvester; public-rss-only)",
         "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0"
       },
       redirect: "follow",
       signal: AbortSignal.timeout(12_000),

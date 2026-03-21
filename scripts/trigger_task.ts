@@ -1,7 +1,7 @@
 import { tasks, configure } from "@trigger.dev/sdk/v3";
 
 configure({
-  secretKey: "tr_pat_a7mkhwwu9pu1a5k16gkhrr6ewwiy3rphy5a436db",
+  secretKey: process.env.TRIGGER_SECRET_KEY,
 });
 
 async function main() {

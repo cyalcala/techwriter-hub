@@ -28,7 +28,8 @@ function isValidTitle(title: string): boolean {
 
 async function findWhoIsHiringThread(): Promise<number | null> {
   try {
-    const res = await fetch(`${HN_API}/user/whoishiring.json`, {
+    const res = await fetch(`${HN_API}/user/whoishiring.json?t=${Date.now()}`, {
+      headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" },
       signal: AbortSignal.timeout(8_000),
     });
     if (!res.ok) return null;
@@ -37,7 +38,8 @@ async function findWhoIsHiringThread(): Promise<number | null> {
     const submitted = user?.submitted || [];
 
     for (const id of submitted.slice(0, 5)) {
-      const itemRes = await fetch(`${HN_API}/item/${id}.json`, {
+      const itemRes = await fetch(`${HN_API}/item/${id}.json?t=${Date.now()}`, {
+        headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" },
         signal: AbortSignal.timeout(5_000),
       });
       if (!itemRes.ok) continue;
@@ -62,7 +64,8 @@ export async function fetchHNJobs(): Promise<NewOpportunity[]> {
   console.log(`[hn] Found thread #${threadId}, fetching comments...`);
 
   try {
-    const threadRes = await fetch(`${HN_API}/item/${threadId}.json`, {
+    const threadRes = await fetch(`${HN_API}/item/${threadId}.json?t=${Date.now()}`, {
+      headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" },
       signal: AbortSignal.timeout(8_000),
     });
     if (!threadRes.ok) return [];
@@ -75,7 +78,8 @@ export async function fetchHNJobs(): Promise<NewOpportunity[]> {
       const batch = kidIds.slice(i, i + 10);
       const comments = await Promise.allSettled(
         batch.map(async (id) => {
-          const r = await fetch(`${HN_API}/item/${id}.json`, {
+          const r = await fetch(`${HN_API}/item/${id}.json?t=${Date.now()}`, {
+            headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" },
             signal: AbortSignal.timeout(5_000),
           });
           return r.ok ? r.json() : null;
