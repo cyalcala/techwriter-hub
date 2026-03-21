@@ -4,6 +4,9 @@ export default defineConfig({
   project: "proj_hzeuykzmhlzwmqeljfft",
   runtime: "node",
   logLevel: "log",
+  build: {
+    external: ["@libsql/linux-x64-gnu", "@libsql/linux-x64-musl"],
+  },
   dirs: ["./jobs"],
   maxDuration: 300,
   retries: {
