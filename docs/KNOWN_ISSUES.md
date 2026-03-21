@@ -49,3 +49,13 @@
     2. Relaxed sifter to allow Specialist roles (Senior/Lead) matching target signals.
     3. Switched to explicit `new Date()` for upsert timestamps to ensure heartbeat visibility.
 - **Verification**: `totalActive` increased from 415 to **427** (+12) in next run. `stalenessHrs` dropped to 0.03.
+
+## 6. 2026-03-21 — Hash Explosion (Zombie Listings)
+- **Status**: RESOLVED (2026-03-21)
+- **Symptom**: `totalActive` count inflated (454+), and many items appeared duplicated in the feed. Some 18-day old items had "Just Now" badges.
+- **Root Cause**: Sources (likely `remotecom`) were providing shifting URLs for the same roles. Since `contentHash` is based on URL, it created new database rows instead of updates.
+- **Resolution**:
+    1. Hardened `scrape-opportunities.ts` with **Semantic Deduplication** (checks `title|company` fingerprint even if `contentHash` is different).
+    2. Surgical Purge: Deleted 78 redundant rows from Turso using a `ROW_NUMBER()` subquery.
+    3. Frontend Hardening: Removed `scrapedAt` updates on every pulse to prevent artificial freshness for old jobs.
+- **Verification**: `totalActive` dropped from 454 to **376** (Purity-Certified). `audit-duplicates.ts` confirmed 0 semantic duplicates remaining.

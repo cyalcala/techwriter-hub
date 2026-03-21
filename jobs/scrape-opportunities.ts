@@ -139,12 +139,13 @@ export async function harvest() {
   
   for (const item of allItems) {
     if (!item) continue;
+    const itemTitle = item.title || "";
     
     // 1. Security Layer: Drop scams
-    if (isLikelyScam(item.title, item.description ?? "")) continue;
+    if (isLikelyScam(itemTitle, item.description ?? "")) continue;
 
     // 2. Semantic Fingerprint Check
-    const fingerprint = `${normalizeTitle(item.title)}|${(item.company || '').toLowerCase()}`;
+    const fingerprint = `${normalizeTitle(itemTitle)}|${(item.company || '').toLowerCase()}`;
     if (processedFingerprints.has(fingerprint)) continue;
     if (normalizedExisting.has(fingerprint) && !existingHashes.has(item.contentHash)) {
       // If title|company exists but hash is different, it's a "Zombie" (Hash Drift)
@@ -153,27 +154,34 @@ export async function harvest() {
     }
     
     // 3. Intelligent Sifting & Tiering
-    const tier = siftOpportunity(item.title, item.company || "", item.description ?? "");
+    const tier = siftOpportunity(itemTitle, item.description ?? "", item.sourcePlatform ?? "Generic");
     if (tier === OpportunityTier.TRASH) continue;
 
     // 4. Source-level overrides
     if (item.sourcePlatform === "OnlineJobs") {
-      const t = (item.title || "").toLowerCase();
+      const t = itemTitle.toLowerCase();
       const isJob = ["hire", "hiring", "job", "apply", "career", "opening", "vacancy", "role"].some(k => t.includes(k));
-  console.log(`[harvest] ${relevantItems.length} passed sifter funnel (${newCount} are brand new)`);
+      if (!isJob) continue;
+    }
+
+    processedFingerprints.add(fingerprint);
+    dedupedRelevant.push({ ...item, tier });
+  }
+
+  const processedCount = dedupedRelevant.length;
+  console.log(`[harvest] ${processedCount} passed sifter funnel (${newCount} are brand new)`);
 
   // ── UPSERT (INSERT OR REFRESH) ──────────────────────────
   let processed = 0;
-  for (let i = 0; i < relevantItems.length; i += 50) {
+  for (let i = 0; i < dedupedRelevant.length; i += 50) {
     try {
-      const batch = relevantItems.slice(i, i + 50);
+      const batch = dedupedRelevant.slice(i, i + 50);
       // We use onConflictDoUpdate to refresh the 'scrapedAt' and 'isActive' status
       await db.insert(opportunities)
         .values(batch)
         .onConflictDoUpdate({
           target: [opportunities.contentHash],
           set: { 
-            scrapedAt: new Date(),
             isActive: 1,
             tier: sql`excluded.tier`
           }

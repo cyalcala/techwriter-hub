@@ -1,9 +1,9 @@
 # VA.INDEX — Complete Claude Handoff Document
 ## Created: 2026-03-21
-## Version: 2.2 — Includes VAjobsPH Source
-## Current Trigger.dev Version: v20260321.50
-## System Status at Document Creation: HEALTHY
-## Total Active Listings: 454
+## Version: 2.3 — Includes Zombie Purge & High-Purity
+## Current Trigger.dev Version: v20260321.60
+## System Status at Document Creation: HEALTHY (High Purity)
+## Total Active Listings: 376
 ## Purpose: Import into new Claude conversation
 
 ---
@@ -279,16 +279,17 @@ NEVER use `tool="browser"`. Use terminal and curl.
 9. **INC-012: Vite 6 Incompatibility**: Build failures resolved by downgrading to Vite 5 in the frontend.
 10. **INC-014: Edge Caching**: Feed was stale due to aggressive Vercel caching; added `no-store` headers to `vercel.json` (Phase 2 fix).
 11. **INC-016: Silent Sifter**: Refined sifter logic to prevent over-filtering of "Virtual Assistant" roles.
-12. **INC-017: Indexing Crash**: CI/CD blocked because top-level imports crashed the Trigger indexer. Fixed by refactoring `jobs/lib/db.ts` to use async dynamic imports (RULE 1).
+12. **INC-018: Silent Blockage**: Fixed property selection mismatch in deduplication and relaxed sifter for specialists (2026-03-21).
+13. **INC-019: Hash Explosion (Zombies)**: Identified "rathole" where drifting URLs caused 78 duplicate rows. Fixed via semantic deduplication (`title|company`) and purged zombies from Turso (2026-03-21).
 
 ---
 
 ## CURRENT SYSTEM STATE (Captured 2026-03-21)
 
-- **Turso Active Listings**: 454
-- **Gold listings**: 54
-- **Last Heartbeat**: 2026-03-21T13:30:14.000Z
-- **Staleness**: 0.01 hrs
+- **Turso Active Listings**: 376
+- **Gold listings**: 38
+- **Last Heartbeat**: 2026-03-21T13:53:23.000Z
+- **Staleness**: 0.08 hrs
 - **Recent Runs**: Every 15min COMPLETED (harvest-opportunities).
 
 ---
