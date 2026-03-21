@@ -14,6 +14,7 @@ const SUBREDDITS = [
   { name: "remotejobs", label: "r/remotejobs" },
   { name: "phcareers", label: "r/phcareers" },
   { name: "VirtualAssistant", label: "r/VirtualAssistant" },
+  { name: "VAjobsPH", label: "r/VAjobsPH" },
 ];
 
 function toHash(title: string, url: string) {

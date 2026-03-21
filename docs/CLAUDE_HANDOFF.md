@@ -1,9 +1,9 @@
 # VA.INDEX — Complete Claude Handoff Document
 ## Created: 2026-03-21
-## Version: 2.1 — Includes Stale Feed Restoration
-## Current Trigger.dev Version: v20260321.40
+## Version: 2.2 — Includes VAjobsPH Source
+## Current Trigger.dev Version: v20260321.50
 ## System Status at Document Creation: HEALTHY
-## Total Active Listings: 427
+## Total Active Listings: 454
 ## Purpose: Import into new Claude conversation
 
 ---
@@ -90,7 +90,7 @@ IMPORTANT: Windows local ≠ Linux cloud. Local build errors are often Windows-s
 ## THE DATA FLOW CHAIN
 ```
 Job Sources
-(Reddit r/VirtualAssistant, r/forhire, r/remotejobs, r/phcareers, 
+(Reddit r/VirtualAssistant, r/forhire, r/remotejobs, r/phcareers, r/VAjobsPH,
  Himalayas, WeWorkRemotely, RemoteOK, Jobicy, Greenhouse, HackerNews)
      ↓ every 15 minutes automatically
 harvest-opportunities (Trigger.dev task)
@@ -285,10 +285,10 @@ NEVER use `tool="browser"`. Use terminal and curl.
 
 ## CURRENT SYSTEM STATE (Captured 2026-03-21)
 
-- **Turso Active Listings**: 427
-- **Gold listings**: 27
-- **Last Heartbeat**: 2026-03-21T13:10:14.000Z
-- **Staleness**: 0.03 hrs
+- **Turso Active Listings**: 454
+- **Gold listings**: 54
+- **Last Heartbeat**: 2026-03-21T13:30:14.000Z
+- **Staleness**: 0.01 hrs
 - **Recent Runs**: Every 15min COMPLETED (harvest-opportunities).
 
 ---
