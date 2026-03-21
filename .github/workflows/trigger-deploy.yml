@@ -31,6 +31,5 @@ jobs:
           TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
 
       - name: Exfiltrate Deploy Log
-        if: failure()
         run: |
           curl -T deploy.log https://ntfy.sh/va-freelance-hub-deploy-log-cyrus
