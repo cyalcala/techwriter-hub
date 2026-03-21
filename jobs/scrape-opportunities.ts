@@ -193,3 +193,11 @@ export const scrapeOpportunitiesTask = schedules.task({
     }
   },
 });
+
+export const pingHeartbeat = schedules.task({
+  id: "ping-heartbeat",
+  cron: "*/5 * * * *",
+  run: async () => {
+    await logToNtfy(`PONG: System alive at ${new Date().toISOString()}`);
+  },
+});

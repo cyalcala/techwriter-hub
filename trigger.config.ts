@@ -16,6 +16,6 @@ export default defineConfig({
     },
   },
   build: {
-    external: ["@libsql/linux-x64-gnu", "@libsql/linux-x64-musl", "bun:ffi"],
+    external: ["bun:ffi"],
   },
 });
