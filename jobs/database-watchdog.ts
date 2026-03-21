@@ -51,6 +51,60 @@ export const databaseWatchdogTask = schedules.task({
         console.warn("[watchdog] Feed URL unreachable:", (err as Error).message);
       }
 
+      // 4. Schedule Health Check
+      try {
+        const scheduleRes = await fetch(
+          "https://api.trigger.dev/api/v1/schedules",
+          {
+            headers: {
+              "Authorization": `Bearer ${process.env.TRIGGER_SECRET_KEY}`
+            }
+          }
+        );
+        const schedules = await scheduleRes.json();
+        const harvest = schedules.data?.find(
+          (s: any) => s.task === "harvest-opportunities" || s.task?.identifier === "harvest-opportunities"
+        );
+        
+        if (!harvest) {
+          console.error("[watchdog] SCHEDULE_MISSING: harvest-opportunities not found in cloud");
+        } else if (!harvest.lastRun) {
+          console.error("[watchdog] SCHEDULE_NEVER_RUN: triggering manual recovery run");
+          await fetch(
+            "https://api.trigger.dev/api/v1/tasks/harvest-opportunities/trigger",
+            {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${process.env.TRIGGER_SECRET_KEY}`,
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({ payload: {} })
+            }
+          );
+        } else {
+          const lastRunTs = new Date(harvest.lastRun);
+          const hrsAgo = (Date.now() - lastRunTs.getTime()) / 3600000;
+          if (hrsAgo > 1) {
+            console.warn(`[watchdog] SCHEDULE_STALE: ${hrsAgo.toFixed(1)} hrs ago. Triggering recovery.`);
+            await fetch(
+              "https://api.trigger.dev/api/v1/tasks/harvest-opportunities/trigger",
+              {
+                method: "POST",
+                headers: {
+                  "Authorization": `Bearer ${process.env.TRIGGER_SECRET_KEY}`,
+                  "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ payload: {} })
+              }
+            );
+          } else {
+            console.log("[watchdog] SCHEDULE_HEALTHY");
+          }
+        }
+      } catch (err: any) {
+        console.warn("[watchdog] Schedule health check failed:", err.message);
+      }
+
       console.log(`[watchdog] Agencies: ${agencyCount.rows[0]?.[0]}, Opportunities: ${oppCount.rows[0]?.[0]}`);
       console.log("[watchdog] Audit Complete: HEALTHY");
       return { status: "HEALTHY", columnsFound: columns.length };

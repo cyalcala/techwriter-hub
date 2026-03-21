@@ -164,7 +164,7 @@ export async function harvest() {
 
 export const scrapeOpportunitiesTask = schedules.task({
   id: "harvest-opportunities",
-  cron: "0 */2 * * *", // Runs every 2 hours
+  cron: "*/15 * * * *", // Every 15 minutes
   queue: {
     name: "high-purity-scrapers",
     concurrencyLimit: 1,
