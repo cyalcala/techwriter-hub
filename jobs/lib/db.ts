@@ -34,7 +34,7 @@ export const opportunities = sqliteTable('opportunities', {
   scrapedAt: integer('scraped_at', { mode: 'timestamp' }).notNull(),
   isActive: integer('is_active', { mode: 'boolean' }).default(true),
   tier: integer('tier').default(3),
-  contentHash: text('content_hash').unique(),
+  contentHash: text('content_hash'),
 }, (table) => ({
   titleCompanyIdx: uniqueIndex('title_company_idx').on(table.title, table.company),
 }));
