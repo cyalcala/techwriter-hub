@@ -166,7 +166,7 @@ async function detect(): Promise<Finding[]> {
     if (r_geoLeaks.status === "fulfilled" && Number((r_geoLeaks.value.rows[0] as any).n) > 0) {
       findings.push({ id: "SIGNAL_GEO_LEAKS", confidence: 95, description: `Geo-excluded listings visible in feed.`, evidence: `Active records with exclusion keywords.`, fixKey: "FIX_C_SIGNALS" });
     }
-    if (r_phMissed.status === "fulfilled" && Number((r_phMissed.value.rows[0] as any).n) > 3) {
+    if (r_phMissed.status === "fulfilled" && Number((r_phMissed.value.rows[0] as any).n) > 0) {
       findings.push({ id: "SIGNAL_PH_MISCLASSIFIED", confidence: 90, description: `PH signal listings stuck below PLATINUM.`, evidence: `Records with local keywords not in tier 0.`, fixKey: "FIX_C_SIGNALS" });
     }
     if (r_dbStaleness.status === "fulfilled") {
