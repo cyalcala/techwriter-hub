@@ -85,7 +85,7 @@ export const resilienceWatchdogTask = schedules.task({
     // 3. CHECK SOURCE HEALTH
     const unhealthySources = await db.select()
       .from(systemHealth)
-      .where(sql`status = 'FAIL' OR updatedAt < ${fourHoursAgo}`);
+      .where(sql`status = 'FAIL' OR updatedAt < ${oneHourAgo}`);
     
     vitals.sourcesDegraded = unhealthySources.map((s: any) => s.sourceName);
     

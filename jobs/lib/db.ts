@@ -1,4 +1,5 @@
 import { text, integer, sqliteTable, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { sql } from 'drizzle-orm';
 
 export const agencies = sqliteTable('agencies', {
   id: text('id').primaryKey(),
@@ -35,6 +36,7 @@ export const opportunities = sqliteTable('opportunities', {
   isActive: integer('is_active', { mode: 'boolean' }).default(true),
   tier: integer('tier').default(3),
   contentHash: text('content_hash'),
+  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch('now'))`),
 }, (table) => ({
   titleCompanyIdx: uniqueIndex('title_company_idx').on(table.title, table.company),
 }));

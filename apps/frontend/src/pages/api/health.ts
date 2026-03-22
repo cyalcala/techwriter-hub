@@ -21,21 +21,28 @@ export const GET: APIRoute = async () => {
     };
 
     // 2. Pulse Audit
-    const latest = await db.select({ scrapedAt: opportunities.scrapedAt })
-      .from(opportunities)
-      .orderBy(desc(opportunities.scrapedAt))
-      .limit(1);
-    
-    const lastHeartbeat = latest[0]?.scrapedAt;
-    const stalenessHrs = lastHeartbeat ? (Date.now() - new Date(lastHeartbeat).getTime()) / (1000 * 60 * 60) : 999;
+    const stats = await db.select({
+    total: sql<number>`count(*)`,
+    gold: sql<number>`sum(case when tier = 1 then 1 else 0 end)`,
+    newToday: sql<number>`sum(case when created_at > unixepoch('now', '-24 hours') then 1 else 0 end)`,
+    maxIngested: sql<number>`max(created_at)`,
+  }).from(opportunities).where(eq(opportunities.isActive, true));
+
+  const { total, gold, newToday, maxIngested } = stats[0];
+  const lastHeartbeat = maxIngested ? new Date(maxIngested * 1000) : new Date(0);
+  const stalenessHrs = (Date.now() - lastHeartbeat.getTime()) / (1000 * 60 * 60);
+
+  // Success Bias Audit: If zero new jobs today, mark as unfaithful
+  const isFaithful = newToday > 0;
 
     diagnostics.vitals = {
-      totalActive: allActive.length,
-      tierDistribution: tiers,
-      lastHeartbeat: lastHeartbeat || "NEVER",
+      totalActive: total,
+      goldDistribution: gold,
+      lastHeartbeat: lastHeartbeat.toISOString(),
       stalenessHrs: Number(stalenessHrs.toFixed(2)),
-      isFaithful: allActive.length >= 200, // Alert if density drops below threshold
-      isStale: stalenessHrs > 6
+      isFaithful,
+      isStale: stalenessHrs > 6,
+      dailyGrowthRate: newToday,
     };
 
     if (!diagnostics.vitals.isFaithful || diagnostics.vitals.isStale) {
