@@ -19,7 +19,11 @@ try {
   liveOpportunities = await db.select()
     .from(opportunities)
     .where(not(eq(opportunities.tier, 4)))
-    .orderBy(asc(opportunities.tier), desc(opportunities.scrapedAt))
+    .orderBy(
+    asc(opportunities.tier),
+    sql`COALESCE(${opportunities.postedAt}, ${opportunities.scrapedAt}) DESC`,
+    desc(opportunities.id)
+  )
     .limit(3000); 
 } catch (e) {
   dbError = e.message;
