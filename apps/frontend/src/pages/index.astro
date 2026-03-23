@@ -14,12 +14,21 @@ let liveOpportunities = [];
 let dbError = null;
 
 try {
-  // Ultra-Fast Indexed Sort using tier_latest_idx
+  // Balanced Time-Decay Sort (15min Rule + 12h Decay)
+  // Lower score = Top of feed
+  const now = Date.now();
   liveOpportunities = await db.select()
     .from(opportunities)
     .where(not(eq(opportunities.tier, 4)))
     .orderBy(
-      asc(opportunities.tier),
+      sql`
+        (tier + 
+          CASE 
+            WHEN (${now} - latest_activity_ms) <= 900000 THEN -5.0 
+            ELSE ((${now} - latest_activity_ms) / 43200000.0) 
+          END
+        ) ASC
+      `,
       desc(opportunities.latestActivityMs)
     )
     .limit(150); 
