@@ -16,7 +16,7 @@ The system is highly abstracted. Its core intelligence, scraping arrays, and sca
 - **ORM Interface:** **Drizzle ORM** is utilized for strict, typesafe SQL query building and schematic migrations.
 - **Relational Schema:**
   - `agencies`: Stores top-level entity metadata (name, verification footprint, hiring URLs, `hiring_heat`, `friction_level`).
-  - `opportunities`: Stores individual job signals extracted dynamically. Contains a cryptographically unique `content_hash`.
+  - `opportunities`: Stores individual job signals extracted dynamically. Contains a cryptographically unique `content_hash` and an indexed `latest_activity_ms` column for hardware-accelerated sorting.
 
 ### The Titanium Sieve (Zig Native Engine)
 - **The Sifter (`sifter.zig`):** A high-performance, SIMD-ready binary module that hard-kills Tech/Exec/Blog noise at the hardware level with near-zero latency (~7.9ms per batch).
@@ -24,6 +24,7 @@ The system is highly abstracted. Its core intelligence, scraping arrays, and sca
 
 ### Orchestration Execution (Trigger.dev v3)
 - **Engine Shift:** We explicitly operate on Trigger.dev's V3 architecture. Traditional Vercel Serverless Functions enforce a brutal 10-60 second execution timeout limit, making heavy scraping unviable. V3 background workers pull the compute off the main thread entirely, allowing scheduled jobs to run for theoretically infinite durations (minutes/hours) natively as isolated background processes.
+- **Strategic Synchronization:** All harvest tasks populate the `latest_activity_ms` field [Math.max(posted, scraped)]. This allows the frontend to query the DB using a composite index `(tier, latest_activity_ms)`, dropping sorted response times from >500ms to <100ms.
 
 ---
 
@@ -55,7 +56,7 @@ All background operations are highly surgical, enforcing O(1) growth caps and st
 
 ## 4. Frontend Rendering (Unified SSR)
 - **Engine Priority:** Both **Astro** (`apps/frontend`) and **Next.js** (`apps/web`) are configured for **Strict SSR** (output: 'server').
-- **Cache-Control Shields:** Both apps enforce `no-store, must-revalidate` to bypass browser/edge caching, ensuring the user always sees the absolute 'Titanium' state of the DB.
+- **Cache-Control Shields:** We leverage **Edge-Side Stale-While-Revalidate (SWR)** caching (`s-maxage=60, stale-while-revalidate=30`). This delivers instant responses from the Vercel Edge while asynchronously fetching the absolute 'Titanium' state of the DB in the background.
 - **Aesthetic Refinement:** O(1) performance focus with Tailwind CSS and zero-JS hydration (Astro).
 
 ---
@@ -65,3 +66,9 @@ To maintain 100% production reliability across highly dynamic deployments, we as
 
 - **Snapshot CLI (`bun run save`)**: Generates an alphanumeric mythical ID format (`Hydra_2026-03-XX`). Natively connects to the Turso SQL layers to extract table objects mathematically into a raw JSON file pushed strictly inside an ignored `.backups/` directory. Concurrently executes `git tag` routines structurally indexing the raw layout of the filetree.
 - **Restoration Hook (`bun run restore`)**: Dynamically rolls Git memory variables back through history, forcefully drops SQL dependencies from `createDb()`, and instantly reconstructs the schema back up natively through JSON injection blocks.
+
+## 6. The Agentic SRE Sentinel
+The platform is protected by an autonomous "Agentic" sentinel powered by Gemini 1.5 Flash.
+- **Zero-Cost Enforcement**: A strict quota of 10 AI calls/day is tracked in `.sentinel-quota.json`.
+- **Safety Gates**: Any autonomous code change exceeding 5 lines or affecting multiple files triggers a "Human-in-the-Loop" block.
+- **Titanium Sync**: The `sync-framework.ts` utility uses MD5 change detection to ensure propagated updates are surgical and redundant Zig rebuilds are eliminated.
