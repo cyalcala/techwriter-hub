@@ -4,32 +4,37 @@ import { asc, desc, eq, not, sql } from "drizzle-orm";
 
 async function run() {
   const db = await createDb();
-  console.log("=== TOP 5 by DB ORDER BY ===");
-  const res1 = await db.select({
-    id: opportunities.id,
+  const now = Date.now();
+  console.log(`Current Time (now): ${now} (${new Date(now).toISOString()})`);
+
+  const res = await db.select({
     title: opportunities.title,
     tier: opportunities.tier,
+    latestActivityMs: opportunities.latestActivityMs,
+    scrapedAt: opportunities.scrapedAt,
     postedAt: opportunities.postedAt,
-    scrapedAt: opportunities.scrapedAt
+    score: sql`
+      (tier + 
+        CASE 
+          WHEN (${now} - latest_activity_ms) <= 900000 THEN -5.0 
+          ELSE ((${now} - latest_activity_ms) / 43200000.0) 
+        END
+      )
+    `
   }).from(opportunities)
     .where(not(eq(opportunities.tier, 4)))
     .orderBy(
-      asc(opportunities.tier),
-      sql`COALESCE(posted_at, scraped_at) DESC`
-    ).limit(5);
-  console.table(res1);
+      sql`
+        (tier + 
+          CASE 
+            WHEN (${now} - latest_activity_ms) <= 900000 THEN -5.0 
+            ELSE ((${now} - latest_activity_ms) / 43200000.0) 
+          END
+        ) ASC
+      `,
+      desc(opportunities.latestActivityMs)
+    ).limit(30);
 
-  console.log("\n=== TOP 5 LATEST BY SCRAPED_AT ===");
-  const res2 = await db.select({
-    id: opportunities.id,
-    title: opportunities.title,
-    tier: opportunities.tier,
-    postedAt: opportunities.postedAt,
-    scrapedAt: opportunities.scrapedAt
-  }).from(opportunities)
-    .where(not(eq(opportunities.tier, 4)))
-    .orderBy(desc(opportunities.scrapedAt))
-    .limit(5);
-  console.table(res2);
+  console.table(res);
 }
 run();

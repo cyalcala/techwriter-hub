@@ -25,7 +25,7 @@ try {
         (tier + 
           CASE 
             WHEN (${now} - latest_activity_ms) <= 900000 THEN -5.0 
-            ELSE ((${now} - latest_activity_ms) / 43200000.0) 
+            ELSE ((${now} - latest_activity_ms) / 14400000.0) 
           END
         ) ASC
       `,
