@@ -51,11 +51,13 @@ function getTier(opp: any) {
 
 // 2. Final Output Formatting (Dedup offloaded to DB)
 const finalFeed = liveOpportunities.map(opp => {
-  const ageHrs = (Date.now() - opp.latestDateMs) / (1000 * 60 * 60);
+  const latestMs = opp.latestActivityMs || opp.scrapedAt?.getTime() || 0;
+  const ageHrs = (Date.now() - latestMs) / (1000 * 60 * 60);
   return {
     ...opp,
     ageHrs,
-    displayDate: formatRelativeTime(new Date(opp.latestDateMs))
+    effectiveTier: opp.tier, // Restore for legacy template check
+    displayDate: formatRelativeTime(new Date(latestMs))
   };
 });
 ---
