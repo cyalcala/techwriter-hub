@@ -4,6 +4,15 @@
 ## [2026-03-23] — [Opportunities: 291 | Agencies: 57]
 **Status: AUTO-PROCESSED**
 
+### 🛡️ Reliability & Fixes
+* fix: resolve routing 404 and timestamp staleness issues (1c3a7c0)
+
+---
+
+
+## [2026-03-23] — [Opportunities: 291 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
 ---
 
 
