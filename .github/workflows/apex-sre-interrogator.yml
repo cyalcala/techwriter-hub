@@ -1,0 +1,35 @@
+name: Apex SRE Interrogator
+
+on:
+  schedule:
+    # Runs at the top of every hour (e.g., 1:00, 2:00, 3:00)
+    - cron: '0 * * * *'
+  workflow_dispatch: 
+    # This allows you to manually click a "Run workflow" button in the GitHub UI
+
+jobs:
+  interrogate:
+    name: Run SLO Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 🛑 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🥟 Setup Bun Runtime
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: 📦 Install Dependencies
+        run: bun install
+
+      - name: ⚡ Execute Apex Interrogator
+        env:
+          # Mapping GitHub Secrets to the environment variables the script expects
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+          VERCEL_ACCESS_TOKEN: ${{ secrets.VERCEL_ACCESS_TOKEN }}
+          TRIGGER_API_KEY: ${{ secrets.TRIGGER_API_KEY }}
+          VERCEL_DEPLOY_WEBHOOK: ${{ secrets.VERCEL_DEPLOY_WEBHOOK }}
+        run: bun run scripts/apex-sre.ts
