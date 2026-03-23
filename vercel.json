@@ -1,8 +1,0 @@
-{
-  "rewrites": [
-    {
-      "source": "/api/control/:path*",
-      "destination": "/apps/control-plane/api/index.ts"
-    }
-  ]
-}

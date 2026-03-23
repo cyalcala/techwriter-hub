@@ -6,7 +6,10 @@ import api from './api.js';
 const app = new Hono();
 
 app.use('*', logger());
+app.route('/api/control', api);
 app.route('/api', api);
+app.route('/', api); // Catch-all for extra robustness if prefix is stripped
+
 
 app.get('/', (c) => {
   return c.html(

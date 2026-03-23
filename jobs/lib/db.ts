@@ -36,9 +36,11 @@ export const opportunities = sqliteTable('opportunities', {
   isActive: integer('is_active', { mode: 'boolean' }).default(true),
   tier: integer('tier').default(3),
   contentHash: text('content_hash'),
-  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch('now'))`),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()), // Millisecond precision
+  latestActivityMs: integer('latest_activity_ms').notNull().default(0),
 }, (table) => ({
   titleCompanyIdx: uniqueIndex('title_company_idx').on(table.title, table.company),
+  tierLatestIdx: uniqueIndex('tier_latest_idx').on(table.tier, table.latestActivityMs),
 }));
 
 export const systemHealth = sqliteTable('system_health', {

@@ -1,0 +1,8 @@
+node_modules
+.git
+.trigger
+.backups
+tmp
+dist
+build
+*.log

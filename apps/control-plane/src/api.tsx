@@ -11,6 +11,14 @@ configure({
   secretKey: process.env.TRIGGER_SECRET_KEY,
 });
 
+api.get('/debug', (c) => {
+  return c.json({
+    path: c.req.path,
+    url: c.req.url,
+    header_host: c.req.header('host'),
+  });
+});
+
 api.get('/feed', async (c) => {
   const now = Date.now();
   

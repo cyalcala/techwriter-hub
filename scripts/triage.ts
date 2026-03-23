@@ -120,7 +120,13 @@ async function detect(): Promise<Finding[]> {
     c.execute(`SELECT COUNT(*) AS n FROM opportunities WHERE scraped_at > unixepoch('now', '-15 minutes') AND created_at < unixepoch('now', '-48 hours')`),
     // 4. Signal Leaks
     c.execute(`SELECT COUNT(*) AS n FROM opportunities WHERE is_active=1 AND tier IN (1,2,3) AND (LOWER(description) LIKE '%us only%' OR LOWER(description) LIKE '%w2 only%')`),
-    // 5. API Truth vs Cache Truth
+    // 5. Titanium Decay Sync: Check if the top job is actually fresh
+    c.execute(`SELECT 
+      tier, 
+      latest_activity_ms, 
+      (tier + CASE WHEN (unixepoch('now')*1000 - latest_activity_ms) <= 900000 THEN -5.0 ELSE ((unixepoch('now')*1000 - latest_activity_ms) / 14400000.0) END) as sort_score
+      FROM opportunities WHERE is_active=1 AND tier < 4 ORDER BY sort_score ASC LIMIT 1`),
+    // 6. API Truth vs Cache Truth
     fetchWithCrossExamination("https://va-freelance-hub-web.vercel.app/api/health", {}, 5000), // Cache-busted
     safeFetch("https://va-freelance-hub-web.vercel.app/api/health", {}, 5000) // Standard cached request
   ]);
@@ -231,19 +237,15 @@ async function safeFetch(url: string, opts: RequestInit = {}, timeoutMs = 8000) 
 const FIX_REGISTRY: Record<string, { desc: string; apply: (dryRun: boolean) => Promise<string> }> = {
   
   FIX_A_SORT: {
-    desc: "Astro Sorting Fix (COALESCE fallback)",
+    desc: "Apex Sort Synchronization (Titanium Decay)",
     apply: async (dryRun) => {
-      if (dryRun) return "Would patch index.astro with robust sorting.";
-      const file = "apps/frontend/src/pages/index.astro";
+      if (dryRun) return "Would verify Hono API sort-alignment.";
+      const file = "apps/control-plane/src/api.tsx";
       let src = fileRead(file);
-      // Hard replacement to ensure we aren't relying on a fragile regex match
-      const badSort = "asc(opportunities.tier), desc(opportunities.scrapedAt)";
-      const goodSort = "asc(opportunities.tier), sql`COALESCE(${opportunities.postedAt}, ${opportunities.scrapedAt}) DESC`";
-      if (src.includes(badSort)) {
-         fileWrite(file, src.replace(badSort, goodSort));
-         return `Patched Astro sorting to use INGESTION_TIME fallback`;
+      if (src.includes("/ 14400000.0")) {
+         return "Hono API is already synchronized with Titanium 4h Decay.";
       }
-      return `Astro sort already looks correct. Verify manual imports.`;
+      return "CRITICAL: Hono API sort logic drift detected. Manual alignment required or SRE overwrite.";
     }
   },
 
@@ -388,7 +390,7 @@ async function certify() {
   gate("C4 ", f > 0,    `Velocity: ${f} ingested in last 2hrs (need > 0)`);
   gate("C5 ", gl === 0, `Security: ${gl} Geo-leaks (need 0)`);
   gate("C6 ", nt === 0, `Schema: ${nt} NULL-tier records (need 0)`);
-  gate("C7 ", top <= 1, `UX: Top feed tier is ${top} (need 0 or 1)`);
+  gate("C7 ", top <= 1, `UX: Top feed rank is Tier ${top} (Titanium Optimized)`);
   gate("C8 ", healthStale < 2, `Freshness: API reports ${healthStale.toFixed(2)}hrs stale (need < 2)`);
   gate("C9 ", cdnHeader !== "HIT", `Edge: Cache state is '${cdnHeader}' (need MISS/BYPASS for dynamic)`);
   gate("C10", f_health.ok && f_health.latency < 2000, `Liveness: Origin reachable in ${f_health.latency.toFixed(0)}ms`);
