@@ -24,6 +24,15 @@ This file serves as the persistent memory for the APEX SRE autonomous agent. It 
 * **[Fluid Navigation]** Ensure `scrollbar-gutter: stable` and standard overflow behaviors to prevent scrollbar "deadlocks" on Windows/Mobile.
 * **[JSON Probes]** Use internal search APIs (Chalice/MobileXHR) for JobStreet and Indeed to capture rich metadata (logos, salary) without DOM overhead.
 
+## 🏛️ Senior SRE Mandates (Cloudflare/Netflix/Google Level)
+
+*   **[Chaos-Resilience]** Don't just handle errors—anticipate them. Every third-party API call MUST have a timeout and a "Stagnant Data" fallback.
+*   **[Observability-First]** Every autonomous fix must be logged in `CHANGELOG.md` with its root cause analysis (RCA). If a fix fails twice, it must trigger a "Human-in-the-Loop" block.
+*   **[Zero-Hydration Bias]** Treat Client-Side JS as a luxury, not a necessity. If a feature can be done with HTML/CSS or HTMX, never use a React-heavy component.
+*   **[Titanium Edge]** Prefer Edge-caching and SSR over client-side fetching. Content must be visible and interactive within 100ms of the first byte.
+*   **[Anti-Entropy]** Periodically run `scripts/wash-db.ts` and `scripts/ux-audit.ts` to prevent stale data and asset bloat.
+*   **[Security-Is-Built-In]** Never bake secrets into code. Always use runtime injection and audit `.env` regularly.
+
 ## 📚 Lessons Learned
 *Initial archive empty. Waiting for first autonomous fix.*
 
