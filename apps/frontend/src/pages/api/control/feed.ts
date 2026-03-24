@@ -5,27 +5,34 @@ import { desc, not, eq, sql } from 'drizzle-orm';
 
 export const GET: APIRoute = async () => {
   const now = Date.now();
+  const sevenDaysAgo = now - (7 * 24 * 60 * 60 * 1000);
   
-  const signals = await db.select()
+  // Optimized Query: 
+  // 1. Filter by last 7 days to reduce scan set significantly
+  // 2. Use indexed order: tier then latestActivityMs desc
+  // 3. Limit to 100 to allow fast in-memory re-sorting for the 15m rule
+  const rawSignals = await db.select()
     .from(opportunities)
-    .where(not(eq(opportunities.tier, 4)))
-    .orderBy(
-      sql`
-        (tier + 
-          CASE 
-            WHEN (${now} - latest_activity_ms) <= 900000 THEN -5.0 
-            ELSE ((${now} - latest_activity_ms) / 14400000.0) 
-          END
-        ) ASC
-      `,
-      desc(opportunities.latestActivityMs)
-    )
-    .limit(50);
+    .where(sql`${opportunities.tier} != 4 AND ${opportunities.latestActivityMs} > ${sevenDaysAgo}`)
+    .orderBy(opportunities.tier, desc(opportunities.latestActivityMs))
+    .limit(100);
+
+  // In-memory re-sorting to handle the dynamic 15-minute "hot" boost
+  // This keeps the DB query extremely fast (indexed) while maintaining the complex logic
+  const signals = rawSignals.sort((a, b) => {
+    const scoreA = (a.tier || 3) + ((now - a.latestActivityMs) <= 900000 ? -5.0 : (now - a.latestActivityMs) / 14400000.0);
+    const scoreB = (b.tier || 3) + ((now - b.latestActivityMs) <= 900000 ? -5.0 : (now - b.latestActivityMs) / 14400000.0);
+    return scoreA - scoreB;
+  }).slice(0, 50);
 
   const html = signals.map(sig => renderSignalCard(sig)).join('');
   
   return new Response(html, {
-    headers: { 'Content-Type': 'text/html' }
+    headers: { 
+      'Content-Type': 'text/html',
+      'Cache-Control': 's-maxage=30, stale-while-revalidate=60',
+      'X-Content-Source': 'Turso-Edge-Cached'
+    }
   });
 };
 

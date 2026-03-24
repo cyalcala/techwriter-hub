@@ -1,6 +1,8 @@
 ---
-import Layout from '../layouts/Layout.astro';
 export const prerender = false;
+// Cache busted by Triage Script
+import Layout from '../layouts/Layout.astro';
+export const prerender = true;
 // Feed logic offloaded to Hono/HTMX for superior performance
 ---
 

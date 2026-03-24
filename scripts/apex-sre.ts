@@ -84,6 +84,21 @@ async function updateChangelog(protocol: FixProtocol) {
   writeFileSync(changelogPath, content);
 }
 
+async function updateWisdom(protocol: FixProtocol) {
+  const wisdomPath = "docs/SRE_WISDOM.md";
+  if (!existsSync(wisdomPath) || !protocol.wisdom) return;
+
+  const date = new Date().toISOString().split('T')[0];
+  const wisdomEntry = `\n- [${date}] ${protocol.wisdom}`;
+
+  let content = readFileSync(wisdomPath, "utf8");
+  if (content.includes("## 📚 Lessons Learned")) {
+    content = content.replace("## 📚 Lessons Learned", "## 📚 Lessons Learned" + wisdomEntry);
+    writeFileSync(wisdomPath, content);
+    console.log("🧠 Wisdom bank updated with new lesson.");
+  }
+}
+
 async function runSreSuite() {
   console.log("\n🚀 Starting Apex SRE Interrogator Suite [AGENTIC MODE]...");
   const startTime = Date.now();
@@ -166,6 +181,7 @@ async function runSreSuite() {
       if (simOutput.includes("ALL GATES PASSED")) {
         console.log("✅ AI Fix Verified! Pushing to repository...");
         await updateChangelog(protocol);
+        await updateWisdom(protocol);
         
         // Literal Commit & Push
         await $`git config user.name "Apex Sentinel"`.quiet();

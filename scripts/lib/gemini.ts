@@ -1,3 +1,5 @@
+import { readFileSync } from "fs";
+
 /**
  * Apex SRE Gemini AI Bridge
  * Interfaces with Google AI Studio (Gemini 1.5 Flash) for autonomous reasoning.
@@ -14,6 +16,7 @@ export interface FixProtocol {
   action: "PATCH_CODE" | "REDEPLOY" | "RESTART_JOBS" | "ALERT_HUMAN";
   patches?: { path: string; content: string }[];
   explanation: string;
+  wisdom?: string; // NEW: Lesson learned to be stored in SRE_WISDOM.md
 }
 
 export async function askGemini(errorContext: string, codebaseContext: string): Promise<FixProtocol> {
@@ -25,6 +28,9 @@ export async function askGemini(errorContext: string, codebaseContext: string): 
 YOU ARE THE APEX SRE SENTINEL. YOUR MISSION IS TO MAINTAIN THE VA-FREELANCE-HUB AT $0 COST.
 YOU HAVE A "TITANIUM" ARCHITECTURAL BIAS: STICK TO THE GUARDRAILS IN THE ARCHITECTURE.MD.
 
+### SRE WISDOM (PAST LESSONS):
+${readFileSync("docs/SRE_WISDOM.md", "utf8")}
+
 ### CURRENT SYSTEM FAILURE:
 ${errorContext}
 
@@ -32,18 +38,20 @@ ${errorContext}
 ${codebaseContext}
 
 ### YOUR INSTRUCTIONS:
-1. ANALYZE THE ERROR AGAINST THE CODEBASE.
+1. ANALYZE THE ERROR AGAINST THE CODEBASE AND PAST WISDOM.
 2. **REFLECT**: CROSS-EXAMINE THE PROPOSED FIX AGAINST ARCHITECTURE.MD. DOES IT VIOLATE SIMD PURITY, $0 COST, OR SSR PRINCIPLES?
 3. **CONSERVATIVE BIAS**: IF TWO FIXES ARE POSSIBLE, YOU MUST CHOOSE THE ONE WITH THE FEWEST LINES OF CODE CHANGED.
 4. PROVIDE A STRATEGIC, MINIMAL FIX THAT STAYS WITHIN THE FREE TIER.
 5. IF YOU ARE UNSURE OR IF THE FIX REQUIRES $>5$ LINES OF COMPLEX LOGIC, CHOOSE "ALERT_HUMAN".
-6. RESPOND ONLY WITH A VALID JSON OBJECT IN THIS FORMAT:
+6. **LEARNING**: IN THE "wisdom" FIELD, PROVIDE A ONE-SENTENCE LESSON LEARNED FROM THIS FIX FOR FUTURE REFERENCE.
+7. RESPOND ONLY WITH A VALID JSON OBJECT IN THIS FORMAT:
 {
   "analysis": "Brief analysis of root cause",
   "confidence": 95,
   "action": "PATCH_CODE",
   "patches": [{ "path": "path/to/file.ts", "content": "Full new content" }],
-  "explanation": "Why this fix works, how it respects Architecture.md, and confirmation of minimal line count."
+  "explanation": "Why this fix works, how it respects Architecture.md, and confirmation of minimal line count.",
+  "wisdom": "Bullet point lesson: [Category] Action taken and why."
 }
 `;
 

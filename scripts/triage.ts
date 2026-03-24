@@ -153,7 +153,17 @@ async function detect(): Promise<Finding[]> {
 
   if (findings.length === 0) {
     console.log(pass("Zero-Trust Validation passed."));
-    return [];
+  }
+
+  // --- PERFORMANCE AUDIT (NEW) ---
+  const perfHealth = f_healthBusted.status === "fulfilled" ? f_healthBusted.value.latency : 9999;
+  const perfFeed = f_feedBusted.status === "fulfilled" ? f_feedBusted.value.latency : 9999;
+  
+  if (perfHealth > 800) {
+    findings.push({ id: "PERF_LATENCY_HEALTH", confidence: 80, description: `API Health latency is high (${perfHealth.toFixed(0)}ms).`, evidence: `Threshold: 800ms`, fixKey: "FIX_B_CACHE" });
+  }
+  if (perfFeed > 2000) {
+    findings.push({ id: "PERF_LATENCY_FEED", confidence: 70, description: `Feed latency is high (${perfFeed.toFixed(0)}ms).`, evidence: `Threshold: 2000ms`, fixKey: "FIX_B_CACHE" });
   }
 
   findings.sort((a, b) => b.confidence - a.confidence);
@@ -300,6 +310,10 @@ async function certify() {
   gate("C4 ", f > 0,    `Velocity: ${f} fresh records (ms calibrated)`);
   gate("C5 ", gl === 0, `Security: ${gl} Geo-leaks`);
   gate("C7 ", top <= 1, `UX: Top feed rank is Tier ${top}`);
+  
+  const perfHealth = f_health.latency;
+  gate("C9 ", perfHealth < 1000, `Speed: API Health responded in ${perfHealth.toFixed(0)}ms`);
+  
   gate("C8 ", healthStale < 2, `Freshness: API reports ${healthStale.toFixed(2)}hrs stale`);
   gate("C11", f_health.ok && f_health.text.includes("HEALTHY"), "System: Health Check reported 'HEALTHY'");
   

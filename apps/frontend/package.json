@@ -12,6 +12,7 @@
     "astro": "astro"
   },
   "dependencies": {
+    "@astrojs/tailwind": "latest",
     "@astrojs/vercel": "latest",
     "@libsql/client": "latest",
     "@tailwindcss/vite": "^4.2.1",
