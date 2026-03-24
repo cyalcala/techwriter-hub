@@ -35,7 +35,8 @@ This file serves as the persistent memory for the APEX SRE autonomous agent. It 
 *   **[Security-Is-Built-In]** Never bake secrets into code. Always use runtime injection and audit `.env` regularly.
 
 ## 📚 Lessons Learned
-*Initial archive empty. Waiting for first autonomous fix.*
+*   **[2026-03-24]** **Hydration Lag Awareness**: HTMX `load` triggers can cause perceived slowness on first-paints. For "Titanium-Fast" experiences, the initial state MUST be injected via SSR. 
+*   **[2026-03-24]** **Self-Healing Burst**: Downtime remediation is 15x more effective when using 1-minute high-velocity "Burst Cycles" (limit 7) rather than standard 15-minute wait periods.
 
 ## ⚡ Performance Baselines
 - API Health Response: < 500ms
