@@ -7,18 +7,49 @@ import { getSortedSignals } from '../db-local/sorting';
 
 // Lightning-Fast Feed Logic: SSR the first 50 results immediately.
 let initialSignals = [];
+let dbError = null;
+
 try {
+  // Check for critical secrets before querying
+  if (!process.env.TURSO_DATABASE_URL) {
+    throw new Error("TURSO_DATABASE_URL_MISSING");
+  }
+
   initialSignals = await getSortedSignals(50);
+  
+  // High-Performance Retry: If primary feed is filtered to zero, pull absolute latest records
+  if (initialSignals.length === 0) {
+    console.warn("[index] Primary feed empty, attempting wide-open fetch...");
+    const { getLatestMirror } = await import('../db-local/sorting');
+    initialSignals = await getLatestMirror(50);
+  }
+
   // [Snap-Fast] Edge Caching: Cache the entire SSR output for 15s
   Astro.response.headers.set('Cache-Control', 'public, max-age=15, s-max-age=15');
-} catch (err) {
-  console.error("[index] Feed error:", err);
+} catch (err: any) {
+  dbError = err.message;
+  console.error("[index] SSR Data Error:", err);
 }
 ---
 
 <Layout title="Feed | VA.INDEX">
   <main class="max-w-[1200px] mx-auto px-6 py-12">
     <header class="mb-16">
+      {dbError && (
+        <div class="mb-12 p-6 bg-red-50 border-4 border-red-500 rounded-3xl animate-pulse">
+          <div class="flex items-center gap-4">
+            <div class="h-4 w-4 rounded-full bg-red-500 animate-ping"></div>
+            <h2 class="text-xl font-black text-red-900 uppercase tracking-tighter">
+              Mission Critical: Database Disconnected
+            </h2>
+          </div>
+          <p class="mt-2 text-red-800/70 font-bold uppercase text-xs tracking-widest leading-relaxed">
+            The frontend engine cannot reach Turso. ERROR: {dbError}. 
+            Action Required: Ensure TURSO_DATABASE_URL is set in Vercel Project Settings.
+          </p>
+        </div>
+      )}
+
       <div class="flex items-center gap-2 mb-6 group cursor-default">
         <div class="pulse-dot"></div>
         <span class="text-[10px] font-black text-blueberry-500 tracking-[0.2em] uppercase transition-all group-hover:tracking-[0.4em]">LIVE SIGNAL FEED</span>

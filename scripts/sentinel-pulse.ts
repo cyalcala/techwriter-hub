@@ -13,8 +13,16 @@ async function pulse() {
   try {
     // 1. Deterministic Health Audit
     console.log("\n--- [PHASE 1] DETERMINISTIC AUDIT ---");
-    const triage = await $`bun run scripts/triage.ts --certify`.quiet();
-    console.log(triage.stdout.toString());
+    const triageStatus = await $`bun run scripts/triage.ts --certify`.quiet();
+    const triageOutput = triageStatus.stdout.toString();
+    console.log(triageOutput);
+
+    // 1b. Automatic Recovery: If freshness or velocity failed, trigger harvest
+    if (triageOutput.includes("❌ C4") || triageOutput.includes("❌ C8")) {
+      console.log("\n⚠️ STALE DATA DETECTED: Initiating Recovery Harvest...");
+      await $`bun run jobs/scrape-opportunities.ts`.quiet();
+      console.log("✅ RECOVERY COMPLETE: Database populated with fresh signals.");
+    }
 
     // 2. Agentic Reasoning Dry-Run
     console.log("\n --- [PHASE 2] AGENTIC REASONING DRY-RUN ---");
