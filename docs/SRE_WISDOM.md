@@ -7,6 +7,7 @@ This file serves as the persistent memory for the APEX SRE autonomous agent. It 
 - Titanium-grade reliability.
 - Conservative but decisive remediation.
 - 15-minute evolution cycles for rapid learning.
+- **Hono/Preact Purity**: Leverage Hono Middleware for edge-side instrumentation and Preact/JSX for ultra-thin interactive layers.
 
 ## 📚 Lessons Learned
 *Initial archive empty. Waiting for first autonomous fix.*
@@ -18,3 +19,5 @@ This file serves as the persistent memory for the APEX SRE autonomous agent. It 
 ## 🛠️ Known Anti-Patterns
 - Avoid complex regex in hot paths.
 - Do not bypass Tiering logic for "speed" fixes.
+- **Hono/HTMX**: Do not return full HTML layouts for partial `hx-get` requests; use `<>` fragments or specific components to minimize payload size.
+- **Preact/JSX**: Ensure keys are unique in lists to prevent reconciliation death-spirals.

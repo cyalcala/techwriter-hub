@@ -99,7 +99,7 @@ async function detect(): Promise<Finding[]> {
 
   const [
     r_timeSync, r_velocity, r_pollution, r_geoLeaks, r_topSort,
-    f_healthBusted, f_feedBusted, f_healthCached
+    f_healthBusted, f_feedBusted, f_pulseBusted, f_healthCached
   ] = await Promise.allSettled([
     c.execute(`SELECT 
       COUNT(CASE WHEN scraped_at < 9999999999 THEN 1 END) AS ms_drift, 
@@ -119,6 +119,7 @@ async function detect(): Promise<Finding[]> {
       FROM opportunities WHERE is_active=1 AND tier < 4 ORDER BY sort_score ASC LIMIT 1`),
     fetchWithCrossExamination("https://va-freelance-hub-web.vercel.app/api/health", {}, 5000),
     fetchWithCrossExamination("https://va-freelance-hub-web.vercel.app/api/control/feed", {}, 8000),
+    fetchWithCrossExamination("https://va-freelance-hub-web.vercel.app/api/pulse", {}, 5000), // NEW: Hono Pulse
     safeFetch("https://va-freelance-hub-web.vercel.app/api/health", {}, 5000)
   ]);
 
@@ -158,12 +159,21 @@ async function detect(): Promise<Finding[]> {
   // --- PERFORMANCE AUDIT (NEW) ---
   const perfHealth = f_healthBusted.status === "fulfilled" ? f_healthBusted.value.latency : 9999;
   const perfFeed = f_feedBusted.status === "fulfilled" ? f_feedBusted.value.latency : 9999;
+  const perfPulse = f_pulseBusted.status === "fulfilled" ? f_pulseBusted.value.latency : 9999;
   
   if (perfHealth > 800) {
     findings.push({ id: "PERF_LATENCY_HEALTH", confidence: 80, description: `API Health latency is high (${perfHealth.toFixed(0)}ms).`, evidence: `Threshold: 800ms`, fixKey: "FIX_B_CACHE" });
   }
   if (perfFeed > 2000) {
     findings.push({ id: "PERF_LATENCY_FEED", confidence: 70, description: `Feed latency is high (${perfFeed.toFixed(0)}ms).`, evidence: `Threshold: 2000ms`, fixKey: "FIX_B_CACHE" });
+  }
+  if (perfPulse > 1500) {
+    findings.push({ id: "PERF_LATENCY_PULSE", confidence: 75, description: `Hono Pulse latency is high (${perfPulse.toFixed(0)}ms).`, evidence: `Threshold: 1500ms`, fixKey: "FIX_B_CACHE" });
+  }
+  
+  // --- HONO/HTMX INTEGRITY ---
+  if (f_pulseBusted.status === "fulfilled" && f_pulseBusted.value.text.includes("pulse disconnected")) {
+    findings.push({ id: "HONO_PULSE_FAILED", confidence: 98, description: `Control Plane Pulse is disconnected.`, evidence: `Response: pulse disconnected`, fixKey: "FIX_D_TRIGGER" });
   }
 
   findings.sort((a, b) => b.confidence - a.confidence);
