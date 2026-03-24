@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/api/control/(.*)", "destination": "https://va-freelance-hub-control-plane.vercel.app/api/$1" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

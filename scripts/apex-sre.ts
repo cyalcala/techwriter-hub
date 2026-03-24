@@ -161,6 +161,31 @@ async function runSreSuite() {
   }
 
   try {
+    // 0. PHASE 0: HYPERHEALTH PROBE (The "Senior SRE" Pulse)
+    console.log("\n--- [PHASE 0] HYPERHEALTH PROBE ---");
+    try {
+      await $`bun run scripts/health-check.ts`.quiet();
+    } catch (err: any) {
+      console.error("🚨 RED ALERT: Hyperhealth Check Failed. Initiating Emergency Remediation...");
+      
+      // Autonomous Remediation: Rollback if the last commit was recent (< 30 mins)
+      const lastCommitTime = await $`git log -1 --format=%ct`.quiet();
+      const nowSec = Math.floor(Date.now() / 1000);
+      if (nowSec - Number(lastCommitTime.stdout.toString().trim()) < 1800) {
+        console.warn("⚠️  Downtime detected post-deployment. Executing Automated Rollback...");
+        await $`git revert HEAD --no-edit`.quiet();
+        await $`git push origin main`.quiet();
+        console.log("✅ Rollback pushed. Waiting for redeploy...");
+        process.exit(0);
+      }
+
+      // If not recent, trigger a standard redeploy
+      if (process.env.VERCEL_DEPLOY_WEBHOOK) {
+        await fetch(process.env.VERCEL_DEPLOY_WEBHOOK, { method: "POST" });
+        console.log("✅ Emergency redeploy triggered via Webhook.");
+      }
+    }
+
     // 1. PHASE 1: STANDARD TRIAGE (Deterministic)
     console.log("\n--- [PHASE 1] DETERMINISTIC INTERROGATION ---");
     const detectResult = await $`bun run scripts/triage.ts --detect`.quiet();

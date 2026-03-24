@@ -14,7 +14,7 @@
   "dependencies": {
     "@astrojs/node": "^10.0.3",
     "@astrojs/tailwind": "latest",
-    "@astrojs/vercel": "latest",
+    "@astrojs/vercel": "^10.0.2",
     "@libsql/client": "latest",
     "@tailwindcss/vite": "^4.2.1",
     "astro": "^6.0.5",
