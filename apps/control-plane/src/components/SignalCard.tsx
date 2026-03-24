@@ -42,13 +42,17 @@ export const SignalCard = ({ signal }: { signal: any }) => {
 };
 
 function formatRelativeTime(dateInput: Date | null) {
-  if (!dateInput) return 'Just Now';
+  if (!dateInput) return 'New Signal';
   const now = new Date();
   const date = new Date(dateInput);
   const diffMs = now.getTime() - date.getTime();
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
   
-  if (diffMs < 3600000) return 'Just Now'; // < 1 hour
+  if (diffMs < 60000) return 'Seconds ago';
+  
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 60) return `${diffMins}m ago`;
+  
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
   if (diffHours < 24) return `${diffHours}h ago`;
   
   const diffDays = Math.floor(diffHours / 24);

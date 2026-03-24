@@ -9,6 +9,9 @@ This file serves as the persistent memory for the APEX SRE autonomous agent. It 
 - 15-minute evolution cycles for rapid learning.
 - **Hono/Preact Purity**: Leverage Hono Middleware for edge-side instrumentation and Preact/JSX for ultra-thin interactive layers.
 - **Meta-SRE Philosophy**: The Sentinel is authorized and expected to rewrite its own monitoring logic, prompts, and performance gates to improve its effectiveness with every run.
+* **[Performance]** Avoid complex SQL `ORDER BY` calculations on hot paths; fetch a pool and sort in-memory for O(N log N) speed.
+* **[Freshness]** Never use `unixepoch()` without `* 1000` if the system expects milliseconds; mixed units cause "Epoch Drift" corruption.
+* **[Astro]** Conflicting `prerender` flags can cause Vercel to serve stale static content; ensure SSR is explicitly set for dynamic feeds.
 
 ## 📚 Lessons Learned
 *Initial archive empty. Waiting for first autonomous fix.*

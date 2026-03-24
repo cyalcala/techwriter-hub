@@ -1,9 +1,7 @@
 ---
 export const prerender = false;
-// Cache busted by Triage Script
+// Freshness priority: SSR enabled to ensure real-time "minutes ago" syncing.
 import Layout from '../layouts/Layout.astro';
-export const prerender = true;
-// Feed logic offloaded to Hono/HTMX for superior performance
 ---
 
 <Layout title="Feed | VA.INDEX">

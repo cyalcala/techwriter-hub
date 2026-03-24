@@ -22,25 +22,26 @@ api.get('/debug', (c) => {
 api.get('/feed', async (c) => {
   const now = Date.now();
   
-  // Debug Step: Count
-  const countResult = await db.select({ count: sql`count(*)` }).from(schema.opportunities);
-  console.log(`[api] Harvesting data check: Found ${countResult[0]?.count || 0} total records.`);
-
-  const signals = await db.select()
+  // 1. Fetch top candidates across all tiers using indexed fields
+  // We fetch a larger pool (200) then sort in-memory for the decay algorithm
+  const candidates = await db.select()
     .from(schema.opportunities)
     .where(not(eq(schema.opportunities.tier, 4)))
-    .orderBy(
-      sql`
-        (tier + 
-          CASE 
-            WHEN (${now} - latest_activity_ms) <= 900000 THEN -5.0 
-            ELSE ((${now} - latest_activity_ms) / 14400000.0) 
-          END
-        ) ASC
-      `,
-      desc(schema.opportunities.latestActivityMs)
-    )
-    .limit(50);
+    .orderBy(desc(schema.opportunities.latestActivityMs))
+    .limit(200);
+
+  // 2. Perform the complex time-decay ranking in-memory (O(N log N) for small N is cheap)
+  const signals = candidates
+    .map(sig => {
+      const ageMs = now - (sig.latestActivityMs || 0);
+      const score = (sig.tier || 3) + (ageMs <= 900000 ? -5.0 : ageMs / 14400000.0);
+      return { ...sig, sortScore: score };
+    })
+    .sort((a, b) => a.sortScore - b.sortScore)
+    .slice(0, 50);
+
+  // 3. Set Cache-Control for performance
+  c.header('Cache-Control', 'public, max-age=60, s-max-age=60, stale-while-revalidate=30');
 
   return c.html(
     <>

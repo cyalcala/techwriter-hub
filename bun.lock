@@ -7,6 +7,7 @@
       "dependencies": {
         "@libsql/client": "latest",
         "@trigger.dev/sdk": "4.4.3",
+        "dotenv": "^17.3.1",
         "drizzle-orm": "latest",
         "fast-xml-parser": "^5.5.6",
       },
