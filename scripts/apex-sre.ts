@@ -172,11 +172,20 @@ async function runSreSuite() {
       await $`bun run scripts/triage.ts --fix`.quiet();
     }
 
-    // 2. PHASE 2: CERTIFICATION CHECK
-    console.log("\n--- [PHASE 3] CERTIFICATION GATE ---");
+    // 2. PHASE 2: CERTIFICATION & BUILD GATE
+    console.log("\n--- [PHASE 3] CERTIFICATION & BUILD GATE ---");
+    
+    // Check deterministic gates
     const certifyResult = await $`bun run scripts/triage.ts --certify`.quiet();
     const certOutput = certifyResult.stdout.toString();
     console.log(certOutput);
+
+    // Check build stability (The "Anti-Stupidity" Guardrail)
+    const buildResult = await $`bun run scripts/check-build.ts`.quiet();
+    if (buildResult.exitCode !== 0) {
+      console.error("❌ BUILD GATE FAILED: Code is not mission-ready. Aborting.");
+      process.exit(1);
+    }
 
     if (certOutput.includes("ALL GATES PASSED")) {
       console.log(`\n🎉 System is HEALTHY. Suite completed in ${((Date.now() - startTime) / 1000).toFixed(2)}s.`);
