@@ -98,7 +98,7 @@ async function detect(): Promise<Finding[]> {
   const c = db();
 
   const [
-    r_timeSync, r_velocity, r_pollution, r_geoLeaks, r_topSort,
+    r_timeSync, r_velocity, r_pollution, r_geoLeaks, r_topSort, r_vitals,
     f_healthBusted, f_feedBusted, f_pulseBusted, f_healthCached
   ] = await Promise.allSettled([
     c.execute(`SELECT 
@@ -117,6 +117,7 @@ async function detect(): Promise<Finding[]> {
       latest_activity_ms, 
       (tier + CASE WHEN (unixepoch('now')*1000 - latest_activity_ms) <= 900000 THEN -5.0 ELSE ((unixepoch('now')*1000 - latest_activity_ms) / 14400000.0) END) as sort_score
       FROM opportunities WHERE is_active=1 AND tier < 4 ORDER BY sort_score ASC LIMIT 1`),
+    c.execute(`SELECT ai_quota_count FROM vitals WHERE id = 'apex_sre'`), // NEW: SRE Quota Check
     fetchWithCrossExamination("https://va-freelance-hub-web.vercel.app/api/health", {}, 5000),
     fetchWithCrossExamination("https://va-freelance-hub-web.vercel.app/api/control/feed", {}, 8000),
     fetchWithCrossExamination("https://va-freelance-hub-web.vercel.app/api/pulse", {}, 5000), // NEW: Hono Pulse
@@ -171,9 +172,16 @@ async function detect(): Promise<Finding[]> {
     findings.push({ id: "PERF_LATENCY_PULSE", confidence: 75, description: `Hono Pulse latency is high (${perfPulse.toFixed(0)}ms).`, evidence: `Threshold: 1500ms`, fixKey: "FIX_B_CACHE" });
   }
   
-  // --- HONO/HTMX INTEGRITY ---
   if (f_pulseBusted.status === "fulfilled" && f_pulseBusted.value.text.includes("pulse disconnected")) {
     findings.push({ id: "HONO_PULSE_FAILED", confidence: 98, description: `Control Plane Pulse is disconnected.`, evidence: `Response: pulse disconnected`, fixKey: "FIX_D_TRIGGER" });
+  }
+
+  // --- SRE SELF-AUDIT (NEW) ---
+  if (r_vitals.status === "fulfilled") {
+    const quota = Number((r_vitals.value.rows[0] as any)?.ai_quota_count ?? 0);
+    if (quota > 8) {
+      findings.push({ id: "SRE_QUOTA_FATIGUE", confidence: 90, description: `SRE is approaching daily AI limit (${quota}/10).`, evidence: `High AI burn rate detected.`, fixKey: null });
+    }
   }
 
   findings.sort((a, b) => b.confidence - a.confidence);
