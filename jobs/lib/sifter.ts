@@ -30,6 +30,15 @@ const GEO_EXCLUSION_KILLS = [
   "eastern time zone","pacific time zone","central time zone","mountain time zone",
 ];
 
+const TITLE_GEO_KILLS = [
+  "united states", " u.s.", " us ", " usa ", "uk only", " u.k.", " canada", 
+  " australia", " europe", " germany", " france", " netherlands", " sweden", 
+  " norway", " denmark", " finland", " ireland", " switzerland", " austria", 
+  " belgium", " spain", " italy", " portugal", " greece", " israel", 
+  " north america", " south america", " emea", " apac only", " latam",
+  "united kingdom", "london-based", "ny-based", "sf-based", "la-based",
+];
+
 const LANGUAGE_KILLS = [
   "japanese speaker","french speaker","german speaker","spanish speaker",
   "bilingual spanish","bilingual french","bilingual japanese","mandarin",
@@ -151,6 +160,7 @@ export function siftOpportunity(title: string, description: string, sourcePlatfo
   const body = `${t} ${d}`;
 
   // 1. HARD KILLS (Region/Language/Executive/PH-Negative Companies) - Highest Precedence
+  for (const k of TITLE_GEO_KILLS) if (t.includes(k) && !PLATINUM_DIRECT.some(s => t.includes(s))) return OpportunityTier.TRASH;
   for (const k of GEO_EXCLUSION_KILLS) if (body.includes(k)) return OpportunityTier.TRASH;
   for (const k of LANGUAGE_KILLS) if (t.includes(k)) return OpportunityTier.TRASH;
   

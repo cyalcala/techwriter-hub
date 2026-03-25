@@ -53,9 +53,9 @@ export async function harvest() {
   console.log("[harvest] Layer 2: Reddit JSON...");
   const redditItems = await fetchRedditJobs();
 
-  // ── LAYER 3: Hacker News API ────────────────────────────
-  console.log("[harvest] Layer 3: Hacker News API...");
-  const hnItems = await fetchHNJobs();
+  // ── LAYER 3: Hacker News API (DISABLED DISRUPTIVE NOISE) ──────
+  // const hnItems = await fetchHNJobs();
+  const hnItems: any[] = [];
 
   // ── LAYER 4: Jobicy REST API ────────────────────────────
   console.log("[harvest] Layer 4: Jobicy API...");
