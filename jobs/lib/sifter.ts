@@ -19,9 +19,15 @@ const GEO_EXCLUSION_KILLS = [
   "emea only","emea-based","north america only",
   "canada only","must be in canada","australia only","must be in australia",
   "must have right to work in australia","new zealand only",
-  "must be in new york","must be in california",
+  "must be in new york","must be in california","must be in portland","must be in atlanta",
+  "must be in chicago","must be in austin","must be in seattle","must be in boston",
+  "must be in dallas","must be in denver","must be in phoenix",
   "must be in london","must be in toronto",
   "dach","nordics","benelux","latam only","south america only",
+  "(portland)","(atlanta)","(chicago)","(austin)","(seattle)","(boston)",
+  "est time zone","pst time zone","cst time zone","mst time zone",
+  "et time zone","pt time zone","ct time zone","mt time zone",
+  "eastern time zone","pacific time zone","central time zone","mountain time zone",
 ];
 
 const LANGUAGE_KILLS = [
@@ -29,6 +35,7 @@ const LANGUAGE_KILLS = [
   "bilingual spanish","bilingual french","bilingual japanese","mandarin",
   "cantonese","korean speaker","portuguese speaker","italian speaker",
   "dutch speaker","scandinavian speaker","fluent in spanish","fluent in french",
+  "kannada","telugu","tamil","hindi","bengali",
 ];
 
 const TECH_HARD_KILLS = [
@@ -43,6 +50,7 @@ const TECH_HARD_KILLS = [
   "blockchain developer","smart contract","embedded systems","firmware engineer",
   "computer vision","nlp engineer","quant developer","quantitative analyst",
   "systems administrator"," programmer"," coder","scientist",
+  "technical lead","tech lead","lead engineer","lead developer","architecture lead",
 ];
 
 const TECH_CONTEXT_KILLS = [" developer"," engineer"," architect"];
@@ -142,10 +150,14 @@ export function siftOpportunity(title: string, description: string, sourcePlatfo
   const sp = (sourcePlatform || "").toLowerCase();
   const body = `${t} ${d}`;
 
-  // 1. HARD KILLS (Region/Language/Executive) - Highest Precedence
+  // 1. HARD KILLS (Region/Language/Executive/PH-Negative Companies) - Highest Precedence
   for (const k of GEO_EXCLUSION_KILLS) if (body.includes(k)) return OpportunityTier.TRASH;
   for (const k of LANGUAGE_KILLS) if (t.includes(k)) return OpportunityTier.TRASH;
   
+  // PH-Negative or Too-Corporate Companies
+  const COMPANY_KILLS = ["canonical", "gitlab", "ge healthcare", "nextiva"];
+  for (const k of COMPANY_KILLS) if (body.includes(k) && !PLATINUM_DIRECT.some(s => body.includes(s))) return OpportunityTier.TRASH;
+
   // High-level Corporate Kills
   const CORP_KILLS = [
     "chief executive","chief technology","chief operating","chief financial",
@@ -153,6 +165,9 @@ export function siftOpportunity(title: string, description: string, sourcePlatfo
     "vice president"," vp of"," svp"," evp","managing director",
     "director of ","head of ","senior director","associate director",
     "principal engineer","staff engineer",
+    "revenue operations","business operations manager","strategy manager",
+    "sales operations","enterprise customer success","enterprise account",
+    "enterprise sales","enterprise support manager",
   ];
   for (const k of CORP_KILLS) if (t.includes(k)) return OpportunityTier.TRASH;
 

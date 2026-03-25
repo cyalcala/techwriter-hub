@@ -1,4 +1,18 @@
-# Internal Engineering Changelog
+## [2026-03-25] — [Opportunities: 314 | Agencies: 57]
+**Status: SYSTEM EVOLVED — GLOWING & SNAPSHOTTED**
+
+### ✨ Major Features
+- feat: implement **Glowing "Ultra Fresh" Banner** in `SignalCard.astro` for signals < 1h old
+- feat: implement **VA.INDEX Time Machine** (15m automated snapshots via Trigger.dev)
+- feat: implement **Real-Time Terminal (`/logs`)** for system transparency and heartbeat
+- feat: implement **Stability Guardrails (`STABILITY.md`)** for engineering health
+
+### 🛡️ Reliability & Fixes
+- fix: hardened sifter to exclude "scientist" and high-level corporate roles
+- fix: implemented `logger.ts` for database-backed agent telemetry
+- fix: synchronized local and remote state with fallback-safe architecture
+
+---
 
 
 ## [2026-03-25] — [Opportunities: 314 | Agencies: 57]

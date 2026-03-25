@@ -12,8 +12,7 @@ async function reSiftAll() {
   let updated = 0;
   for (const opp of allOpps) {
     const newTier = siftOpportunity(
-      opp.title || "",
-      opp.company || "",
+      `${opp.title} (${opp.company})`,
       opp.description || "",
       opp.sourcePlatform || ""
     );
