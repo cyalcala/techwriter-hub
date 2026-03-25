@@ -53,11 +53,14 @@ export const systemHealth = sqliteTable('system_health', {
 });
 
 export const vitals = sqliteTable('vitals', {
-  id: text('id').primaryKey(), // 'apex_sre'
+  id: text('id').primaryKey(), // 'apex_sre', 'global_git_lock'
   aiQuotaCount: integer('ai_quota_count').default(0),
   aiQuotaDate: text('ai_quota_date'), // 'YYYY-MM-DD'
   lockStatus: text('lock_status').default('IDLE'), // 'IDLE' or 'RUNNING'
   lockUpdatedAt: integer('lock_updated_at', { mode: 'timestamp' }),
+  successiveFailureCount: integer('successive_failure_count').default(0),
+  lastErrorHash: text('last_error_hash'),
+  lastRecoveryAt: integer('last_recovery_at', { mode: 'timestamp' }),
 });
 
 export type Agency = typeof agencies.$inferSelect;

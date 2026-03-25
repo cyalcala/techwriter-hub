@@ -7,7 +7,7 @@ import { fetch } from "undici";
 async function checkHealth() {
   const urls = [
     "https://va-freelance-hub-web.vercel.app/",
-    "https://va-freelance-hub-web.vercel.app/api/control/mirror"
+    "https://va-freelance-hub-web.vercel.app/api/control/feed"
   ];
 
   console.log("🕵️  Sentinel Health Check: Probing 'Titanium' Reliability...");

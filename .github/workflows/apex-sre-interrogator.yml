@@ -38,4 +38,5 @@ jobs:
           TRIGGER_API_KEY: ${{ secrets.TRIGGER_API_KEY }}
           VERCEL_DEPLOY_WEBHOOK: ${{ secrets.VERCEL_DEPLOY_WEBHOOK }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GITHUB_PAT: ${{ secrets.GITHUB_PAT }}
         run: bun run scripts/apex-sre.ts

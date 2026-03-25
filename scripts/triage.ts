@@ -356,8 +356,10 @@ async function certify() {
   
   if (v > 200 && p >= 5 && f > 0 && gl === 0 && top <= 1 && healthStale < 2 && f_health.ok) {
     console.log(pass("\nALL GATES PASSED. System is truly healthy."));
+    process.exit(0);
   } else {
     console.log(fail("\nGATES FAILED."));
+    process.exit(1);
   }
 }
 

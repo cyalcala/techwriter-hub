@@ -14,7 +14,8 @@ const client = createClient({
 const db = drizzle(client);
 
 console.log("Running migrations...");
-await migrate(db, { migrationsFolder: "./migrations" });
+const migrationsPath = resolve(__dirname, "./migrations");
+await migrate(db, { migrationsFolder: migrationsPath });
 console.log("Migrations complete.");
 
 client.close();

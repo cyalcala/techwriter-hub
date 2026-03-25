@@ -3,9 +3,15 @@ import { writeFileSync, readFileSync, existsSync } from 'fs';
 import { bundleContext } from "./context-aggregator";
 import { askGemini, FixProtocol } from "./lib/gemini";
 import { createClient } from "@libsql/client/http";
+import { GitAgent } from "./lib/git-agent";
+import { BudgetShield } from "./lib/budget-shield";
+import { Strategist } from "./lib/strategist";
 
 const DAILY_LIMIT = 10;
 const SRE_ID = "apex_sre";
+const gitAgent = new GitAgent({ agentId: SRE_ID });
+const budgetShield = new BudgetShield({ agentId: SRE_ID, dailyAiLimit: DAILY_LIMIT });
+const strategist = new Strategist(SRE_ID);
 
 function getDb() {
   const url = process.env.TURSO_DATABASE_URL;
@@ -14,76 +20,12 @@ function getDb() {
   return createClient({ url, authToken: token });
 }
 
-async function acquireLock(): Promise<boolean> {
-  const db = getDb();
-  const now = Date.now();
-  const fiveMinsAgo = now - 5 * 60 * 1000;
-
-  // Try to acquire the lock. If it's IDLE or stale (> 5 mins), we take it.
-  const result = await db.execute({
-    sql: `UPDATE vitals 
-          SET lock_status = 'RUNNING', lock_updated_at = ? 
-          WHERE id = ? AND (lock_status = 'IDLE' OR lock_updated_at < ?)`,
-    args: [now, SRE_ID, fiveMinsAgo]
-  });
-
-  if (result.rowsAffected === 0) {
-    // Check if we need to initialize the row
-    const check = await db.execute({ sql: "SELECT id FROM vitals WHERE id = ?", args: [SRE_ID] });
-    if (check.rows.length === 0) {
-      await db.execute({
-        sql: "INSERT INTO vitals (id, lock_status, lock_updated_at, ai_quota_count, ai_quota_date) VALUES (?, 'RUNNING', ?, 0, ?)",
-        args: [SRE_ID, now, new Date().toISOString().split('T')[0]]
-      });
-      return true;
-    }
-    return false;
-  }
-  return true;
-}
-
-async function releaseLock() {
-  const db = getDb();
-  await db.execute({
-    sql: "UPDATE vitals SET lock_status = 'IDLE', lock_updated_at = ? WHERE id = ?",
-    args: [Date.now(), SRE_ID]
-  });
-}
-
 async function checkQuota(): Promise<boolean> {
-  const db = getDb();
-  const today = new Date().toISOString().split('T')[0];
-  
-  let result = await db.execute({
-    sql: "SELECT ai_quota_count, ai_quota_date FROM vitals WHERE id = ?",
-    args: [SRE_ID]
-  });
-
-  if (result.rows.length === 0) return true;
-  
-  const row = result.rows[0];
-  if (row.ai_quota_date !== today) {
-    // Reset for new day
-    await db.execute({
-      sql: "UPDATE vitals SET ai_quota_count = 0, ai_quota_date = ? WHERE id = ?",
-      args: [today, SRE_ID]
-    });
-    return true;
-  }
-
-  if (Number(row.ai_quota_count) >= DAILY_LIMIT) {
-    console.error(`🛑 Shared Quota Enforcement: Daily AI limit (${DAILY_LIMIT}) exceeded across all platforms.`);
-    return false;
-  }
-  return true;
+  return await budgetShield.checkAiQuota();
 }
 
 async function incrementQuota() {
-  const db = getDb();
-  await db.execute({
-    sql: "UPDATE vitals SET ai_quota_count = ai_quota_count + 1 WHERE id = ?",
-    args: [SRE_ID]
-  });
+  await budgetShield.incrementAiQuota();
 }
 
 function countLinesChanged(protocol: FixProtocol): number {
@@ -147,6 +89,33 @@ async function updateWisdom(protocol: FixProtocol) {
     content = content.replace("## 📚 Lessons Learned", "## 📚 Lessons Learned" + wisdomEntry);
     writeFileSync(wisdomPath, content);
     console.log("🧠 Wisdom bank updated with new lesson.");
+  }
+}
+
+async function runStrategicHunt() {
+  console.log("\n🔭  Sentinel initiating Strategic Hunt for betterment...");
+  
+  if (!await checkQuota()) return;
+
+  const strategy = await strategist.deliberate();
+  if (!strategy) {
+    console.log("💡  No significant strategic betterment moves identified in this cycle.");
+    return;
+  }
+
+  console.log(`\n🏆  WINNING STRATEGY: ${strategy.title}`);
+  console.log(`📝  Description: ${strategy.description}`);
+  console.log(`📊  SENSICAL SCORE: ${(strategy.scores.optimizer + strategy.scores.harvester + (strategy.scores.architect * 1.5)) / 3.5}/10`);
+  
+  // LOG STRATEGY FOR WISDOM
+  const wisdom = `\n* [STRATEGIC] ${strategy.title}: ${strategy.description} (Scores: Arc:${strategy.scores.architect}, Opt:${strategy.scores.optimizer}, Harv:${strategy.scores.harvester})`;
+  writeFileSync("docs/SRE_WISDOM.md", readFileSync("docs/SRE_WISDOM.md", "utf8") + wisdom);
+
+  // EXECUTE ACTION PROTOCOL
+  console.log(`⚡  Action Protocol: ${strategy.actionProtocol}`);
+  
+  if (strategy.actionProtocol.includes("PATCH_CODE")) {
+    console.log("🛠️  Strategic Patching pending manual confirmation for this safety-level.");
   }
 }
 
@@ -214,6 +183,10 @@ async function runSreSuite() {
 
     if (certOutput.includes("ALL GATES PASSED")) {
       console.log(`\n🎉 System is HEALTHY. Suite completed in ${((Date.now() - startTime) / 1000).toFixed(2)}s.`);
+      
+      // TRIGGER STRATEGIC HUNT (BETTERMENT)
+      await runStrategicHunt();
+      
       process.exit(0); // 0 = Healthy (No Burst)
     }
 
@@ -225,17 +198,25 @@ async function runSreSuite() {
       process.exit(1);
     }
 
-    if (!await acquireLock()) {
+    if (!await gitAgent.acquireLock()) {
       console.warn("⚠️ Execution Conflict: Another SRE Sentinel is currently running. Skipping to avoid collision.");
       process.exit(0);
     }
 
     try {
+      await gitAgent.setupGit();
       if (!await checkQuota()) {
         return;
       }
 
       const codebase = await bundleContext();
+      
+      // CREATE ERROR HASH (for sanity check/self-correction)
+      const errorHash = Buffer.from(certOutput).toString('base64').substring(0, 32);
+      if (!await budgetShield.validateStability(errorHash)) {
+        return;
+      }
+
       await incrementQuota();
       const protocol = await askGemini(certOutput, codebase);
 
@@ -270,15 +251,16 @@ async function runSreSuite() {
           await updateChangelog(protocol);
           await updateWisdom(protocol);
           
-          // Literal Commit & Push
-          await $`git config user.name "Apex Sentinel"`.quiet();
-          await $`git config user.email "sentinel@va-hub.ai"`.quiet();
-          await $`git add .`.quiet();
-          await $`git commit -m "sentinel(auto-fix): ${protocol.analysis}"`.quiet();
-          await $`git push origin main`.quiet();
+          const pushed = await gitAgent.safePush(`sentinel(auto-fix): ${protocol.analysis}`);
           
-          console.log(`\n🚀 System SELF-HEALED and committed in ${((Date.now() - startTime) / 1000).toFixed(2)}s.`);
-          process.exit(2); // 2 = Fixed (Stop Burst)
+          if (pushed) {
+            await budgetShield.reportSuccess(); // RESET STABILITY TRACKER
+            console.log(`\n🚀 System SELF-HEALED and committed in ${((Date.now() - startTime) / 1000).toFixed(2)}s.`);
+            process.exit(2); // 2 = Fixed (Stop Burst)
+          } else {
+            console.error("❌ Failed to push AI fix despite certification pass.");
+            process.exit(3);
+          }
         } else {
           console.error("❌ AI Fix failed simulation. Rolling back.");
           await $`git checkout .`.quiet();
@@ -293,7 +275,7 @@ async function runSreSuite() {
         }
       }
     } finally {
-      await releaseLock();
+      await gitAgent.releaseLock();
     }
 
   } catch (error: any) {
