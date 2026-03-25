@@ -1,6 +1,15 @@
 ## [2026-03-25] — [Opportunities: 314 | Agencies: 57]
 **Status: SYSTEM EVOLVED — GLOWING & SNAPSHOTTED**
 
+## [2026-03-25] — [Opportunities: 62 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: harden sifter (geo-kills/corp-kills) and resolve logs 404 routing (82c56cf)
+
+---
+
+
 ### ✨ Major Features
 - feat: implement **Glowing "Ultra Fresh" Banner** in `SignalCard.astro` for signals < 1h old
 - feat: implement **VA.INDEX Time Machine** (15m automated snapshots via Trigger.dev)
