@@ -90,6 +90,15 @@ async function run() {
     console.log(`\n✅ Restore Point [${name}] Created Successfully.`);
     console.log(`   To restore to this point later, run: bun run restore ${name}\n`);
 
+    // 4. Log to DB
+    const { createLog } = await import("../packages/db/logger");
+    await createLog(`System Snapshot Created: ${name}`, 'snapshot', { 
+      name, 
+      commitHash, 
+      isAutomated,
+      context: customMsg || "Manual Snapshot"
+    });
+
   } catch (err) {
     console.error(`\n❌ Restore Point Creation Failed:`, err);
   }

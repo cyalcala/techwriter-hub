@@ -11,7 +11,7 @@ async function reSiftAll() {
   let bronzeAdded = 0;
 
   for (const opp of allOpps) {
-    const newTier = siftOpportunity(opp.title, opp.company, opp.description || "", opp.sourcePlatform || "");
+    const newTier = siftOpportunity(opp.title, opp.description || "", opp.sourcePlatform || "");
     
     if (newTier !== opp.tier) {
       await db.update(opportunities)

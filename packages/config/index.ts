@@ -56,12 +56,14 @@ export const defaultConfig: NicheConfig = {
   kill_lists: {
     titles: [
       "ceo", "cto", "cfo", "cio", "coo", "vp", "vice president", "director", "president", "head of", "principal", "leadership", "executive", "staff", "researcher",
+      "enterprise", "product manager", "project manager", "program manager", "division manager", "manager,", "manager -", "regional manager", "country manager",
       "engineer", "developer", "software", "devops", "sre", "data scientist", "programmer", "architect", "fullstack", "backend", "frontend", "coder", "systems", "tech", "technical", "coding", "javascript", "typescript", "python", "java", "react", "vue", "angular", "node", "aws", "cloud", "infrastructure", "cybersecurity", "security", "ai", "machine learning", "ml", "data science"
     ],
     companies: ["canonical", "gitlab", "google", "meta", "apple", "microsoft", "amazon"],
     content: [
       "beijing", "shanghai", "tokyo", "london", "paris", "berlin", "moscow", "riyadh", "dubai", "new york", "san francisco", "chicago", "hong kong", "singapore",
       "china", "europe", "emea", "latam", "portuguese", "spanish", "german", "french", "uk-only", "us-only", "emea-only",
+      "dach", "nordics", "benelux", "japanese speaker", "french speaker", "german speaker", "spanish speaker",
       "success story", "how to", "reading this", "join us", "blog", "article", "news"
     ]
   },

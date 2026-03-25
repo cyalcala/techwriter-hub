@@ -59,6 +59,7 @@ Before doing anything, output:
 - **Health**: [HEALTHY/DEGRADED/STALE]
 - **Last 5 commits**: [list]
 - **Pipeline status**: [green/red counts]
+- **Fail-Soft Status**: [GREEN (Live) / AMBER (Cached Fallback)] - Check `index.astro` response for "Mission Continuity" text.
 - **Vercel config**: [current vercel.json contents]
 - **Any known issues**: [from KNOWN_ISSUES.md]
 

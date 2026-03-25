@@ -36,6 +36,7 @@ This file serves as the persistent memory for the APEX SRE autonomous agent. It 
 
 ## 📚 Lessons Learned
 - [2026-03-25] [CIRCUIT BREAKER] Implemented static JSON fallback in `index.astro` to maintain mission continuity during Turso/Vercel connectivity failures.
+- [2026-03-25] [SCHEMA DRIFT] Resolved "Failed query" by manually adding `company_logo` and `metadata` columns to production Turso via `ALTER TABLE`. Lessons learned: `drizzle-kit push` is not always sufficient for complex index-conflicted environments.
 *   **[2026-03-24]** **Hydration Lag Awareness**: HTMX `load` triggers can cause perceived slowness on first-paints. For "Titanium-Fast" experiences, the initial state MUST be injected via SSR. 
 *   **[2026-03-24]** **Self-Healing Burst**: Downtime remediation is 15x more effective when using 1-minute high-velocity "Burst Cycles" (limit 7) rather than standard 15-minute wait periods.
 

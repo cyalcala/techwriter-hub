@@ -1,0 +1,19 @@
+import { db } from "./client";
+import { logs, NewLog } from "./schema";
+
+export async function createLog(message: string, level: 'info' | 'warn' | 'error' | 'snapshot' = 'info', metadata: any = {}) {
+  const newLog: NewLog = {
+    id: crypto.randomUUID(),
+    message,
+    level,
+    timestamp: new Date(),
+    metadata: JSON.stringify(metadata),
+  };
+  
+  try {
+    await db.insert(logs).values(newLog);
+    console.log(`[LOG:${level.toUpperCase()}] ${message}`);
+  } catch (e) {
+    console.error(`Failed to write log: ${e.message}`);
+  }
+}

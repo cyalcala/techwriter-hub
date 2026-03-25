@@ -53,14 +53,22 @@ export const systemHealth = sqliteTable('system_health', {
 });
 
 export const vitals = sqliteTable('vitals', {
-  id: text('id').primaryKey(), // 'apex_sre', 'global_git_lock'
+  id: text('id').primaryKey(),
   aiQuotaCount: integer('ai_quota_count').default(0),
-  aiQuotaDate: text('ai_quota_date'), // 'YYYY-MM-DD'
-  lockStatus: text('lock_status').default('IDLE'), // 'IDLE' or 'RUNNING'
+  aiQuotaDate: text('ai_quota_date'),
+  lockStatus: text('lock_status').default('IDLE'),
   lockUpdatedAt: integer('lock_updated_at', { mode: 'timestamp' }),
   successiveFailureCount: integer('successive_failure_count').default(0),
   lastErrorHash: text('last_error_hash'),
   lastRecoveryAt: integer('last_recovery_at', { mode: 'timestamp' }),
+});
+
+export const logs = sqliteTable('logs', {
+  id: text('id').primaryKey(),
+  message: text('message').notNull(),
+  level: text('level').default('info'), // 'info', 'warn', 'error', 'snapshot'
+  timestamp: integer('timestamp', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  metadata: text('metadata', { mode: 'json' }).default('{}'),
 });
 
 export type Agency = typeof agencies.$inferSelect;
@@ -71,3 +79,5 @@ export type SystemHealth = typeof systemHealth.$inferSelect;
 export type NewSystemHealth = typeof systemHealth.$inferInsert;
 export type Vitals = typeof vitals.$inferSelect;
 export type NewVitals = typeof vitals.$inferInsert;
+export type Log = typeof logs.$inferSelect;
+export type NewLog = typeof logs.$inferInsert;
