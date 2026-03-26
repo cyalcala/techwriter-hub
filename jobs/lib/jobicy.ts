@@ -15,10 +15,12 @@ function toHash(title: string, url: string) {
 
 export async function fetchJobicyJobs(): Promise<NewOpportunity[]> {
   try {
-    const res = await fetch("https://jobicy.com/api/v2/remote-jobs?count=50", {
+    const res = await fetch(`https://jobicy.com/api/v2/remote-jobs?count=50&t=${Date.now()}`, {
       headers: {
         "User-Agent": "VA.INDEX/1.0 (ethical-harvester; public-api)",
         "Accept": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache"
       },
       signal: AbortSignal.timeout(10_000),
     });

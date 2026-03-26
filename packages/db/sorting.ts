@@ -28,3 +28,14 @@ export async function getSortedSignals(limit = 50) {
     .sort((a, b) => a.sortScore - b.sortScore)
     .slice(0, limit);
 }
+
+/**
+ * Latest Mirror Algorithm
+ * Returns the absolute freshest signals regardless of tier.
+ */
+export async function getLatestMirror(limit = 10) {
+  return await db.select()
+    .from(schema.opportunities)
+    .orderBy(desc(schema.opportunities.latestActivityMs))
+    .limit(limit);
+}

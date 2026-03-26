@@ -37,7 +37,9 @@ export async function fetchATSJobs(): Promise<NewOpportunity[]> {
   // 1. Fetch Greenhouse
   const ghPromises = GREENHOUSE_BOARDS.map(async (board) => {
     try {
-      const res = await fetch(`https://boards-api.greenhouse.io/v1/boards/${board}/jobs`);
+      const res = await fetch(`https://boards-api.greenhouse.io/v1/boards/${board}/jobs?t=${Date.now()}`, {
+        headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
+      });
       if (!res.ok) return [];
       const data = await res.json();
       if (!data.jobs) return [];
@@ -64,7 +66,9 @@ export async function fetchATSJobs(): Promise<NewOpportunity[]> {
   // 2. Fetch Lever
   const leverPromises = LEVER_BOARDS.map(async (board) => {
     try {
-      const res = await fetch(`https://api.lever.co/v0/postings/${board}?mode=json`);
+      const res = await fetch(`https://api.lever.co/v0/postings/${board}?mode=json&t=${Date.now()}`, {
+        headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
+      });
       if (!res.ok) return [];
       const jobs = await res.json();
       

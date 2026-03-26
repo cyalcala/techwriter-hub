@@ -5,6 +5,19 @@
 **Status: AUTO-PROCESSED**
 
 ### 🛡️ Reliability & Fixes
+* fix: rename /logs to /terminal to bypass Vercel 404 and update root config (a8e0623)
+* fix: implement source-based (Reddit/OnlineJobs) and role-based (Support) prioritisation (3bc7dea)
+* fix: remove HackerNews source and implement strict title-based country kills (c116b94)
+* fix: sync feed.ts UI and apply final sifter hardening (f23270a)
+* fix: harden sifter (geo-kills/corp-kills) and resolve logs 404 routing (82c56cf)
+
+---
+
+
+## [2026-03-25] — [Opportunities: 59 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
 * fix: implement source-based (Reddit/OnlineJobs) and role-based (Support) prioritisation (3bc7dea)
 * fix: remove HackerNews source and implement strict title-based country kills (c116b94)
 * fix: sync feed.ts UI and apply final sifter hardening (f23270a)

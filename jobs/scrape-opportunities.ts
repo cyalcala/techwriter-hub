@@ -1,11 +1,12 @@
 import { schedules } from "@trigger.dev/sdk/v3";
-import { createDb, opportunities, systemHealth } from "./lib/db";
+import { createDb } from "@va-hub/db/client";
+import { opportunities as opportunitiesSchema, systemHealth } from "@va-hub/db/schema";
 import { fetchRSSFeed, rssSources } from "./lib/scraper";
 import { fetchRedditJobs } from "./lib/reddit";
-import { fetchHNJobs } from "./lib/hackernews";
 import { fetchJobicyJobs } from "./lib/jobicy";
-import { fetchJSONFeed } from "./lib/json-harvester";
+import { fetchJobBoardJobs } from "./lib/job-boards";
 import { fetchATSJobs } from "./lib/ats";
+import { fetchJSONFeed } from "./lib/json-harvester";
 import { config } from "@va-hub/config";
 import { sql } from "drizzle-orm";
 import { isLikelyScam } from "./lib/trust";
@@ -17,8 +18,6 @@ function normalizeTitle(title: string): string {
     .replace(/\bvirtual assistant\b/g, "va")
     .trim();
 }
-
-const PH_NATIVE_SOURCES = new Set(["OnlineJobs", "Reddit r/phcareers"]);
 
 async function logToNtfy(message: string, priority: number = 3) {
   try {
@@ -32,173 +31,76 @@ async function logToNtfy(message: string, priority: number = 3) {
   }
 }
 
-export async function harvest() {
+export async function harvest(db: any) {
   await logToNtfy("══Starting Harvest══");
   console.log("[harvest] ═══ Starting Multi-Source Harvest ═══");
-  const db = await createDb();
 
   // ── LAYER 1: RSS Feeds ──────────────────────────────────
-  console.log("[harvest] Layer 1: RSS Feeds...");
   const rssResults = await Promise.allSettled(rssSources.map(s => fetchRSSFeed(s as any)));
   const rssItems = rssResults.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
 
-  rssResults.forEach((r, i) => {
-    const src = rssSources[i];
-    const cnt = r.status === "fulfilled" ? r.value.length : 0;
-    const status = r.status === "fulfilled" ? "OK" : `FAIL`;
-    console.log(`  → ${src.name}: ${cnt} (${status})`);
-  });
-
-  // ── LAYER 2: Reddit Public JSON ─────────────────────────
-  console.log("[harvest] Layer 2: Reddit JSON...");
+  // ── LAYER 2: Reddit JSON ─────────────────────────
   const redditItems = await fetchRedditJobs();
 
-  // ── LAYER 3: Hacker News API (DISABLED DISRUPTIVE NOISE) ──────
-  // const hnItems = await fetchHNJobs();
-  const hnItems: any[] = [];
-
-  // ── LAYER 4: Jobicy REST API ────────────────────────────
-  console.log("[harvest] Layer 4: Jobicy API...");
+  // ── LAYER 3: Job Boards (Jobicy etc.) ────────────────────────────
   const jobicyItems = await fetchJobicyJobs();
 
-  // ── LAYER 5: Direct ATS Harvest (Greenhouse + Lever) ───
-  console.log("[harvest] Layer 5: ATS Direct Harvest...");
+  // ── LAYER 4: Direct ATS Harvest ───
   const atsItems = await fetchATSJobs();
 
-  // ── LAYER 6: High-Velocity JSON Probes ───────────────────
-  console.log("[harvest] Layer 6: JSON Probes...");
+  // ── LAYER 5: JSON Probes ───────────────────
   const jsonResults = await Promise.allSettled(config.json_sources.map(s => fetchJSONFeed(s as any)));
   const jsonItems = jsonResults.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
 
   // ── COMBINE ALL SOURCES ─────────────────────────────────
-  const allItems = [...rssItems, ...redditItems, ...hnItems, ...jobicyItems, ...atsItems, ...jsonItems];
+  const allItems = [...rssItems, ...redditItems, ...jobicyItems, ...atsItems, ...jsonItems];
   
-  // ── RECORD HEALTH ───────────────────────────────────────
-  const healthMetrics: Array<{ name: string; status: "OK" | "FAIL"; error: string | null }> = [
-    ...rssSources.map((s, i) => ({ 
-      name: s.name, 
-      status: rssResults[i].status === "fulfilled" ? "OK" as const : "FAIL" as const, 
-      error: rssResults[i].status === "rejected" ? (rssResults[i] as PromiseRejectedResult).reason?.message : null 
-    })),
-    { name: "Reddit", status: redditItems.length > 0 ? "OK" : "FAIL", error: redditItems.length > 0 ? null : "No signals found" },
-    { name: "HackerNews", status: hnItems.length > 0 ? "OK" : "FAIL", error: hnItems.length > 0 ? null : "No signals found" },
-    { name: "Jobicy", status: jobicyItems.length > 0 ? "OK" : "FAIL", error: jobicyItems.length > 0 ? null : "API Error or No signals" },
-    { name: "ATS", status: atsItems.length > 0 ? "OK" : "FAIL", error: atsItems.length > 0 ? null : "No signals found" }
-  ];
-
-  for (const log of healthMetrics) {
-    try {
-      // Use deterministic ID for upsert stability
-      const healthId = `health:${log.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
-      
-      await db.insert(systemHealth).values({
-        id: healthId,
-        sourceName: log.name,
-        status: log.status,
-        lastSuccess: log.status === "OK" ? new Date() : null,
-        errorMessage: log.error,
-        updatedAt: new Date()
-      }).onConflictDoUpdate({
-        target: [systemHealth.id],
-        set: { 
-          status: log.status, 
-          lastSuccess: log.status === "OK" ? new Date() : undefined, 
-          errorMessage: log.error, 
-          updatedAt: new Date() 
-        }
-      });
-    } catch (healthErr) {
-      console.error(`[harvest] Failed to record health for ${log.name}:`, (healthErr as Error).message);
-      // Non-blocking
-    }
-  }
-
-  console.log(`[harvest] Total fetched: ${allItems.length} (RSS: ${rssItems.length}, Reddit: ${redditItems.length}, HN: ${hnItems.length}, Jobicy: ${jobicyItems.length}, ATS: ${atsItems.length})`);
-
-  if (allItems.length === 0) {
-    console.log("[harvest] Zero items from all sources.");
-    return { processed: 0, newCount: 0, skipped: 0 };
-  }
-
-  // ── DEDUP ───────────────────────────────────────────────
-  const existingItems = await db.select({
-    hash: opportunities.contentHash,
-    title: opportunities.title,
-    company: opportunities.company
-  }).from(opportunities);
-
-  const existingHashes = new Set(existingItems.map((r: any) => r.hash));
-  const normalizedExisting = new Set(existingItems.map((r: any) => 
-    `${normalizeTitle(r.title)}|${(r.company || '').toLowerCase()}`
-  ));
-
-  const newItems = allItems.filter((item) => {
-    if (!item.contentHash || existingHashes.has(item.contentHash)) return false;
-    const itemFingerprint = `${normalizeTitle(item.title)}|${(item.company || '').toLowerCase()}`;
-    if (normalizedExisting.has(itemFingerprint)) return false;
-    return true;
-  });
-  const newCount = newItems.length;
-  // 3. Multi-Level Deduplication (High-Purity Sieve)
+  // ── DEDUP & SIFT ───────────────────────────────────────────────
   const processedFingerprints = new Set();
-  const dedupedRelevant = [];
+  const dedupedRelevant: any[] = [];
   
+  const now = Date.now();
+
   for (const item of allItems) {
     if (!item) continue;
     const itemTitle = item.title || "";
-    
-    // 1. Security Layer: Drop scams
     if (isLikelyScam(itemTitle, item.description ?? "")) continue;
 
-    // 2. Per-Run Dedup: Don't process the same title|company twice in one run
     const fingerprint = `${normalizeTitle(itemTitle)}|${(item.company || '').toLowerCase()}`;
     if (processedFingerprints.has(fingerprint)) continue;
     
-    // 3. Intelligent Sifting & Tiering
-    const tier = siftOpportunity(itemTitle, item.description ?? "", item.sourcePlatform ?? "Generic");
+    const tier = siftOpportunity(itemTitle, item.description ?? "", item.company ?? "Generic", item.sourcePlatform ?? "Generic");
     if (tier === OpportunityTier.TRASH) continue;
-
-    // 4. Source-level overrides
-    if (item.sourcePlatform === "OnlineJobs") {
-      const t = itemTitle.toLowerCase();
-      const isJob = ["hire", "hiring", "job", "apply", "career", "opening", "vacancy", "role"].some(k => t.includes(k));
-      if (!isJob) continue;
-    }
 
     processedFingerprints.add(fingerprint);
     dedupedRelevant.push({ 
       ...item, 
-      title: (item.title || '').trim().toLowerCase(), // Case-insensitive merge support
-      company: (item.company || 'Generic').trim().toLowerCase(), // Case-insensitive merge support
+      title: itemTitle.trim(), 
+      company: (item.company || 'Generic').trim(),
       tier: tier ?? 3,
       latestActivityMs: Math.max(
         item.postedAt ? new Date(item.postedAt).getTime() : 0, 
-        item.scrapedAt ? new Date(item.scrapedAt).getTime() : Date.now()
+        item.scrapedAt ? new Date(item.scrapedAt).getTime() : now
       )
     });
   }
-
-  const processedCount = dedupedRelevant.length;
-  console.log(`[harvest] ${processedCount} signals pass purity check (${newCount} are brand new hashes)`);
 
   // ── UPSERT (SEMANTIC MERGE) ─────────────────────────────
   let processed = 0;
   for (let i = 0; i < dedupedRelevant.length; i += 50) {
     try {
       const batch = dedupedRelevant.slice(i, i + 50);
-      // We now conflict on (title, company) instead of just contentHash
-      // This automates semantic deduplication and solves the Hash Explosion.
-      await db.insert(opportunities)
+      await db.insert(opportunitiesSchema)
         .values(batch)
         .onConflictDoUpdate({
-          target: [opportunities.title, opportunities.company],
+          target: [opportunitiesSchema.title, opportunitiesSchema.company],
           set: { 
-            scrapedAt: new Date(), // Millisecond precision heartbeat
+            scrapedAt: new Date(),
             isActive: 1,
             tier: sql`excluded.tier`,
-            contentHash: sql`excluded.content_hash`, // Update hash in case it drifted
-            sourceUrl: sql`excluded.source_url`, // Update URL in case it drifted
-            latestActivityMs: sql`excluded.latest_activity_ms` // Keep fresh
+            contentHash: sql`excluded.content_hash`,
+            sourceUrl: sql`excluded.source_url`,
+            latestActivityMs: sql`excluded.latest_activity_ms`
           }
         });
       processed += batch.length;
@@ -207,36 +109,23 @@ export async function harvest() {
     }
   }
 
-  const refreshedCount = processed - newCount;
-  console.log(`[harvest] ═══ Complete: ${processed} signals processed (${newCount} NEW, ${refreshedCount} REFRESHED) ═══`);
-
-  // ── CLEANUP: Purge stale records older than 60 days ─────
-  try {
-    const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
-    await db.run(sql`DELETE FROM opportunities WHERE scraped_at < ${sixtyDaysAgo.getTime()} AND is_active = 0`);
-    console.log("[harvest] Stale inactive records purged.");
-  } catch {
-    // Non-critical — cleanup failure shouldn't break the harvest
-  }
-
-  return { processed, newCount, skipped: allItems.length - processed };
+  return { processed, newCount: processed }; // Simplified for now
 }
 
 export const scrapeOpportunitiesTask = schedules.task({
   id: "harvest-opportunities",
-  cron: "*/30 * * * *", // Reduced to 30m to save execution credits
-  queue: {
-    name: "high-purity-scrapers",
-    concurrencyLimit: 1,
-  },
+  cron: "*/30 * * * *",
   run: async () => {
+    const { db, client } = createDb();
     try {
-      const result = await harvest();
-      await logToNtfy(`SUCCESS: ${result.newCount} NEW, ${result.processed - result.newCount} REFRESHED.`);
+      const result = await harvest(db);
+      await logToNtfy(`SUCCESS: ${result.processed} signals processed.`);
       return result;
     } catch (err: any) {
       await logToNtfy(`CRITICAL FAILURE: ${err.message}`, 5);
       throw err;
+    } finally {
+      client.close();
     }
   },
 });

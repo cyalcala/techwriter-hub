@@ -5,7 +5,7 @@ export default defineConfig({
   runtime: "node",
   logLevel: "log",
   build: {
-    external: ["libsql", "@libsql/linux-x64-gnu", "@libsql/linux-x64-musl"],
+    external: ["libsql"],
   },
   dirs: ["./jobs"],
   maxDuration: 300,

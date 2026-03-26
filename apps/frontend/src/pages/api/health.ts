@@ -1,4 +1,7 @@
 import type { APIRoute } from 'astro';
+import { db } from '@va-hub/db/client';
+import { opportunities } from '@va-hub/db/schema';
+import { sql, eq } from 'drizzle-orm';
 
 export const GET: APIRoute = async () => {
   const diagnostics: Record<string, any> = {
@@ -8,10 +11,6 @@ export const GET: APIRoute = async () => {
   };
 
   try {
-    const { db } = await import('@va-hub/db/client');
-    const { opportunities } = await import('@va-hub/db/schema');
-    const { sql, eq, desc, not } = await import('drizzle-orm');
-    
     // 1. Density Audit
     const allActive = await db.select().from(opportunities).where(eq(opportunities.isActive, true));
     const tiers = {
@@ -26,26 +25,27 @@ export const GET: APIRoute = async () => {
       gold: sql<number>`sum(case when tier = 1 then 1 else 0 end)`,
       newToday: sql<number>`sum(case when created_at > unixepoch('now', '-24 hours') * 1000 then 1 else 0 end)`,
       maxScraped: sql<number>`max(scraped_at)`,
+      maxCreated: sql<number>`max(created_at)`,
     }).from(opportunities).where(eq(opportunities.isActive, true));
 
-    const { total, gold, newToday, maxScraped } = stats[0];
+    const { total, gold, newToday, maxScraped, maxCreated } = stats[0];
     
-    // Normalize timestamp to Date object (Strict Milliseconds)
+    const lastIngestion = maxCreated ? new Date(maxCreated) : new Date(0);
     const lastHeartbeat = maxScraped ? new Date(maxScraped) : new Date(0);
       
-    const stalenessHrs = (Date.now() - lastHeartbeat.getTime()) / (1000 * 60 * 60);
+    const ingestionStalenessHrs = (Date.now() - lastIngestion.getTime()) / (1000 * 60 * 60);
+    const dbStalenessHrs = (Date.now() - lastHeartbeat.getTime()) / (1000 * 60 * 60);
 
-    // Success Bias Audit: If zero new jobs today, mark as unfaithful
     const isFaithful = newToday > 0;
 
     diagnostics.vitals = {
       totalActive: total,
       goldDistribution: gold,
-      lastHeartbeat: lastHeartbeat.toISOString(),
-      stalenessHrs: Number(stalenessHrs.toFixed(2)),
+      lastIngestion: lastIngestion.toISOString(),
+      ingestionStalenessHrs: Number(ingestionStalenessHrs.toFixed(2)),
+      dbStalenessHrs: Number(dbStalenessHrs.toFixed(2)),
       isFaithful,
-      isStale: stalenessHrs > 6,
-      v11: true,
+      isStale: ingestionStalenessHrs > 2, // 2h threshold for "Burst Mode" alignment
       dailyGrowthRate: newToday,
     };
 

@@ -3,49 +3,31 @@ export const prerender = false;
 import Layout from '../layouts/Layout.astro';
 import SignalCard from '../components/SignalCard.astro';
 import MirrorStage from '../components/MirrorStage.astro';
-import { getSortedSignals } from '../db-local/sorting';
+import { getSortedSignals, getLatestMirror } from '@va-hub/db/sorting';
 
 // Lightning-Fast Feed Logic: SSR the first 50 results immediately.
 let initialSignals = [];
-let mirrorSignals = [];
-let dbError = null;
+import staticFallback from '../data/static_fallback.json';
 
 try {
   // Try Live DB
   if (!process.env.TURSO_DATABASE_URL) throw new Error("URL_MISSING");
   
   initialSignals = await getSortedSignals(50);
-  const mirrorSignals = await getLatestMirror(10);
+  mirrorSignals = await getLatestMirror(10);
   
-  // High-Performance Retry: If primary feed is filtered to zero, pull absolute latest records
   if (initialSignals.length === 0) {
-    console.warn("[index] Primary feed empty, attempting wide-open fetch...");
-    const { getLatestMirror } = await import('../db-local/sorting');
     initialSignals = await getLatestMirror(50);
   }
 } catch (err: any) {
-  console.warn("⚠️ Database failure or disconnection. Engaging Fail-Soft static fallback...", err.message);
-  
-  try {
-    // @ts-ignore
-    const fallbackData = (await import('../db-local/static_fallback.json')).default;
-    initialSignals = fallbackData.map((s: any) => ({
-      ...s,
-      sourceUrl: s.source_url,
-      sourcePlatform: s.source_platform,
-      latestActivityMs: s.latest_activity_ms,
-      companyLogo: s.company_logo
-    })).slice(0, 50);
-    
-    dbError = "OFFLINE_FALLBACK_ACTIVE";
-  } catch (fallbackErr) {
-    dbError = err.message; // Truly failed if even fallback is missing
-    console.error("[index] CRITICAL: Both DB and Fallback failed.", fallbackErr);
-  }
+  console.warn("⚠️ Database failure. Engaging Fail-Soft Lifeboat...", err.message);
+  initialSignals = staticFallback;
+  mirrorSignals = staticFallback.slice(0, 10);
+  dbError = 'OFFLINE_FALLBACK_ACTIVE';
 }
 
-// [Snap-Fast] Edge Caching: Cache the entire SSR output for 15s
-Astro.response.headers.set('Cache-Control', 'public, max-age=15, s-max-age=15');
+// [Snap-Fast] Edge Caching: SWR logic for 60s background refresh
+Astro.response.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=30');
 ---
 
 <Layout title="Feed | VA.INDEX">
@@ -109,9 +91,6 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=15, s-max-age=15');
     <div 
       class="grid grid-cols-1 gap-3" 
       id="oppsGrid"
-      hx-get="/api/control/feed"
-      hx-trigger="every 60s"
-      hx-swap="innerHTML"
     >
       {initialSignals.map((sig) => (
         <SignalCard signal={sig} />

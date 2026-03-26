@@ -12,17 +12,18 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/node": "^10.0.3",
-    "@astrojs/tailwind": "latest",
-    "@astrojs/vercel": "^10.0.2",
+    "@astrojs/node": "^9.0.0",
+    "@astrojs/tailwind": "^6.0.0",
+    "@astrojs/vercel": "^8.0.0",
     "@libsql/client": "latest",
-    "@tailwindcss/vite": "^4.2.1",
-    "astro": "^6.0.5",
+    "@tailwindcss/vite": "^4.0.0",
+    "astro": "^5.0.0",
     "dotenv": "latest",
     "drizzle-orm": "latest",
     "tailwindcss": "3"
   },
   "devDependencies": {
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vite": "5.4.11"
   }
 }

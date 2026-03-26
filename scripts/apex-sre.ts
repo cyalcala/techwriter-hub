@@ -51,10 +51,18 @@ function countLinesChanged(protocol: FixProtocol): number {
 async function applyFix(protocol: FixProtocol) {
   if (protocol.action !== "PATCH_CODE" || !protocol.patches) return;
   
+  console.log(`🛡️  Sentinel Write Blocked: Autonomous patching is disabled for stability.`);
+  console.log(`Problem: ${protocol.analysis}`);
+  console.log(`Action suggested: ${protocol.action}`);
+  return;
+
+  /* 
+  // REMOVED FOR ARCHITECTURAL HARDENING
   for (const patch of protocol.patches) {
     console.log(`🛠️  Sentinel applying patch to: ${patch.path}`);
     writeFileSync(patch.path, patch.content);
   }
+  */
 }
 
 async function updateChangelog(protocol: FixProtocol) {

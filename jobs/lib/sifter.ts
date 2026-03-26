@@ -153,11 +153,12 @@ const SILVER_SIGNALS = [
   "distributed team","fully distributed","remote only","work from home anywhere",
 ];
 
-export function siftOpportunity(title: string, description: string, sourcePlatform: string): OpportunityTier {
+export function siftOpportunity(title: string, description: string, company: string, sourcePlatform: string): OpportunityTier {
   const t  = (title || "").toLowerCase().trim();
   const d  = (description || "").toLowerCase();
+  const c  = (company || "").toLowerCase().trim();
   const sp = (sourcePlatform || "").toLowerCase();
-  const body = `${t} ${d}`;
+  const body = `${t} ${d} ${c}`;
 
   // 1. HARD KILLS (Region/Language/Executive/PH-Negative Companies) - Highest Precedence
   for (const k of TITLE_GEO_KILLS) if (t.includes(k) && !PLATINUM_DIRECT.some(s => t.includes(s))) return OpportunityTier.TRASH;

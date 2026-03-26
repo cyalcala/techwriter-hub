@@ -1,0 +1,30 @@
+[
+  {
+    "id": "fallback-1",
+    "title": "Virtual Assistant (High Intent)",
+    "company": "VA.INDEX Curated",
+    "sourceUrl": "https://va-freelance-hub-web.vercel.app",
+    "sourcePlatform": "VA.INDEX Fallback",
+    "description": "This is a curated lifestyle signal served during maintenance. The system is currently in Fail-Soft mode.",
+    "scrapedAt": "2026-03-26T12:00:00Z",
+    "postedAt": "2026-03-26T10:00:00Z",
+    "tier": 1,
+    "isActive": true,
+    "tags": ["VA", "Remote", "Filipino-Friendly"],
+    "latestActivityMs": 1711454400000
+  },
+  {
+    "id": "fallback-2",
+    "title": "Executive Assistant",
+    "company": "OutsourceAccess (Archived)",
+    "sourceUrl": "https://outsourceaccess.com",
+    "sourcePlatform": "VA.INDEX Fallback",
+    "description": "Curated signal from our mission-critical agency list. Serving from local cache.",
+    "scrapedAt": "2026-03-26T12:00:00Z",
+    "postedAt": "2026-03-26T11:00:00Z",
+    "tier": 1,
+    "isActive": true,
+    "tags": ["EA", "Remote"],
+    "latestActivityMs": 1711458000000
+  }
+]
