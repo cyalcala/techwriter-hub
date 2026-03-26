@@ -12,7 +12,10 @@
     "baseUrl": ".",
     "paths": {
       "@va-hub/config": ["packages/config/index.ts"],
-      "@va-hub/sifter-native": ["packages/sifter-native/index.ts"]
+      "@va-hub/db": ["packages/db/index.ts"],
+      "@va-hub/db/client": ["packages/db/client.ts"],
+      "@va-hub/db/schema": ["packages/db/schema.ts"],
+      "@va-hub/db/sorting": ["packages/db/sorting.ts"]
     }
   },
   "exclude": ["node_modules", "apps/web/.next", "packages/zig-parser"]

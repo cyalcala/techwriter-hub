@@ -5,9 +5,9 @@ export default defineConfig({
   runtime: "node",
   logLevel: "log",
   build: {
-    external: ["libsql"],
+    external: ["libsql", "bun"],
   },
-  dirs: ["./jobs"],
+  dirs: ["."],
   maxDuration: 300,
   retries: {
     enabledInDev: false,

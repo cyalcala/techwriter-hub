@@ -6,6 +6,8 @@
   "dependencies": {
     "@libsql/client": "latest",
     "@trigger.dev/sdk": "4.4.3",
+    "@va-hub/db": "workspace:*",
+    "@va-hub/config": "workspace:*",
     "drizzle-orm": "latest",
     "fast-xml-parser": "^5.5.6"
   }

@@ -4,7 +4,8 @@
   "version": "0.1.0",
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "jobs"
   ],
   "scripts": {
     "dev": "bun run --cwd apps/frontend dev",
