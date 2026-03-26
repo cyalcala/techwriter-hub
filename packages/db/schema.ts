@@ -38,6 +38,7 @@ export const opportunities = sqliteTable('opportunities', {
   latestActivityMs: integer('latest_activity_ms').notNull().default(0), // Indexed for high-performance sorting
   companyLogo: text('company_logo'), // External logo URL
   metadata: text('metadata', { mode: 'json' }).default('{}'), // Extended JSON (salary, tags, etc.)
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 }, (table) => ({
   titleCompanyIdx: uniqueIndex('title_company_idx').on(table.title, table.company),
   tierLatestIdx: uniqueIndex('tier_latest_idx').on(table.tier, table.latestActivityMs), // Speeds up Astro feed

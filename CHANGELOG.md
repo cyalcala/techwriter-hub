@@ -11,6 +11,23 @@
 * fix: rename /logs to /terminal to bypass Vercel 404 and update root config (a8e0623)
 * fix: implement source-based (Reddit/OnlineJobs) and role-based (Support) prioritisation (3bc7dea)
 * fix: remove HackerNews source and implement strict title-based country kills (c116b94)
+
+### ⚓ Internal Maintenance
+* chore: purge legacy autonomous agents and shadow pipeline (4c1a24f)
+
+---
+
+
+## [2026-03-26] — [Opportunities: 77 | Agencies: 57]
+**Status: AUTO-PROCESSED**
+
+### ✨ Major Features
+* feat: consolidate architecture & harden indestructible platform (e24b4a1)
+
+### 🛡️ Reliability & Fixes
+* fix: rename /logs to /terminal to bypass Vercel 404 and update root config (a8e0623)
+* fix: implement source-based (Reddit/OnlineJobs) and role-based (Support) prioritisation (3bc7dea)
+* fix: remove HackerNews source and implement strict title-based country kills (c116b94)
 * fix: sync feed.ts UI and apply final sifter hardening (f23270a)
 
 ---
