@@ -12,111 +12,129 @@ import { sql } from "drizzle-orm";
  * Surgically targets Greenhouse, Lever, and specialized Agency feeds.
  */
 
+/**
+ * 🛰️ ATS SITEMAP SNIPER - CORE LOGIC
+ */
+export async function runAtsSniper() {
+  logger.info("Starting Surgical ATS Sniper Run...");
+  const { db, client } = createDb();
+  
+  try {
+    let totalCaptured = 0;
+    let totalSifted = 0;
+
+    for (const source of atsSources) {
+      try {
+        logger.info(`[sniper] Target: ${source.name} (${source.type})`);
+        let rawJobs: any[] = [];
+
+        if (source.type === "greenhouse") {
+          const res = await fetch(`https://boards-api.greenhouse.io/v1/boards/${source.token}/jobs`);
+          const data = await res.json();
+          rawJobs = data.jobs || [];
+        } else if (source.type === "lever") {
+          const res = await fetch(`https://api.lever.co/v0/postings/${source.token}?mode=json`);
+          rawJobs = await res.json();
+        } else if (source.type === "zoho") {
+          const res = await fetch(`https://recruit.zoho.eu/recruit/v2/PublicPostings?board_url=${source.token}`);
+          const data = await res.json();
+          rawJobs = data.data || [];
+        } else if (source.type === "rss") {
+          const res = await fetch(source.token);
+          const xml = await res.text();
+          const { XMLParser } = await import("fast-xml-parser");
+          const parser = new XMLParser();
+          const data = parser.parse(xml);
+          const items = data.rss?.channel?.item || [];
+          rawJobs = Array.isArray(items) ? items : [items];
+        }
+
+        if (rawJobs.length === 0) {
+          logger.warn(`[sniper] ${source.name}: Received 0 jobs.`);
+          continue;
+        }
+
+        logger.info(`[sniper] ${source.name}: Processing ${rawJobs.length} raw signals...`);
+        const batch: NewOpportunity[] = [];
+        const now = new Date();
+
+        for (const raw of rawJobs) {
+          let title = "", url = "", description = "";
+
+          if (source.type === "greenhouse") {
+            title = raw.title; url = raw.absolute_url; description = raw.content || "";
+          } else if (source.type === "lever") {
+            title = raw.text; url = raw.hostedUrl; description = raw.description || "";
+          } else if (source.type === "zoho") {
+            title = raw["Job Title"] || raw.job_title; 
+            url = raw["Application URL"] || raw.application_url;
+            description = raw["Job Description"] || raw.job_description || "";
+          } else if (source.type === "rss") {
+            title = raw.title; url = raw.link; description = raw.description || "";
+          }
+
+          const tier = siftOpportunity(title, description, source.name, source.type);
+          totalSifted++;
+
+          if (tier === OpportunityTier.TRASH) {
+            logger.debug(`[sniper] Rejected: ${title} (${source.name}) - TRASH`);
+            continue;
+          }
+
+          logger.info(`[sniper] Captured: ${title} (${source.name}) - TIER ${tier}`);
+          batch.push({
+            id: uuidv4(),
+            title,
+            company: source.name,
+            type: "direct",
+            sourceUrl: url,
+            sourcePlatform: source.type,
+            tags: JSON.stringify([...source.tags, "ats-sniper"]),
+            description: description.substring(0, 500),
+            scrapedAt: now,
+            createdAt: now,
+            isActive: true,
+            tier,
+            latestActivityMs: now.getTime()
+          });
+        }
+
+        if (batch.length > 0) {
+          await db.insert(opportunitiesSchema)
+            .values(batch)
+            .onConflictDoUpdate({
+              target: [opportunitiesSchema.title, opportunitiesSchema.company],
+              set: { 
+                scrapedAt: now,
+                isActive: true,
+                tier: sql`excluded.tier`,
+                latestActivityMs: now.getTime()
+              }
+            });
+          totalCaptured += batch.length;
+        }
+
+      } catch (err: any) {
+        logger.error(`[sniper] Error targeting ${source.name}: ${err.message}`);
+      }
+    }
+
+    logger.info(`[sniper] Audit Complete. Captured ${totalCaptured}/${totalSifted} signals.`);
+    return { totalCaptured, totalSifted };
+  } finally {
+    client.close();
+  }
+}
+
 export const atsSniperTask = task({
   id: "ats-sniper",
   run: async () => {
-    logger.info("Starting Surgical ATS Sniper Run...");
-    const { db, client } = createDb();
-    
-    try {
-      let totalCaptured = 0;
-      let totalSifted = 0;
-
-      for (const source of atsSources) {
-        try {
-          logger.info(`[sniper] Target: ${source.name} (${source.type})`);
-          let rawJobs: any[] = [];
-
-          if (source.type === "greenhouse") {
-            const res = await fetch(`https://boards-api.greenhouse.io/v1/boards/${source.token}/jobs`);
-            const data = await res.json();
-            rawJobs = data.jobs || [];
-          } else if (source.type === "lever") {
-            const res = await fetch(`https://api.lever.co/v0/postings/${source.token}?mode=json`);
-            rawJobs = await res.json();
-          } else if (source.type === "zoho") {
-            // Zoho Recruit Public JSON
-            const res = await fetch(`https://recruit.zoho.eu/recruit/v2/PublicPostings?board_url=${source.token}`);
-            const data = await res.json();
-            rawJobs = data.data || [];
-          } else if (source.type === "rss") {
-            const res = await fetch(source.token);
-            const xml = await res.text();
-            const { XMLParser } = await import("fast-xml-parser");
-            const parser = new XMLParser();
-            const data = parser.parse(xml);
-            const items = data.rss?.channel?.item || [];
-            rawJobs = Array.isArray(items) ? items : [items];
-          }
-
-          if (rawJobs.length === 0) continue;
-
-          const batch: NewOpportunity[] = [];
-          const now = new Date();
-
-          for (const raw of rawJobs) {
-            let title = "", url = "", description = "";
-
-            if (source.type === "greenhouse") {
-              title = raw.title; url = raw.absolute_url; description = raw.content || "";
-            } else if (source.type === "lever") {
-              title = raw.text; url = raw.hostedUrl; description = raw.description || "";
-            } else if (source.type === "zoho") {
-              title = raw["Job Title"] || raw.job_title; 
-              url = raw["Application URL"] || raw.application_url;
-              description = raw["Job Description"] || raw.job_description || "";
-            } else if (source.type === "rss") {
-              title = raw.title; url = raw.link; description = raw.description || "";
-            }
-
-            // 1. Surgical Sifting
-            const tier = siftOpportunity(title, description, source.name, source.type);
-            totalSifted++;
-
-            if (tier === OpportunityTier.TRASH) continue;
-
-            batch.push({
-              id: uuidv4(),
-              title,
-              company: source.name,
-              type: "direct",
-              sourceUrl: url,
-              sourcePlatform: source.type,
-              tags: JSON.stringify([...source.tags, "ats-sniper"]),
-              description: description.substring(0, 500),
-              scrapedAt: now,
-              createdAt: now,
-              isActive: true,
-              tier,
-              latestActivityMs: now.getTime()
-            });
-          }
-
-          if (batch.length > 0) {
-            await db.insert(opportunitiesSchema)
-              .values(batch)
-              .onConflictDoUpdate({
-                target: [opportunitiesSchema.title, opportunitiesSchema.company],
-                set: { 
-                  scrapedAt: now,
-                  isActive: true,
-                  tier: sql`excluded.tier`,
-                  latestActivityMs: now.getTime()
-                }
-              });
-            totalCaptured += batch.length;
-            logger.info(`[sniper] Captured ${batch.length} signals for ${source.name}`);
-          }
-
-        } catch (err: any) {
-          logger.error(`[sniper] Error targeting ${source.name}: ${err.message}`);
-        }
-      }
-
-      logger.info(`[sniper] Audit Complete. Captured ${totalCaptured}/${totalSifted} signals.`);
-      return { totalCaptured, totalSifted };
-    } finally {
-      client.close();
-    }
+    return await runAtsSniper();
   },
 });
+
+// --- LOCAL EXECUTION (DEBUG ONLY) ---
+if (process.env.RUN_LOCAL === 'true') {
+    logger.info("Local run detected. Executing sniper...");
+    runAtsSniper().then(res => console.log("Final Report:", res)).catch(err => console.error(err));
+}

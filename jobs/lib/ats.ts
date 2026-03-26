@@ -10,10 +10,7 @@ import { createHash } from "crypto";
  */
 
 const GREENHOUSE_BOARDS = [
-  "gitlab", 
-  "canonical", 
   "remotecom", 
-  "toptal", 
   "doist", 
   "automattic", 
   "outsourceaccess", 

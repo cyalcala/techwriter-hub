@@ -1,8 +1,8 @@
-import type { APIRoute } from 'astro';
-import { db, schema } from '../../../../packages/db/client';
+import { db } from '@va-hub/db/client';
+import { opportunities } from '@va-hub/db/schema';
 import { sql, eq } from 'drizzle-orm';
 
-export const GET: APIRoute = async () => {
+export async function getSystemHealth() {
   const diagnostics: Record<string, any> = {
     timestamp: new Date().toISOString(),
     status: "HEALTHY",
@@ -16,7 +16,7 @@ export const GET: APIRoute = async () => {
       newToday: sql<number>`sum(case when created_at > unixepoch('now', '-24 hours') * 1000 then 1 else 0 end)`,
       maxScraped: sql<number>`max(scraped_at)`,
       maxCreated: sql<number>`max(created_at)`,
-    }).from(schema.opportunities).where(eq(schema.opportunities.isActive, true));
+    }).from(opportunities).where(eq(opportunities.isActive, true));
 
     const { total, gold, newToday, maxScraped, maxCreated } = stats[0];
     
@@ -30,6 +30,7 @@ export const GET: APIRoute = async () => {
       totalActive: total,
       goldDistribution: gold,
       lastIngestion: lastIngestion.toISOString(),
+      lastHeartbeat: lastHeartbeat.toISOString(),
       ingestionStalenessHrs: Number(ingestionStalenessHrs.toFixed(2)),
       dbStalenessHrs: Number(dbStalenessHrs.toFixed(2)),
       isFaithful: newToday > 0,
@@ -38,22 +39,13 @@ export const GET: APIRoute = async () => {
     };
 
     if (!diagnostics.vitals.isFaithful || diagnostics.vitals.isStale) {
-      diagnostics.status = "DEGRADED ⚠️";
+      diagnostics.status = "DEGRADED";
     }
 
   } catch (err: any) {
-    diagnostics.status = "CRITICAL ❌";
+    diagnostics.status = "OFFLINE";
     diagnostics.error = err.message;
   }
 
-  return new Response(JSON.stringify(diagnostics, null, 2), {
-    status: 200,
-    headers: {
-      "Content-Type": "application/json",
-      "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
-      "Pragma": "no-cache",
-      "Surrogate-Control": "no-store",
-      "X-Sentinel-Verified": "true"
-    },
-  });
-};
+  return diagnostics;
+}

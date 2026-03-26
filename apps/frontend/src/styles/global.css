@@ -5,7 +5,10 @@
 @layer base {
   body {
     @apply bg-oat-50 text-blueberry-900 antialiased overflow-x-hidden;
-    font-family: 'Geist', sans-serif;
+    font-family: 'Inter', sans-serif;
+  }
+  h1, h2, h3, h4, .font-heading {
+    font-family: 'Outfit', sans-serif;
   }
 }
 
@@ -22,5 +25,30 @@
   .pulse-dot::after {
     content: '';
     @apply relative inline-flex h-2 w-2 rounded-full bg-blueberry-500;
+  }
+
+  /* Titanium Tier Branding */
+  .tier-platinum {
+    @apply border-[#FFD700]/30 shadow-[0_0_30px_rgba(255,215,0,0.12)] bg-white relative overflow-hidden;
+  }
+  .tier-platinum::after {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-br from-[#FFD700]/5 to-transparent pointer-events-none;
+  }
+
+  .tier-gold {
+    @apply border-[#50C878]/30 shadow-[0_0_20px_rgba(80,200,120,0.1)] bg-white;
+  }
+
+  .tier-silver {
+    @apply border-oat-200/50 shadow-sm bg-white;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }

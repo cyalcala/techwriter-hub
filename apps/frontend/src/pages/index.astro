@@ -3,82 +3,93 @@ export const prerender = false;
 import Layout from '../layouts/Layout.astro';
 import SignalCard from '../components/SignalCard.astro';
 import MirrorStage from '../components/MirrorStage.astro';
-import { getSortedSignals, getLatestMirror } from '@va-hub/db/sorting';
 
-// Lightning-Fast Feed Logic: SSR the first 50 results immediately.
-let initialSignals = [];
+// Use direct relative imports to bypass workspace alias issues if needed
+import { getSortedSignals, getLatestMirror } from '../../../../packages/db/sorting';
+import { db, schema } from '../../../../packages/db/client';
+import { sql, eq } from 'drizzle-orm';
 import staticFallback from '../data/static_fallback.json';
 
+// Variables initialization
+let initialSignals = [];
+let mirrorSignals = [];
+let healthStats = { status: 'STANDBY', lastHeartbeat: null };
+let dbError = null;
+
 try {
-  // Try Live DB
-  if (!process.env.TURSO_DATABASE_URL) throw new Error("URL_MISSING");
-  
-  initialSignals = await getSortedSignals(50);
-  mirrorSignals = await getLatestMirror(10);
-  
-  if (initialSignals.length === 0) {
-    initialSignals = await getLatestMirror(50);
+  if (process.env.TURSO_DATABASE_URL) {
+    initialSignals = await getSortedSignals(50);
+    mirrorSignals = await getLatestMirror(10);
+    
+    // Quick Health Pulse
+    const stats = await db.select({
+      maxScraped: sql<number>`max(scraped_at)`,
+    }).from(schema.opportunities).where(eq(schema.opportunities.isActive, true));
+    
+    if (stats[0]?.maxScraped) {
+      healthStats = { 
+        status: 'ACTIVE', 
+        lastHeartbeat: new Date(stats[0].maxScraped).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+      };
+    }
   }
 } catch (err: any) {
-  console.warn("⚠️ Database failure. Engaging Fail-Soft Lifeboat...", err.message);
+  console.warn("⚠️ Fail-Soft Active:", err.message);
   initialSignals = staticFallback;
   mirrorSignals = staticFallback.slice(0, 10);
-  dbError = 'OFFLINE_FALLBACK_ACTIVE';
+  dbError = 'OFFLINE';
 }
-
-// [Snap-Fast] Edge Caching: SWR logic for 60s background refresh
-Astro.response.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=30');
 ---
 
-<Layout title="Feed | VA.INDEX">
+<Layout title="Live Feed | VA.INDEX">
   <main class="max-w-[1200px] mx-auto px-6 py-12">
     <header class="mb-16">
-      {dbError && (
-        <div class={`mb-12 p-6 rounded-3xl animate-pulse border-4 ${dbError === 'OFFLINE_FALLBACK_ACTIVE' ? 'bg-amber-50 border-amber-500' : 'bg-red-50 border-red-500'}`}>
-          <div class="flex items-center gap-4">
-            <div class={`h-4 w-4 rounded-full animate-ping ${dbError === 'OFFLINE_FALLBACK_ACTIVE' ? 'bg-amber-500' : 'bg-red-500'}`}></div>
-            <h2 class={`text-xl font-black uppercase tracking-tighter ${dbError === 'OFFLINE_FALLBACK_ACTIVE' ? 'text-amber-900' : 'text-red-900'}`}>
-              {dbError === 'OFFLINE_FALLBACK_ACTIVE' ? '⚠️ Mission Continuity: Offline Fallback' : 'Mission Critical: Database Disconnected'}
-            </h2>
-          </div>
-          <p class={`mt-2 font-bold uppercase text-xs tracking-widest leading-relaxed ${dbError === 'OFFLINE_FALLBACK_ACTIVE' ? 'text-amber-800/70' : 'text-red-800/70'}`}>
-            {dbError === 'OFFLINE_FALLBACK_ACTIVE' 
-              ? 'Primary database is unreachable. Serving cached signals for business continuity. Real-time updates paused.'
-              : `The frontend engine cannot reach Turso. ERROR: ${dbError}. Action Required: Ensure TURSO_DATABASE_URL is set in Vercel Project Settings.`}
-          </p>
+      <div class="flex items-center gap-6 mb-8 group cursor-default">
+        <div class="flex items-center gap-2">
+          <div class="pulse-dot"></div>
+          <span class="text-[10px] font-black text-blueberry-500 tracking-[0.3em] uppercase transition-all group-hover:tracking-[0.5em]">LIVE SIGNALS</span>
         </div>
-      )}
+        
+        <div class="h-4 w-[1px] bg-oat-200"></div>
 
-      <div class="flex items-center gap-2 mb-6 group cursor-default">
-        <div class="pulse-dot"></div>
-        <span class="text-[10px] font-black text-blueberry-500 tracking-[0.2em] uppercase transition-all group-hover:tracking-[0.4em]">LIVE SIGNAL FEED</span>
+        <div class="flex items-center gap-2 px-3 py-1 bg-white/50 border border-oat-200/50 rounded-full shadow-sm backdrop-blur-sm">
+          <span class="text-[9px] font-black text-blueberry-800/40 uppercase tracking-tighter">System Pulse:</span>
+          <span class="text-[10px] font-black text-emerald-600 uppercase">
+            {healthStats.status}
+          </span>
+          {healthStats.lastHeartbeat && (
+            <span class="text-[9px] font-bold text-blueberry-800/30">
+              Synced {healthStats.lastHeartbeat}
+            </span>
+          )}
+        </div>
       </div>
       
       <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-8 mb-12">
         <div class="max-w-2xl">
-          <h1 class="text-4xl sm:text-6xl font-black text-blueberry-900 mb-6 leading-[0.9] tracking-tighter uppercase whitespace-pre-line">
+          <h1 class="text-4xl sm:text-6xl font-black text-blueberry-900 mb-6 leading-[0.9] tracking-tighter uppercase whitespace-pre-line font-heading transition-all hover:tracking-tight">
             Live Signals. Automated Capture. 
             <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-500">Your Next Job, Found.</span>
           </h1>
           <p class="text-lg text-blueberry-800/70 font-medium leading-relaxed max-w-xl">
-            Stop chasing every lead and start winning the right ones. Our engine surgically sifts through global opportunities, purging tech noise and executive roles to prioritize accessible VA and non-tech positions for Filipinos.
+             Indestructible harvesting of high-intent remote roles. We surgically prioritize Filipino-accessible VA and non-tech opportunities by purging global noise at the edge.
           </p>
         </div>
       </div>
 
       <div class="flex flex-col sm:flex-row items-center gap-4">
         <div class="relative w-full sm:max-w-md group">
-          <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blueberry-800/40 group-focus-within:text-blueberry-500 transition-colors"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+          <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none transition-colors group-focus-within:text-emerald-500 text-blueberry-800/30">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
           </div>
           <input 
             type="text" 
             id="oppSearch" 
-            placeholder="Search roles or companies..." 
-            class="bg-[#FDFBF7] border-2 border-oat-200/50 rounded-2xl pl-12 pr-6 py-4 text-sm text-blueberry-900 focus:outline-none focus:border-oat-200 focus:bg-white backdrop-blur-xl transition-all font-medium placeholder:text-blueberry-800/40 w-full shadow-sm hover:shadow-md"
+            placeholder="Sift through signals..." 
+            class="bg-white border-2 border-oat-200/50 rounded-2xl pl-12 pr-6 py-4 text-sm text-blueberry-900 focus:outline-none focus:border-blueberry-900/10 focus:ring-4 focus:ring-blueberry-500/5 transition-all font-medium placeholder:text-blueberry-800/30 w-full shadow-sm"
           />
         </div>
-        <div class="flex items-center gap-1.5 p-1 bg-[#FDFBF7] border-2 border-oat-200/50 rounded-2xl shadow-sm overflow-hidden shrink-0" id="timeFilters">
+        <div class="flex items-center gap-1.5 p-1 bg-oat-100/50 border border-oat-200/50 rounded-2xl shadow-inner overflow-hidden shrink-0" id="timeFilters">
           <button data-filter="all" class="time-btn active">All</button>
           <button data-filter="24" class="time-btn text-emerald-600">24h</button>
           <button data-filter="72" class="time-btn">3d</button>
@@ -88,10 +99,7 @@ Astro.response.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate
 
     <MirrorStage signals={mirrorSignals.length > 0 ? mirrorSignals : initialSignals.slice(0, 10)} />
 
-    <div 
-      class="grid grid-cols-1 gap-3" 
-      id="oppsGrid"
-    >
+    <div class="grid grid-cols-1 gap-3" id="oppsGrid">
       {initialSignals.map((sig) => (
         <SignalCard signal={sig} />
       ))}
@@ -111,7 +119,6 @@ Astro.response.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate
     const empty = document.getElementById('emptyState');
     if (!grid) return;
 
-    // Pre-cache item and metadata for extreme search speed
     let items = Array.from(grid.querySelectorAll('.opp-item')).map(el => ({
       el,
       text: el.dataset.search || "",
@@ -125,52 +132,42 @@ Astro.response.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate
 
     function run() {
       let count = 0;
-      // High-performance loop
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
         const match = item.text.includes(q) && item.age <= limit;
-        // Batching DOM updates
         item.el.style.display = match ? 'flex' : 'none';
         if (match) count++;
       }
       if (empty) empty.style.display = count > 0 ? 'none' : 'block';
     }
 
-    search?.addEventListener('input', (e) => {
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => {
-        q = e.target.value.toLowerCase().trim();
-        run();
-      }, 50); // Minimal debounce for snappy feel
-    });
-
-    btns?.forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        btns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        const val = btn.dataset.filter;
-        limit = val === 'all' ? Infinity : parseFloat(val);
-        run();
+    if (search) {
+      search.addEventListener('input', (e) => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          q = e.target.value.toLowerCase().trim();
+          run();
+        }, 50); 
       });
-    });
+    }
 
-    document.addEventListener('htmx:afterSwap', (e) => {
-      if (e.detail.target.id === 'oppsGrid') {
-        // Refresh cache on HTMX swap
-        items = Array.from(grid.querySelectorAll('.opp-item')).map(el => ({
-          el,
-          text: el.dataset.search || "",
-          age: parseFloat(el.dataset.age || "999")
-        }));
-        run();
-      }
-    });
+    if (btns) {
+      btns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          btns.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const val = btn.dataset.filter;
+          limit = val === 'all' ? Infinity : parseFloat(val);
+          run();
+        });
+      });
+    }
   }
 
-  // Use DOMContentLoaded to ensure elements are ready
   document.addEventListener('DOMContentLoaded', initFeed);
-  // Also run immediately if script is loaded late
+  // Re-init for View Transitions
+  document.addEventListener('astro:after-swap', initFeed);
   initFeed();
 </script>
 
@@ -179,6 +176,6 @@ Astro.response.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate
     @apply px-6 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all cursor-pointer text-blueberry-800/40 hover:text-blueberry-900;
   }
   .time-btn.active {
-    @apply bg-oat-100 text-blueberry-900 shadow-inner;
+    @apply bg-white text-blueberry-900 shadow-sm border border-black/5;
   }
 </style>
