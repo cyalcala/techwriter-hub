@@ -1,139 +1,171 @@
-# VA Freelance Hub — Project Context
+# VA.INDEX — AI Context File
 
-## MANDATORY READING BEFORE ANY ACTION
+> **Last updated:** 2026-03-27 (post-major-health-check)
+> **System status:** HEALTHY, fully autonomous, all tasks live
 
-Read these files in this order before doing anything else in this codebase:
+## MANDATORY: Read Before Any Action
 
-1. `docs/AI_GUARDRAILS.md` — what you must never do and why
-2. `docs/KNOWN_ISSUES.md` — what has broken before and how it was fixed
-3. `docs/SESSION_INIT.md` — checklist to run before every session
-
-These documents exist because an AI agent caused 4 hours of production downtime on 2026-03-20 by violating basic rules. Do not skip this reading. Do not assume you already know the rules. Read them every session.
+1. `docs/AI_GUARDRAILS.md` — what you must never do
+2. `docs/KNOWN_ISSUES.md` — what has broken before
+3. This file — current system state
 
 ---
 
 ## What This Is
-A personal portfolio project and public resource site for Filipino freelancers.
-Self-updating aggregator of VA job opportunities, a curated VA-friendly company
-directory, and a daily AI digest of actionable content from freelance influencers.
-Built to demonstrate agentic engineering skills.
 
-## Owner
-Filipino freelance technical writer + agentic engineer (github: cyalcala).
-GitHub repo is public — this is a living portfolio piece.
-Footer should credit the builder and link to source.
+A self-updating aggregator of **Filipino-accessible VA and remote job opportunities**. 
+Autonomous harvesting engine captures signals from 5 source layers every 30 minutes, 
+sifts them through a Philippine-First classifier, and serves them via SSR on Vercel.
 
-## Core Stack
-- Runtime: Bun
-- Frontend: Next.js 14 App Router
-- Styling: Tailwind CSS + shadcn/ui
-- Database: Turso (LibSQL/SQLite) via Drizzle ORM
-- Scheduled jobs: Trigger.dev v3 (Cloud, free tier)
-- HTML parsing: Zig binary (called as subprocess from Bun)
-- Hosting: Vercel (Hobby tier, personal/non-commercial)
-- Versioning: GitHub (cyalcala/va-freelance-hub)
+**Owner:** Filipino freelance technical writer + agentic engineer (github: cyalcala)
 
-## Architecture
-```
-GitHub → Vercel auto-deploys Next.js app
+---
 
-Trigger.dev Cloud (cron: every 2 hours)
-  └─ Bun TS scraper fetches RSS + HTML sources
-      └─ Zig binary parses raw HTML → clean JSON
-  └─ Deduplicates + writes to Turso via Drizzle
-  └─ Calls Vercel revalidation webhook → ISR pages refresh
+## Current Stack
 
-Next.js App (Vercel Edge)
-  └─ Server Components → Turso (Drizzle ORM)
-  └─ ISR: revalidates on webhook trigger (revalidate = 3600)
-  └─ UI: Tailwind + shadcn/ui
-```
+| Layer | Technology |
+|---|---|
+| Runtime | Bun |
+| Frontend | **Astro 4** (SSR, `apps/frontend/`) |
+| Styling | Tailwind CSS 3 |
+| Database | Turso (LibSQL/SQLite edge) via Drizzle ORM |
+| Scheduled jobs | **Trigger.dev v3** Cloud (`jobs/`) |
+| Hosting | Vercel (Git auto-deploy from `main`) |
+| Notifications | ntfy.sh push notifications |
+| Repo | GitHub `cyalcala/va-freelance-hub` (public) |
+
+---
 
 ## Monorepo Structure
+
 ```
-apps/web           → Next.js 14 App Router
-packages/db        → Drizzle schema + migrations (shared)
-packages/scraper   → Bun TS scrapers (RSS + HTML)
-packages/zig-parser → Zig HTML parser binary
-jobs/              → Trigger.dev v3 job definitions
-trigger.config.ts
-bunfig.toml
-package.json       (Bun workspaces)
-```
+apps/frontend/        → Astro 4 SSR (Vercel adapter)
+  src/pages/           → index.astro (feed), agencies.astro, terminal.astro
+  src/pages/api/       → health.ts (JSON diagnostics)
+  src/components/      → SignalCard, MirrorStage, Navbar
+  
+packages/db/           → Drizzle schema, client, sorting algorithm
+packages/config/       → Niche DNA config, ATS source list
+packages/scraper/      → RSS parser utilities
 
-## Database Schema
+jobs/                  → Trigger.dev v3 task definitions
+  scrape-opportunities.ts  → Main harvest (cron: */30)
+  ats-harvester.ts         → ATS sniper (on-demand)
+  database-watchdog.ts     → DB cleanup (cron: */7h)
+  resilience-watchdog.ts   → Self-healing (cron: */6h)
+  trigger.config.ts        → Trigger.dev project config
+  lib/                     → scraper, sifter, reddit, jobicy, ats, trust
 
-### opportunities
-id, title, company, type (VA/freelance/project),
-source_url, source_platform, tags (JSON array),
-location_type (remote/hybrid), pay_range,
-posted_at, scraped_at, is_active (bool)
-
-### va_directory
-id, company_name, website, hires_filipinos (bool),
-niche (admin/creative/tech/etc), hiring_page_url,
-verified_at, notes
-
-### content_digests (Phase 2)
-id, creator_name, video_id, video_title, video_url,
-transcript_raw, action_plan (JSON array of steps),
-published_at, processed_at, tags[]
-
-## Site Pages
-```
-/               → Hero, live stats, latest 10 opportunities
-/opportunities  → Full paginated freelance feed (filterable by type, platform, recency)
-/directory      → VA-friendly company directory (searchable by name/niche)
-/digest         → Daily action plans from Nate Herk + Nick Saraev (Phase 2)
+scripts/               → save, restore, resurrect, sync-framework
 ```
 
-## Design Direction
-- Dark background: #0a0a0a
-- Accent: electric blue or violet
-- Monospace font for data/badges
-- Clean card layouts
-- Reference: Linear.app meets a job board
+---
 
-## Data Sources
+## Autonomous Loop (How It Works)
 
-### RSS (Phase 1)
-- We Work Remotely
-- Remotive.io
-- ProBlogger job board
-- Remote.co
-- OnlineJobs.ph (HTML scrape, not RSS)
+```
+Every 30 minutes (Trigger.dev cron):
+  harvest-opportunities runs →
+    Layer 1: RSS (Himalayas, WWR, RemoteOK, ProBlogger, Jobspresso)
+    Layer 2: Reddit JSON (r/VAjobsPH, r/forhire, r/remotejobs, r/phcareers)
+    Layer 3: Jobicy API
+    Layer 4: Direct ATS (fetchATSJobs via Greenhouse/Lever)
+    Layer 5: JSON Probes (JobStreet PH)
+  → Sifter v9.0 classifies into Platinum/Gold/Silver/Bronze/Trash
+  → Dedup by title+company fingerprint
+  → Upsert to Turso DB
+  → ntfy.sh notification (success/failure)
 
-### Influencer Digest (Phase 2)
-- Nate Herk (YouTube)
-- Nick Saraev (YouTube)
-Fetched via `youtube-transcript` npm package,
-summarized via Claude API (Sonnet) into 5-7 action steps.
+Every 6 hours:
+  resilience-watchdog runs →
+    If data stale >2h → triggers burst harvest recovery
+    If 20min gap → triggers minor recovery
+    Audits source degradation
+
+Every 7 hours:
+  database-watchdog runs →
+    Purges inactive >60d
+    Purges TRASH tier >7d
+    Deactivates stale >72h ("watermelons")
+    Purges killed-company data (Canonical, GitLab, etc)
+
+On every page request:
+  Astro SSR queries Turso live → serves fresh data
+  /api/health returns JSON diagnostics (staleness, counts, growth)
+```
+
+---
+
+## Database Schema (Turso)
+
+### `opportunities` (main feed)
+`id, title, company, type, source_url, source_platform, tags (JSON), 
+location_type, pay_range, description, posted_at, scraped_at, is_active, 
+tier (0=Platinum,1=Gold,2=Silver,3=Bronze,4=Trash), content_hash, 
+latest_activity_ms (indexed), company_logo, metadata (JSON), created_at`
+
+Unique index: `(title, company)` — prevents duplicates
+Composite index: `(tier, latest_activity_ms)` — fast feed sorting
+
+### `agencies` (directory)
+`id, name, slug, website_url, hiring_url, logo_url, description, status, 
+last_sync, verified_at, metadata, score, buzz_score, hiring_heat, 
+friction_level, created_at`
+
+### `system_health` (source monitoring)
+`id, source_name, status, last_success, error_message, updated_at`
+
+### `vitals` (system state)
+`id, ai_quota_count, ai_quota_date, lock_status, lock_updated_at, 
+successive_failure_count, last_error_hash, last_recovery_at`
+
+### `logs` (telemetry)
+`id, message, level, timestamp, metadata`
+
+---
+
+## Sifter v9.0 (Signal Classification)
+
+Philippine-First five-tier classifier in `jobs/lib/sifter.ts`:
+
+1. **HARD KILLS** — Geo exclusions (US/UK/EU only), language kills, company kills (Canonical, GitLab)
+2. **TECH KILLS** — Software engineer, developer, etc. (unless "technical support", "prompt engineer")
+3. **SENIORITY KILLS** — C-suite, VP, Director (unless "Senior VA", "Social Media Manager")
+4. **POSITIVE CHECK** — Must be an achievable role OR have PH signal
+5. **TIERING** — Platinum (PH signal), Gold (APAC/SEA), Silver (worldwide remote), Bronze (catch-all)
+
+---
 
 ## Environment Variables
+
 ```
-TURSO_DATABASE_URL=libsql://your-db.turso.io
-TURSO_AUTH_TOKEN=your-token
-TRIGGER_SECRET_KEY=tr_dev_xxxxx
-ISR_SECRET=random-string-you-generate
-NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
-ANTHROPIC_API_KEY=sk-ant-xxxxx  # Phase 2 only
+TURSO_DATABASE_URL=libsql://cyrus-freelance-cyrusalcala.aws-ap-northeast-1.turso.io
+TURSO_AUTH_TOKEN=<token>
+TRIGGER_SECRET_KEY=tr_prod_<key>  (production)
+TRIGGER_SECRET_KEY=tr_dev_<key>   (development)
 ```
 
-## Self-Maintenance Jobs (Phase 4)
-- `verify-links.ts` — runs daily, pings each source_url, marks is_active=false if 404
-- `verify-directory.ts` — runs weekly, checks hiring_page_url, updates verified_at
+---
 
-## Build Phases
-- **Phase 0** — Monorepo scaffold + tooling (current)
-- **Phase 1** — DB schema + RSS scraper + Trigger.dev cron + basic frontend
-- **Phase 2** — Influencer digest (YouTube transcript + Claude API)
-- **Phase 3** — Frontend polish, filters, search
-- **Phase 4** — Self-maintenance jobs (dead link detection, auto-archive)
+## Known Pitfalls (Learned the Hard Way)
 
-## Key Constraints
-- Vercel Hobby tier (personal/non-commercial — do not add monetization without upgrading)
-- Free tier across ALL services
-- Zig binary role: HTML parsing only, called via Bun.spawn, outputs newline-delimited JSON to stdout
-- Trigger.dev free tier: 750 runs/month — cron set to every 2 hours (~360 runs) to leave room for retries
-- No auth, no payments, no user accounts in scope
-- TypeScript strict mode everywhere
+| Issue | Root Cause | Prevention |
+|---|---|---|
+| Stale data for hours | database-watchdog was deactivating ALL primary source data | Never `SET is_active=0` by source_platform — sources are PRIMARY data |
+| Build won't deploy | `@astrojs/vercel` v7 requires `/serverless` subpath | Always use `@astrojs/vercel/serverless` |
+| Canonical/GitLab in feed | Old data inserted before sifter rules existed | database-watchdog now auto-purges killed companies |
+| Reddit/Jobicy not inserting | `allItems` array excluded them despite fetching | Always include ALL fetched sources in allItems |
+| Trigger.dev tasks frozen | Tasks not redeployed after code changes | Run `bun run trigger:deploy` after changing any job file |
+
+---
+
+## Key Commands
+
+```bash
+bun run dev              # Start Astro dev server
+bun run build            # Build for Vercel
+bun run trigger:dev      # Start Trigger.dev dev mode
+bun run trigger:deploy   # Deploy tasks to Trigger.dev cloud
+bun run save             # Create restore point
+bun run restore <name>   # Restore from snapshot
+```

@@ -1,74 +1,124 @@
-# VA.INDEX Architecture & Evolution (v5.2)
-*A Deep Technical Breakdown of the Autonomous Signal-Capture Platform*
+# VA.INDEX Architecture (v6.0 — Post Health Check)
+*Updated: 2026-03-27*
 
 ---
 
-## 1. The Core Paradigm & Topology
-The VA.INDEX platform is designed as an indestructible, "set-it-and-forget-it" pipeline. It operates completely decoupled from traditional monolithic backend constraints by leveraging edge SQLite databases, serverless background orchestration, and a statically generated frontend.
+## 1. System Overview
 
-The system is highly abstracted. Its core intelligence, scraping arrays, and scam heuristics are externalized into a modular `@va-hub/config` package, enabling the entire codebase to be instantly cloned and mapped to any niche (e.g., Web3 Developers, Cybersecurity, UI/UX Designers) without rewriting business logic.
+VA.INDEX is an autonomous job signal aggregator targeting Filipino-accessible remote/VA opportunities. It operates as a "set-and-forget" pipeline with self-healing capabilities.
 
----
-
-## 2. Infrastructure & Compute Layers
-### Database Storage (Turso + LibSQL Edge)
-- **Engine:** LibSQL (SQLite fork optimized for low latency edge replication).
-- **ORM Interface:** **Drizzle ORM** is utilized for strict, typesafe SQL query building and schematic migrations.
-- **Relational Schema:**
-  - `agencies`: Stores top-level entity metadata (name, verification footprint, hiring URLs, `hiring_heat`, `friction_level`).
-  - `opportunities`: Stores individual job signals extracted dynamically. Contains a cryptographically unique `content_hash` and an indexed `latest_activity_ms` column for hardware-accelerated sorting.
-
-### The Titanium Sieve (Zig Native Engine)
-- **The Sifter (`sifter.zig`):** A high-performance, SIMD-ready binary module that hard-kills Tech/Exec/Blog noise at the hardware level with near-zero latency (~7.9ms per batch).
-- **Bun FFI Bridge:** Native interoperability allows TypeScript to call Zig functions with zero overhead, ensuring the 'Purity Firewall' is absolute before any data enters the database.
-
-### Orchestration Execution (Trigger.dev v3)
-- **Engine Shift:** We explicitly operate on Trigger.dev's V3 architecture. Traditional Vercel Serverless Functions enforce a brutal 10-60 second execution timeout limit, making heavy scraping unviable. V3 background workers pull the compute off the main thread entirely, allowing scheduled jobs to run for theoretically infinite durations (minutes/hours) natively as isolated background processes.
-- **Strategic Synchronization:** All harvest tasks populate the `latest_activity_ms` field [Math.max(posted, scraped)]. This allows the frontend to query the DB using a composite index `(tier, latest_activity_ms)`, dropping sorted response times from >500ms to <100ms.
-
----
-
-## 3. The Backend Service Workers (Background Jobs)
-All background operations are highly surgical, enforcing O(1) growth caps and strict deduplication constraints.
-
-### The Harvester (`scrape-opportunities.ts`)
-- **Cron Cycle:** `0 */2 * * *` (Every 120 minutes).
-- **RSS Parser Vectors:** Rapidly fetches and extracts payload bodies from Himalayas, WeWorkRemotely, RemoteOK, and ProBlogger using `fast-xml-parser`.
-- **REST Protocol Vectors:** Directly pings the Jobicy API, HackerNews (`Ask HN: Who is hiring?`), and Reddit JSON pipelines (`r/forhire`, `r/VirtualAssistant`).
-- **Cryptographic Deduplication:** Uses Node's native `crypto.createHash('sha256')` algorithm. Before pushing to Turso, it concatenates `title + company + source_platform` into a unified hash array. This prevents the primary key layer from overlapping if identical jobs are polled on multiple sync intervals.
-
-### The Scam Shield (`trust.ts`)
-- **RegEx Filtration:** Employs advanced `/(\$?\d+\s*\/.*day)/i` structural regex matching directly onto incoming description payloads. It catches multi-layer scams like direct wire instructions (`wire transfer`), direct-contact breaches (`telegram me`), or illogical pay structures (`earn $500/day`).
-
-### The Phantom Link Verifier (`verify-links.ts`)
-- **Cron Cycle:** `0 6 * * *` (Daily at 6:00 AM UTC).
-- **Execution:** Pings the original source URL of any job older than 7 days.
-- **ATS Semantic Checking:** Instead of just checking HTTP `404 Not Found` statuses, it fetches the HTML `<body>` and runs algorithmic text-checks looking for standard ATS ghost-job signatures (e.g. *"This role has been filled"*, *"No longer accepting applications"*).
-- **Rate Limit Throttling:** Capped surgically at `LIMIT 50` rows per day to ensure network compute remains under $0.05 a month natively while keeping the primary feed highly scrubbed over a cycle.
-
-### The Resilience Watchdog (`resilience-watchdog.ts`)
-- **Cron Cycle:** `0 */6 * * *` (Every 6 hours).
-- **Pulse Audit:** Detects 'Silent Blackouts' if no data has been discovered in 4 hours.
-- **Stagnation Detector:** Monitors the *average age* of the entire Gold pool. If the feed slows down (avg age > 6h), it triggers a critical system-wide alert.
-- **Purity Guard:** Ensures Gold Tier volume remains stable.
+```
+┌────────────────────────────────┐
+│    TRIGGER.DEV CLOUD (v3)      │
+│                                │
+│  */30  harvest-opportunities   │──→ RSS + Reddit + Jobicy + ATS + JSON
+│  */6h  resilience-watchdog     │──→ Staleness detection + burst recovery
+│  */7h  database-watchdog       │──→ Cleanup + killed-company purge
+│  on-demand  ats-sniper         │──→ Surgical Greenhouse/Lever targeting
+└──────────────┬─────────────────┘
+               │ Drizzle ORM
+               ▼
+┌──────────────────────────────┐
+│    TURSO (LibSQL Edge DB)    │
+│    Region: ap-northeast-1    │
+│                              │
+│  opportunities (feed data)   │
+│  agencies (directory)        │
+│  system_health (monitoring)  │
+│  logs (telemetry)            │
+└──────────────┬───────────────┘
+               │ Live SSR query
+               ▼
+┌──────────────────────────────┐
+│    VERCEL (Astro 4 SSR)      │
+│    Auto-deploy from GitHub   │
+│                              │
+│  / (feed) → sorted by tier   │
+│  /agencies → company list    │
+│  /terminal → live logs       │
+│  /api/health → JSON vitals   │
+└──────────────────────────────┘
+```
 
 ---
 
-## 4. Frontend Rendering (Unified SSR)
-- **Engine Priority:** Both **Astro** (`apps/frontend`) and **Next.js** (`apps/web`) are configured for **Strict SSR** (output: 'server').
-- **Cache-Control Shields:** We leverage **Edge-Side Stale-While-Revalidate (SWR)** caching (`s-maxage=60, stale-while-revalidate=30`). This delivers instant responses from the Vercel Edge while asynchronously fetching the absolute 'Titanium' state of the DB in the background.
-- **Aesthetic Refinement:** O(1) performance focus with Tailwind CSS and zero-JS hydration (Astro).
+## 2. Data Pipeline (5-Layer Harvest)
+
+Every 30 minutes, `harvest-opportunities` executes:
+
+| Layer | Source | Method | Key Sources |
+|---|---|---|---|
+| L1 | RSS | `fast-xml-parser` | Himalayas, WWR, RemoteOK, ProBlogger, Jobspresso |
+| L2 | Reddit | JSON API | r/VAjobsPH, r/forhire, r/remotejobs, r/phcareers |
+| L3 | Jobicy | REST API | Virtual Assistant category |
+| L4 | ATS | Greenhouse/Lever/Zoho API | Via `fetchATSJobs()` |
+| L5 | JSON | Direct fetch | JobStreet PH regional feed |
+
+**Pipeline:** Fetch → Sift (tier classify) → Dedup (title+company fingerprint) → Upsert (onConflictDoUpdate)
 
 ---
 
-## 5. The Failsafe Subsystem 
-To maintain 100% production reliability across highly dynamic deployments, we assembled **The Mythical Restore Engine**.
+## 3. Sifter v9.0 (Signal Classification)
 
-- **Snapshot CLI (`bun run save`)**: Generates an alphanumeric mythical ID format (`Hydra_2026-03-XX`). Natively connects to the Turso SQL layers to extract table objects mathematically into a raw JSON file pushed strictly inside an ignored `.backups/` directory. Concurrently executes `git tag` routines structurally indexing the raw layout of the filetree.
-- **Restoration Hook (`bun run restore`)**: Dynamically rolls Git memory variables back through history, forcefully drops SQL dependencies from `createDb()`, and instantly reconstructs the schema back up natively through JSON injection blocks.
+Located in `jobs/lib/sifter.ts`. Five-tier Philippine-First classifier:
 
-## 6. The Agentic SRE Sentinel
-The platform is protected by an autonomous "Agentic" sentinel powered by Gemini 1.5 Flash.
-- **Zero-Cost Enforcement**: A strict quota of 10 AI calls/day is tracked in `.sentinel-quota.json`.
-- **Safety Gates**: Any autonomous code change exceeding 5 lines or affecting multiple files triggers a "Human-in-the-Loop" block.
-- **Titanium Sync**: The `sync-framework.ts` utility uses MD5 change detection to ensure propagated updates are surgical and redundant Zig rebuilds are eliminated.
+```
+HARD KILLS ──→ geo exclusion, language, company blacklist
+TECH KILLS ──→ developer/engineer (except support/prompt engineer)
+SENIORITY  ──→ C-suite/VP/Director (except Senior VA)
+POSITIVE   ──→ must be achievable role OR have PH signal
+TIERING    ──→ Platinum(0) > Gold(1) > Silver(2) > Bronze(3) > Trash(4)
+```
+
+---
+
+## 4. Self-Healing ("Resilience Watchdog")
+
+`resilience-watchdog.ts` runs every 6 hours:
+
+1. **Pulse Check** — If newest scrape_at > 2 hours old → triggers `harvest-opportunities` in BURST MODE
+2. **Gap Check** — If 0 writes in last 20 minutes → triggers minor recovery harvest  
+3. **Gold Audit** — Monitors Platinum/Gold tier stability
+4. **Source Degradation** — Checks `system_health` for FAIL status sources
+
+---
+
+## 5. Self-Cleaning ("Database Watchdog")
+
+`database-watchdog.ts` runs every 7 hours:
+
+1. **Purge Inactive** — DELETE rows inactive for >60 days
+2. **Purge Trash** — DELETE TRASH-tier rows >7 days old
+3. **Watermelon Deactivation** — SET is_active=0 for rows stale >72 hours
+4. **Killed Company Purge** — DELETE any Canonical, GitLab, GE Healthcare, Nextiva rows
+
+> **CRITICAL RULE:** Never deactivate rows by `source_platform`. That was a bug that
+> killed the entire feed. Sources like RemoteOK, WeWorkRemotely are PRIMARY data.
+
+---
+
+## 6. Frontend (Astro 4 SSR on Vercel)
+
+- **Adapter:** `@astrojs/vercel/serverless` (NOT bare `@astrojs/vercel`)
+- **Feed Sort:** `getSortedSignals()` in `packages/db/sorting.ts` — sorts by `(tier ASC, latest_activity_ms DESC)`
+- **Cache:** SSR on every request (no ISR, no static). `/api/health` has `Cache-Control: no-store`
+- **DB imports:** Use relative paths `../../../../packages/db/client` (Vite alias `@va-hub/db` is backup)
+
+---
+
+## 7. Deployments
+
+| System | Deploy Method | Trigger |
+|---|---|---|
+| **Frontend (Vercel)** | Git auto-deploy | Push to `main` branch |
+| **Jobs (Trigger.dev)** | CLI deploy | `bun run trigger:deploy` from `jobs/` |
+| **Database (Turso)** | Schema migrations | `bun run db:migrate` |
+
+---
+
+## 8. Monitoring
+
+- **`/api/health`** — JSON endpoint: totalActive, staleness, goldDistribution, isFaithful, isStale
+- **ntfy.sh** — Push notifications on harvest success/failure (`va-freelance-hub-task-log-cyrus`)
+- **Trigger.dev dashboard** — Run history, logs, schedule status
+- **`/terminal`** — Live system logs UI
