@@ -18,7 +18,13 @@ const SCAM_PATTERNS = [
   /crypto trading/i,
   /payment upfront/i,
   /cash app/i,
-  /data entry.*\$[3-9]\d\/hr/i, // Data entry doesn't pay $30+/hr out of the gate
+  /data entry.*\$[3-9]\d\/hr/i, 
+  /onlyfans/i,
+  /chatter.*onlyfans/i,
+  /side hustle/i,
+  /earn.*php.*day/i,
+  /student looking for/i,
+  /ways to earn/i,
 ];
 
 export function isLikelyScam(title: string, description: string): boolean {

@@ -184,6 +184,8 @@ export function siftOpportunity(title: string, description: string, company: str
     "revenue operations","business operations manager","strategy manager",
     "sales operations","enterprise customer success","enterprise account",
     "enterprise sales","enterprise support manager",
+    "onlyfans","of chatter","chatter for onlyfans",
+    "side hustle","earn money from home","student looking for",
   ];
   for (const k of CORP_KILLS) if (t.includes(k)) return OpportunityTier.TRASH;
 
