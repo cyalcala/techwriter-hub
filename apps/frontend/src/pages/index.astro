@@ -19,7 +19,7 @@ let dbError = null;
 try {
   // Cloudflare Ethos: Immediate Fail-Soft if DB is unreachable
   if (process.env.TURSO_DATABASE_URL) {
-    initialSignals = await getSortedSignals(50);
+    initialSignals = await getSortedSignals(250); // Increased to 250 for deep harvesting visibility
     mirrorSignals = await getLatestMirror(10);
     
     // Surgical Telemetry: Quick Health Pulse
@@ -155,9 +155,13 @@ try {
       let count = 0;
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
-        const match = item.text.includes(q) && item.age <= limit;
-        item.el.style.display = match ? 'flex' : 'none';
-        if (match) count++;
+        // item.age is hours. limit is 24 or 72.
+        const matchesQuery = item.text.includes(q);
+        const matchesTime = item.age <= limit;
+        const isVisible = matchesQuery && matchesTime;
+        
+        item.el.style.display = isVisible ? 'flex' : 'none';
+        if (isVisible) count++;
       }
       if (empty) empty.style.display = count > 0 ? 'none' : 'block';
     }

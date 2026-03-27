@@ -22,7 +22,7 @@ function formatRelativeTime(dateInput: Date | number | null) {
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-const ageHrs = signal.latestActivityMs ? (Date.now() - signal.latestActivityMs) / 3600000 : 0;
+const ageHrs = signal.latestActivityMs ? Math.max(0, (Date.now() - signal.latestActivityMs) / 3600000) : 0;
 const isFresh = ageHrs < 1; 
 const displayDate = formatRelativeTime(signal.latestActivityMs);
 
