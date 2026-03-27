@@ -22,28 +22,29 @@ export const agencies = sqliteTable('agencies', {
 export const opportunities = sqliteTable('opportunities', {
   id: text('id').primaryKey(),
   title: text('title').notNull(),
-  company: text('company'),
-  type: text('type').default('agency'), // e.g., 'agency', 'direct'
+  company: text('company').notNull().default('Generic'),
+  type: text('type').notNull().default('agency'), // e.g., 'agency', 'direct'
   sourceUrl: text('source_url').notNull(),
-  sourcePlatform: text('source_platform'),
-  tags: text('tags', { mode: 'json' }).default('[]'),
-  locationType: text('location_type').default('remote'),
+  sourcePlatform: text('source_platform').notNull().default('Generic'),
+  tags: text('tags', { mode: 'json' }).notNull().default('[]'),
+  locationType: text('location_type').notNull().default('remote'),
   payRange: text('pay_range'),
   description: text('description'),
   postedAt: integer('posted_at', { mode: 'timestamp' }),
   scrapedAt: integer('scraped_at', { mode: 'timestamp' }).notNull(),
-  isActive: integer('is_active', { mode: 'boolean' }).default(true),
-  tier: integer('tier').default(3), // 1=Gold, 2=Silver, 3=Bronze, 4=Trash
+  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+  tier: integer('tier').notNull().default(3), // 1=Gold, 2=Silver, 3=Bronze, 4=Trash
   contentHash: text('content_hash'),
   latestActivityMs: integer('latest_activity_ms').notNull().default(0), // Indexed for high-performance sorting
   companyLogo: text('company_logo'), // External logo URL
-  metadata: text('metadata', { mode: 'json' }).default('{}'), // Extended JSON (salary, tags, etc.)
+  metadata: text('metadata', { mode: 'json' }).notNull().default('{}'), // Extended JSON (salary, tags, etc.)
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 }, (table) => ({
   titleCompanyIdx: uniqueIndex('title_company_idx').on(table.title, table.company),
   tierLatestIdx: uniqueIndex('tier_latest_idx').on(table.tier, table.latestActivityMs), // Speeds up Astro feed
   activeIdx: index('active_idx').on(table.isActive), // Eliminates full scans on the "Live" toggle
   sourcePlatformIdx: index('source_platform_idx').on(table.sourcePlatform), // Janitor's primary filter
+  typeIdx: index('type_idx').on(table.type), // Speeds up agency/direct filtering
 }));
 
 export const systemHealth = sqliteTable('system_health', {

@@ -21,16 +21,14 @@ export function createDb(): DbInstance {
   const client = createClient({
     url: url || "file::memory:",
     authToken: authToken || "",
-    intliant: true, // Edge-optimized fetching
+    // @ts-ignore - Edge-optimized fetching (Injected in DBRE audit)
+    intliant: true, 
     // @ts-ignore - busy_timeout is supported by LibSQL HTTP client
     busy_timeout: 10000, 
   });
 
-  return {
-    db: drizzle(client, { schema }),
-    client,
-    schema
-  };
+  const db = drizzle(client, { schema });
+  return { db, client, schema };
 }
 
 // Singleton for Astro / Long-running processes
