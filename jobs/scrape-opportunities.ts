@@ -51,11 +51,19 @@ export async function harvest(db: any) {
   const priorityAgencyNames = activeAgencies.map((a: any) => a.name);
   
   const sources = [
-    { id: "rss-feeds", name: "RSS Feeds", fn: () => Promise.allSettled(rssSources.map(s => fetchRSSFeed(s as any))).then(r => r.flatMap(x => x.status === "fulfilled" ? x.value : [])) },
+    ...rssSources.map(s => ({ 
+      id: `rss-${s.id}`, 
+      name: s.name, 
+      fn: () => fetchRSSFeed(s as any) 
+    })),
     { id: "reddit-json", name: "Reddit JSON", fn: fetchRedditJobs },
     { id: "jobicy-api", name: "Jobicy API", fn: fetchJobicyJobs },
     { id: "direct-ats", name: "Direct ATS", fn: fetchATSJobs },
-    { id: "json-probes", name: "JSON Probes", fn: () => Promise.allSettled(config.json_sources.map(s => fetchJSONFeed(s as any))).then(r => r.flatMap(x => x.status === "fulfilled" ? x.value : [])) },
+    ...config.json_sources.map(s => ({ 
+      id: `json-${s.id}`, 
+      name: s.name, 
+      fn: () => fetchJSONFeed(s as any) 
+    })),
     { id: "agency-sensor", name: "Agency Sensor", fn: () => probeAgencies(db) }
   ];
 
