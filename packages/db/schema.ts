@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
 
 export const agencies = sqliteTable('agencies', {
   id: text('id').primaryKey(),
@@ -42,6 +42,8 @@ export const opportunities = sqliteTable('opportunities', {
 }, (table) => ({
   titleCompanyIdx: uniqueIndex('title_company_idx').on(table.title, table.company),
   tierLatestIdx: uniqueIndex('tier_latest_idx').on(table.tier, table.latestActivityMs), // Speeds up Astro feed
+  activeIdx: index('active_idx').on(table.isActive), // Eliminates full scans on the "Live" toggle
+  sourcePlatformIdx: index('source_platform_idx').on(table.sourcePlatform), // Janitor's primary filter
 }));
 
 export const systemHealth = sqliteTable('system_health', {
@@ -70,7 +72,9 @@ export const logs = sqliteTable('logs', {
   level: text('level').default('info'), // 'info', 'warn', 'error', 'snapshot'
   timestamp: integer('timestamp', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   metadata: text('metadata', { mode: 'json' }).default('{}'),
-});
+}, (table) => ({
+  timestampIdx: index('timestamp_idx').on(table.timestamp), // Speeds up Terminal log stream
+}));
 
 export type Agency = typeof agencies.$inferSelect;
 export type NewAgency = typeof agencies.$inferInsert;

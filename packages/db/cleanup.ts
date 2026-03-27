@@ -105,6 +105,13 @@ async function executePurge() {
     console.log(`  Pruned: ${ra.rowsAffected} agencies and ${ro.rowsAffected} opportunities`);
   }
 
+  // --- LAYER 6: Physical Storage Reclamation (DBRE) ---
+  if (!dryRun) {
+    console.log("\n[Layer 6] Vacuuming database to reclaim storage...");
+    await c.execute("VACUUM");
+    console.log("  Storage reclaimed successfully.");
+  }
+
   // Final count
   const after = await c.execute("SELECT COUNT(*) as cnt FROM opportunities");
   console.log(`\nFinal Total: ${after.rows[0][0]} opportunities`);

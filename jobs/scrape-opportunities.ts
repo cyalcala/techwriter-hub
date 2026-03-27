@@ -14,6 +14,7 @@ import { siftOpportunity, OpportunityTier } from "./lib/sifter";
 import { v4 as uuidv4 } from "uuid";
 import { healPayloadWithLLM } from "./lib/autonomous-harvester";
 import { agencies as agenciesSchema } from "@va-hub/db/schema";
+import { OpportunitySchema } from "@va-hub/db/validation";
 
 function normalizeTitle(title: string): string {
   return title
@@ -149,9 +150,9 @@ export async function harvest(db: any) {
 
     if (tier === OpportunityTier.TRASH) continue;
 
-    processedFingerprints.add(fingerprint);
-    dedupedRelevant.push({ 
-      ...item, 
+    // ── DATA INTEGRITY SHIELD (ZOD) ──
+    const validationResult = OpportunitySchema.safeParse({
+      ...item,
       id: item.id || uuidv4(),
       title: item.title.trim(), 
       company: (item.company || 'Generic').trim(),
@@ -162,6 +163,17 @@ export async function harvest(db: any) {
         item.scrapedAt ? new Date(item.scrapedAt).getTime() : now
       )
     });
+
+    if (!validationResult.success) {
+      await recordLog(db, `Bounced poisoned signal: ${item.title || 'Unknown'}`, "warn", { 
+        errors: validationResult.error.errors,
+        source: item.sourcePlatform 
+      });
+      continue;
+    }
+
+    processedFingerprints.add(fingerprint);
+    dedupedRelevant.push(validationResult.data);
   }
 
   // ── UPSERT (STRICT TYPE-SAFETY) ─────────────────────────────
