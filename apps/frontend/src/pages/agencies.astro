@@ -71,8 +71,10 @@ const rawAgencies = liveAgencies.map((agency) => {
 });
 
 const agencies = rawAgencies.sort((a, b) => {
-  if (a.relevancyBoost !== b.relevancyBoost) return b.relevancyBoost - a.relevancyBoost;
-  return b.heatValue - a.heatValue;
+  // 1. Prioritize "Hiring Heat" (Visibly Hiring) first
+  if (a.heatValue !== b.heatValue) return b.heatValue - a.heatValue;
+  // 2. Secondary sort by name-based relevancy
+  return b.relevancyBoost - a.relevancyBoost;
 });
 ---
 
