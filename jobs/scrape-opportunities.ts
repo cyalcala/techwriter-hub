@@ -1,6 +1,6 @@
 import { schedules, logger } from "@trigger.dev/sdk/v3";
 import { createDb } from "@va-hub/db/client";
-import { opportunities as opportunitiesSchema, logs as logsSchema } from "@va-hub/db/schema";
+import { opportunities as opportunitiesSchema, logs as logsSchema, systemHealth as healthSchema } from "@va-hub/db/schema";
 import { fetchRSSFeed, rssSources } from "./lib/scraper";
 import { fetchRedditJobs } from "./lib/reddit";
 import { fetchJobicyJobs } from "./lib/jobicy";
@@ -8,13 +8,12 @@ import { fetchATSJobs } from "./lib/ats";
 import { fetchJSONFeed } from "./lib/json-harvester";
 import { probeAgencies } from "./lib/agency-sensor";
 import { config } from "@va-hub/config";
-import { sql } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 import { isLikelyScam } from "./lib/trust";
 import { siftOpportunity, OpportunityTier } from "./lib/sifter";
 import { v4 as uuidv4 } from "uuid";
 import { healPayloadWithLLM } from "./lib/autonomous-harvester";
 import { agencies as agenciesSchema } from "@va-hub/db/schema";
-import { eq } from "drizzle-orm";
 
 function normalizeTitle(title: string): string {
   return title
@@ -70,12 +69,18 @@ export async function harvest(db: any) {
   for (const source of sources) {
     try {
       const startSource = Date.now();
-      const items = await source.fn();
+      
+      // SRE DEFENSE: 30s timeout per source to prevent Zombie Tasks
+      const items = await Promise.race([
+        source.fn(),
+        new Promise<any[]>((_, reject) => setTimeout(() => reject(new Error("Source Timeout (30s)")), 30000))
+      ]);
+      
       const duration = Date.now() - startSource;
       results.push(...(items || []));
       
       // TELEMETRY BRIDGE: Update system_health per source
-      await db.insert(require("@va-hub/db/schema").systemHealth)
+      await db.insert(healthSchema)
         .values({
           id: source.name,
           sourceName: source.name,
@@ -84,7 +89,7 @@ export async function harvest(db: any) {
           updatedAt: new Date()
         })
         .onConflictDoUpdate({
-          target: [require("@va-hub/db/schema").systemHealth.id],
+          target: [healthSchema.id],
           set: { status: 'OK', lastSuccess: new Date(), updatedAt: new Date(), errorMessage: null }
         });
 
@@ -92,7 +97,7 @@ export async function harvest(db: any) {
     } catch (err: any) {
       await recordLog(db, `Source failure: ${source.name} - ${err.message}`, "error", { source: source.name, error: err.message });
       
-      await db.insert(require("@va-hub/db/schema").systemHealth)
+      await db.insert(healthSchema)
         .values({
           id: source.name,
           sourceName: source.name,
@@ -101,7 +106,7 @@ export async function harvest(db: any) {
           updatedAt: new Date()
         })
         .onConflictDoUpdate({
-          target: [require("@va-hub/db/schema").systemHealth.id],
+          target: [healthSchema.id],
           set: { status: 'FAIL', errorMessage: err.message, updatedAt: new Date() }
         });
     }
@@ -192,6 +197,7 @@ export async function harvest(db: any) {
 export const scrapeOpportunitiesTask = schedules.task({
   id: "harvest-opportunities",
   cron: "*/30 * * * *",
+  queue: { concurrencyLimit: 1 },
   run: async (payload: any, { ctx }: any) => {
     const { db, client } = createDb();
     try {

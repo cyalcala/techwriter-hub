@@ -46,7 +46,8 @@ export async function fetchATSJobs(db: any): Promise<NewOpportunity[]> {
   const ghPromises = GREENHOUSE_BOARDS.map(async (board) => {
     try {
       const res = await fetch(`https://boards-api.greenhouse.io/v1/boards/${board}/jobs?t=${Date.now()}`, {
-        headers: { "Cache-Control": "no-cache", "Accept": "application/json" }
+        headers: { "Cache-Control": "no-cache", "Accept": "application/json" },
+        signal: AbortSignal.timeout(15000)
       });
       if (!res.ok) return [];
       
@@ -100,7 +101,8 @@ export async function fetchATSJobs(db: any): Promise<NewOpportunity[]> {
   const leverPromises = LEVER_BOARDS.map(async (board) => {
     try {
       const res = await fetch(`https://api.lever.co/v0/postings/${board}?mode=json&t=${Date.now()}`, {
-        headers: { "Cache-Control": "no-cache", "Accept": "application/json" }
+        headers: { "Cache-Control": "no-cache", "Accept": "application/json" },
+        signal: AbortSignal.timeout(15000)
       });
       if (!res.ok) return [];
       

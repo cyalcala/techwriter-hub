@@ -21,14 +21,14 @@ export async function probeAgencies(db: any): Promise<NewOpportunity[]> {
   const allAgencies = await db.select().from(agencies).where(eq(agencies.status, 'active'));
   const results: NewOpportunity[] = [];
 
-  const probePromises = allAgencies.map(async (agency: any) => {
-    if (!agency.hiringUrl) return [];
+  for (const agency of allAgencies) {
+    if (!agency.hiringUrl) continue;
     
     try {
       // 1. Detect Greenhouse/Lever
       if (agency.hiringUrl.includes("boards.greenhouse.io") || agency.hiringUrl.includes("lever.co")) {
         const board = agency.hiringUrl.split('/').pop()?.split('?')[0];
-        if (!board) return [];
+        if (!board) continue;
 
         const isGreenhouse = agency.hiringUrl.includes("greenhouse.io");
         const apiUrl = isGreenhouse 
@@ -36,15 +36,16 @@ export async function probeAgencies(db: any): Promise<NewOpportunity[]> {
           : `https://api.lever.co/v0/postings/${board}?mode=json`;
 
         const res = await fetch(apiUrl, {
-          headers: { "User-Agent": "VA.INDEX/1.0 (ethical-harvester; agency-sensor)" }
+          headers: { "User-Agent": "VA.INDEX/1.0 (ethical-harvester; agency-sensor)" },
+          signal: AbortSignal.timeout(10000) // SRE Force-Timeout
         });
-        if (!res.ok) return [];
+        if (!res.ok) continue;
         const data = await res.json();
         const jobs = (isGreenhouse ? data.jobs : data) as any[];
 
-        if (!jobs) return [];
+        if (!jobs) continue;
 
-        return jobs.map((job) => ({
+        const mapped = jobs.map((job) => ({
           id: crypto.randomUUID(),
           title: job.title || job.text,
           company: agency.name,
@@ -57,25 +58,27 @@ export async function probeAgencies(db: any): Promise<NewOpportunity[]> {
           locationType: "remote",
           type: "agency",
         }));
+        results.push(...mapped);
+        continue;
       }
 
-      // 2. Agentic Probe for Custom Careers Pages
-      if (Math.random() > 0.15) {
-        return [];
-      }
+      // 2. Agentic Probe for Custom Careers Pages (Probabilistic & Rate-Limited)
+      if (Math.random() > 0.15) continue;
 
       const { checkAndIncrementAiQuota } = await import("./job-utils.js");
       const canCallAi = await checkAndIncrementAiQuota(db);
-      if (!canCallAi) return [];
+      if (!canCallAi) continue;
 
       const res = await fetch(agency.hiringUrl, { 
-        headers: { "User-Agent": "VA.INDEX/1.0 (ethical-harvester; agency-sensor-probe)" } 
+        headers: { "User-Agent": "VA.INDEX/1.0 (ethical-harvester; agency-sensor-probe)" },
+        signal: AbortSignal.timeout(15000)
       });
-      if (!res.ok) return [];
+      if (!res.ok) continue;
       const html = await res.text();
-      const snippet = html.slice(0, 20000); // Increased to 20k for deeper insight
+      const snippet = html.slice(0, 20000);
 
-      await new Promise(r => setTimeout(r, 2000)); // Respect 15 RPM limit
+      // SRE Sync: Sequential processing handles the delay naturally, but we reinforce it
+      await new Promise(r => setTimeout(r, 2000)); 
 
       const prompt = `
         You are a structured data extractor. From the following HTML snippet of an agency's career page, 
@@ -93,10 +96,10 @@ export async function probeAgencies(db: any): Promise<NewOpportunity[]> {
       const parsed = GeminiOutputSchema.safeParse(JSON.parse(cleanJson));
       if (!parsed.success) {
         console.warn(`[agency-sensor] Gemini hallucination or malformed JSON from ${agency.name}`);
-        return [];
+        continue;
       }
 
-      return parsed.data.map((job) => ({
+      const probes = parsed.data.map((job) => ({
         id: crypto.randomUUID(),
         title: job.title,
         company: agency.name,
@@ -110,13 +113,12 @@ export async function probeAgencies(db: any): Promise<NewOpportunity[]> {
         locationType: "remote",
         type: "agency",
       }));
+      results.push(...probes);
 
     } catch (e) {
       console.error(`[agency-sensor] Probe failed for ${agency.name}:`, e);
-      return [];
     }
-  });
+  }
 
-  const settled = await Promise.allSettled(probePromises);
-  return settled.flatMap(s => s.status === "fulfilled" ? s.value : []);
+  return results;
 }
