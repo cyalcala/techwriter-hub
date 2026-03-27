@@ -164,16 +164,40 @@ export async function harvest(db: any) {
       )
     });
 
+    let finalData = null;
+
     if (!validationResult.success) {
-      await recordLog(db, `Bounced poisoned signal: ${item.title || 'Unknown'}`, "warn", { 
+      // ── AGENTIC HEALING TRIGGER ──
+      const rawPayload = (item as any).__raw || JSON.stringify(item);
+      await recordLog(db, `Zod Boundary Breach: ${item.title || 'Unknown'}. Triggering Healer.`, "warn", { 
         errors: validationResult.error.errors,
         source: item.sourcePlatform 
       });
+
+      const healed = await healPayloadWithLLM(db, rawPayload, item.sourcePlatform || "Unknown");
+      if (healed) {
+        const reValidation = OpportunitySchema.safeParse({
+          ...healed,
+          id: item.id || uuidv4(),
+          scrapedAt: new Date(),
+          latestActivityMs: now
+        });
+        if (reValidation.success) {
+          finalData = reValidation.data;
+          await recordLog(db, `Agentic Healer stabilized signal: ${finalData.title}`, "info");
+        }
+      }
+    } else {
+      finalData = validationResult.data;
+    }
+
+    if (!finalData) {
+      await recordLog(db, `Bounced poisoned signal (Healer failed): ${item.title || 'Unknown'}`, "error", { source: item.sourcePlatform });
       continue;
     }
 
     processedFingerprints.add(fingerprint);
-    dedupedRelevant.push(validationResult.data);
+    dedupedRelevant.push(finalData);
   }
 
   // ── UPSERT (STRICT TYPE-SAFETY) ─────────────────────────────
