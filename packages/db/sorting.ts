@@ -14,7 +14,7 @@ export async function getSortedSignals(limit = 50) {
     .from(schema.opportunities)
     .where(not(eq(schema.opportunities.tier, 4)))
     .orderBy(desc(schema.opportunities.latestActivityMs))
-    .limit(200);
+    .limit(1000);
 
   return candidates
     .map(sig => {

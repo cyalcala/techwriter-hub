@@ -43,20 +43,6 @@ const rawAgencies = liveAgencies.map((agency) => {
   const lowerName = agency.name.toLowerCase();
   const lowerDesc = (agency.description || '').toLowerCase();
   
-  let relevancyBoost = 0;
-  
-  // Heavily prioritize agencies that start with "virtual" or have it in their name natively
-  if (lowerName.startsWith('virtual')) {
-    relevancyBoost += 1000;
-  } else if (lowerName.includes('virtual')) {
-    relevancyBoost += 500;
-  } else if (lowerDesc.includes('virtual')) {
-    relevancyBoost += 100;
-  }
-  
-  if (lowerDesc.includes('philippines') || lowerDesc.includes('filipino')) {
-    relevancyBoost += 50;
-  }
   return {
     name: agency.name,
     description: agency.description || 'Verified Filipino Agency Partner',
@@ -65,7 +51,7 @@ const rawAgencies = liveAgencies.map((agency) => {
     sources: (agency.metadata as any)?.source?.split(',') || ['Web'],
     isNew,
     heat: heatFlame,
-    relevancyBoost,
+    relevancyBoost: 0,
     heatValue: agency.hiringHeat || 1,
   };
 });
@@ -73,8 +59,8 @@ const rawAgencies = liveAgencies.map((agency) => {
 const agencies = rawAgencies.sort((a, b) => {
   // 1. Prioritize "Hiring Heat" (Visibly Hiring) first
   if (a.heatValue !== b.heatValue) return b.heatValue - a.heatValue;
-  // 2. Secondary sort by name-based relevancy
-  return b.relevancyBoost - a.relevancyBoost;
+  // 2. Secondary sort by alphabetical name
+  return a.name.localeCompare(b.name);
 });
 ---
 
