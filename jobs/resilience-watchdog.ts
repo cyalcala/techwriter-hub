@@ -56,17 +56,34 @@ export const resilienceWatchdogTask = schedules.task({
         });
       }
 
-      // 2. Audit Source Degradation
-      const degradedSources = await db.select()
-        .from(systemHealth)
-        .where(eq(systemHealth.status, 'FAIL'));
+      // 2. Audit Source Degradation (Titanium Telemetry)
+      const healthEntries = await db.select().from(systemHealth);
+      const degradedSources = healthEntries.filter(s => s.status === 'FAIL');
+      const healthySources = healthEntries.filter(s => s.status === 'OK');
       
-      if (degradedSources.length > 0) {
-        logger.warn(`[watchdog] ${degradedSources.length} sources reported as DEGRADED.`);
-        // Note: Specific source recovery is handled by the harvester's per-source try-catch.
+      // 3. Signal Density Check (Ensure variety and volume)
+      const signalCountResult = await db.run(sql`SELECT COUNT(*) as total FROM opportunities WHERE is_active = 1`);
+      const totalSignals = (signalCountResult.rows[0]?.total as number) ?? 0;
+
+      const isTitaniumHealthy = !isStale && totalSignals > 100 && healthySources.length > 5;
+
+      if (isTitaniumHealthy) {
+        logger.info(`[watchdog] 🛡️ TITANIUM SHIELD: ACTIVE. [Pulse: OK | Signals: ${totalSignals} | Healthy Sources: ${healthySources.length}]`);
+        await db.insert(logs).values({
+          id: uuidv4(),
+          message: `Titanium Shield: Fully Operational. Volume: ${totalSignals} signals. Reach: ${healthySources.length} sources.`,
+          level: "snapshot",
+          timestamp: new Date()
+        });
+      } else if (totalSignals < 50 || isStale) {
+        logger.error(`[watchdog] TITANIUM INTEGRITY COMPROMISED. Signals: ${totalSignals}. Triggering Deep Recovery.`);
+        
+        // RECOVERY: Flush stale indicators and trigger full harvest
+        await db.update(vitals).set({ lockStatus: 'IDLE', lastRecoveryAt: new Date() });
+        await tasks.trigger("harvest-opportunities", { source: "titanium-recovery", mode: "FULL_AUDIT" });
       }
 
-      return { status: "AUDIT_COMPLETE", isStale };
+      return { status: "TITANIUM_AUDIT_COMPLETE", isStale, totalSignals, healthySources: healthySources.length };
     } catch (err) {
       logger.error("[watchdog] Resilience Audit Failed (Possible DB Blackout):", { error: (err as Error).message });
       return { status: "AUDIT_FAILED", error: (err as Error).message };
