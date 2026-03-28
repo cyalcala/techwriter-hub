@@ -23,7 +23,7 @@ export const OpportunitySchema = z.object({
   }, z.date().optional().nullable()),
   scrapedAt: z.date().default(() => new Date()),
   isActive: z.boolean().default(true),
-  tier: z.coerce.number().int().min(1).max(4).default(3),
+  tier: z.coerce.number().int().min(0).max(4).default(3),
   contentHash: z.string().optional().nullable(),
   latestActivityMs: z.coerce.number().int().default(0),
   companyLogo: z.string().url().trim().optional().nullable().or(z.literal("")),

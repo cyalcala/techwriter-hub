@@ -1,4 +1,4 @@
-import { db, schema } from './packages/db/client';
+import { db, schema } from './client';
 import { sql, eq, and } from 'drizzle-orm';
 
 async function majorHealthCheck() {
