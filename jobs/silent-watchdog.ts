@@ -17,7 +17,7 @@ export const silentWatchdogTask = schedules.task({
   maxDuration: 300,
   run: async () => {
     const { db, client } = createDb();
-    const siteUrl = process.env.PUBLIC_SITE_URL || "https://va-freelance-hub.vercel.app";
+    const siteUrl = process.env.PUBLIC_SITE_URL || "https://va-freelance-hub-web.vercel.app";
     const deployHook = process.env.VERCEL_DEPLOY_HOOK_URL;
     
     let driftMinutes = 0;

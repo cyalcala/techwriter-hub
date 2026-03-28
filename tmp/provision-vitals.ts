@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from "uuid";
 
 async function provisionVitals() {
   const { db, client } = createDb();
-  const siteUrl = process.env.PUBLIC_SITE_URL || "https://va-freelance-hub.vercel.app";
+  const siteUrl = process.env.PUBLIC_SITE_URL || "https://va-freelance-hub-web.vercel.app";
   
   console.log("══ Initiating Silent Ops Provisioning ══");
   
