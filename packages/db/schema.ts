@@ -63,6 +63,8 @@ export const extractionRules = sqliteTable('extraction_rules', {
   jsonataPattern: text('jsonata_pattern').notNull(), // LLM-generated JSONata
   confidenceScore: integer('confidence_score').default(0), // 0-100
   samplePayload: text('sample_payload'), // For debugging/validation
+  failureReason: text('failure_reason'), // Why the last extraction failed
+  lastErrorLog: text('last_error_log'), // Full trace if LLM recovery failed
   lastValidatedAt: integer('last_validated_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
   createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
 });

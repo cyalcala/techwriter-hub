@@ -32,15 +32,30 @@ export async function checkAndIncrementAiQuota(db: any): Promise<boolean> {
       return true;
     }
 
-    // 3. Enforce Hard Cap
+    // 3. Enforce RPM Throttling (15 RPM = ~4s per request)
+    const now = new Date();
+    if (vital.lockUpdatedAt) {
+      const msSinceLast = now.getTime() - new Date(vital.lockUpdatedAt).getTime();
+      const THROTTLE_MS = 4000; // 4 seconds buffer
+      if (msSinceLast < THROTTLE_MS) {
+        const waitMs = THROTTLE_MS - msSinceLast;
+        console.log(`[quota-guard] RPM Limit near. Throttling for ${waitMs}ms...`);
+        await new Promise(resolve => setTimeout(resolve, waitMs));
+      }
+    }
+
+    // 4. Enforce Hard Cap (RPD)
     if (vital.aiQuotaCount >= HARD_CAP) {
       console.warn(`[quota-guard] Hard cap reached (${HARD_CAP} RPD). Blocking Gemini call.`);
       return false;
     }
 
-    // 4. Increment
+    // 5. Increment and Update Vital timestamp
     await db.update(vitals)
-      .set({ aiQuotaCount: (vital.aiQuotaCount || 0) + 1 })
+      .set({ 
+        aiQuotaCount: (vital.aiQuotaCount || 0) + 1,
+        lockUpdatedAt: new Date()
+      })
       .where(eq(vitals.id, vital.id));
 
     return true;

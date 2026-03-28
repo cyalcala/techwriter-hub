@@ -14,11 +14,35 @@ import { v4 as uuidv4 } from "uuid";
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 const model = genAI.getGenerativeModel({ 
   model: "gemini-1.5-flash",
+  systemInstruction: `
+    YOU ARE THE VA.INDEX SIGNAL EXTRACTION ARCHITECT.
+    Your mission is to generate robust JSONata transformation rules that map mutated source JSON into our strict schema.
+    
+    CRITICAL CONSTRAINTS:
+    - Return ONLY valid JSON containing a "rule" (string) and "data" (array of initial results).
+    - The JSONata rule must handle future payloads of the same structure.
+    - Ensure sourceUrl is always an absolute URL.
+    - If fields are missing, provide sensible defaults based on the context.
+    - Respond in application/json format.
+  `,
   generationConfig: {
     temperature: 0.1,
     responseMimeType: "application/json",
   }
 });
+
+/**
+ * Minifies a JSON payload to maximize Gemini's context window.
+ * Removes whitespace, nulls, and repeated boilerplate.
+ */
+function minifyPayload(json: any): string {
+  const minified = JSON.stringify(json, (key, value) => {
+    if (value === null || value === undefined || value === "") return undefined;
+    if (Array.isArray(value) && value.length > 50) return value.slice(0, 50); // Sample large arrays
+    return value;
+  });
+  return minified.slice(0, 100000); // 100k char limit for Flash Free Tier (approx 25k tokens)
+}
 
 export const OpportunitySchema = z.object({
   title: z.string().default("Untitled Role"),
@@ -73,81 +97,106 @@ export async function healBatchWithLLM(db: any, rawJson: any, sourceName: string
     console.warn(`[Healer] Rule Engine Error (skipping to LLM):`, (cacheErr as Error).message);
   }
 
-  // 2. SLOW PATH: Gemini Discovery
+  // 2. SLOW PATH: Gemini Discovery with Self-Correction
   const { checkAndIncrementAiQuota } = await import("./job-utils.js");
   const canCallAi = await checkAndIncrementAiQuota(db);
   if (!canCallAi) return [];
 
-  const prompt = `
-    YOU ARE THE VA.INDEX SYSTEM ARCHITECT.
-    The source "${sourceName}" has mutated its JSON structure.
-    Your task:
-    1. Identify the job listing array.
-    2. Generate a JSONata expression that transforms the raw JSON into our target schema.
-    3. Return a JSON object with:
-       - "rule": "A robust JSONata string (e.g. 'data.jobs.{ \"title\": title, \"sourceUrl\": link }')"
-       - "data": An array of the transformed objects for THIS specific payload.
-
-    TARGET SCHEMA (Per Item):
-    {
-      "title": "string",
-      "company": "string",
-      "sourceUrl": "string (absolute URL)",
-      "description": "string (extract key details)",
-      "postedAt": "string (ISO date if found)",
-      "locationType": "remote | hybrid | onsite",
-      "payRange": "string"
-    }
-
-    RAW MUTATED JSON:
-    ${JSON.stringify(rawJson).slice(0, 30000)}
-
-    INSTRUCTIONS:
-    - The JSONata rule must handle future payloads of the same structure.
-    - If no jobs found, return { "rule": "", "data": [] }.
+  const minified = minifyPayload(rawJson);
+  let currentPrompt = `
+    Source "${sourceName}" has mutated. 
+    Analyze this minified payload and generate a JSONata rule for extraction.
+    
+    PAYLOAD: ${minified}
   `;
 
-  try {
-    const aiResult = await model.generateContent(prompt);
-    const parsedAi = JSON.parse(aiResult.response.text());
+  let attempts = 0;
+  const MAX_ATTEMPTS = 2;
 
-    const { rule, data } = parsedAi;
+  while (attempts < MAX_ATTEMPTS) {
+    try {
+      attempts++;
+      const aiResult = await model.generateContent(currentPrompt);
+      const parsedAi = JSON.parse(aiResult.response.text());
+      const { rule, data } = parsedAi;
 
-    if (!Array.isArray(data)) return [];
+      // 3. VERIFICATION: Test the rule locally
+      if (rule) {
+        try {
+          const expression = jsonata(rule);
+          const verifyResult = await expression.evaluate(rawJson);
+          
+          if (!Array.isArray(verifyResult) || verifyResult.length === 0) {
+            throw new Error("Generated rule returned empty or non-array data.");
+          }
 
-    const validated = data
-      .map(item => OpportunitySchema.safeParse({ ...item, sourcePlatform: sourceName }))
-      .filter(p => p.success)
-      .map(p => p.data);
+          // Success - Persist and Return
+          const validated = verifyResult
+            .map(item => OpportunitySchema.safeParse({ ...item, sourcePlatform: sourceName }))
+            .filter(p => p.success)
+            .map(p => p.data);
 
-    if (validated.length > 0 && rule) {
-      // PERSIST THE RULE (Titanium Step)
+          if (validated.length > 0) {
+            await db.insert(extractionRules)
+              .values({
+                id: uuidv4(),
+                sourceName,
+                jsonataPattern: rule,
+                confidenceScore: 95,
+                samplePayload: minified.slice(0, 5000),
+                lastValidatedAt: new Date()
+              })
+              .onConflictDoUpdate({
+                target: extractionRules.sourceName,
+                set: { 
+                  jsonataPattern: rule, 
+                  lastValidatedAt: new Date(),
+                  samplePayload: minified.slice(0, 5000),
+                  failureReason: null,
+                  lastErrorLog: null
+                }
+              });
+
+            console.log(`[Healer] New Intelligent Rule Cached for ${sourceName} (Attempts: ${attempts}).`);
+            return validated;
+          }
+        } catch (ruleErr) {
+          console.warn(`[Healer] Verification failed on attempt ${attempts}:`, (ruleErr as Error).message);
+          currentPrompt = `
+            The previous JSONata rule you generated was invalid or returned no data.
+            Error: ${(ruleErr as Error).message}
+            Please fix the rule and return a valid one.
+          `;
+          if (attempts >= MAX_ATTEMPTS) throw ruleErr;
+        }
+      }
+    } catch (err) {
+      console.error(`[Healer] Discovery Loop Failure (Attempt ${attempts}):`, (err as Error).message);
+      
+      // Log failure to telemetry
       await db.insert(extractionRules)
         .values({
           id: uuidv4(),
           sourceName,
-          jsonataPattern: rule,
-          confidenceScore: 90,
-          samplePayload: JSON.stringify(rawJson).slice(0, 5000),
+          jsonataPattern: "FAILED",
+          failureReason: (err as Error).message,
+          lastErrorLog: JSON.stringify(err),
           lastValidatedAt: new Date()
         })
         .onConflictDoUpdate({
           target: extractionRules.sourceName,
           set: { 
-            jsonataPattern: rule, 
-            lastValidatedAt: new Date(),
-            samplePayload: JSON.stringify(rawJson).slice(0, 5000)
+            failureReason: (err as Error).message,
+            lastErrorLog: JSON.stringify(err),
+            lastValidatedAt: new Date()
           }
         });
 
-      console.log(`[Healer] New Rule Discovered & Cached for ${sourceName}.`);
+      if (attempts >= MAX_ATTEMPTS) break;
     }
-
-    return validated;
-  } catch (err) {
-    console.error(`[Healer] Slow Path Discovery Failed for ${sourceName}:`, err);
-    return [];
   }
+
+  return [];
 }
 
 /**
