@@ -31,8 +31,8 @@ export const silentWatchdogTask = schedules.task({
     try {
       logger.info(`[watchdog] Initiating Live Edge Audit: ${siteUrl}/api/health`);
 
-      // Pillar 1: Live Edge Audit
-      const response = await fetch(`${siteUrl}/api/health`, {
+      // Pillar 1: Live Edge Audit (Force cache bypass with timestamp)
+      const response = await fetch(`${siteUrl}/api/health?t=${Date.now()}`, {
         headers: { 
           "Cache-Control": "no-cache",
           "User-Agent": "VA-Hub-Watchdog/2.0 (Autonomous)"

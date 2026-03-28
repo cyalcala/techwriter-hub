@@ -43,6 +43,9 @@ export const GET: APIRoute = async () => {
       diagnostics.status = "DEGRADED ⚠️";
     }
 
+    const nonce = Math.random().toString(36).substring(7);
+    diagnostics.nonce = nonce;
+
   } catch (err: any) {
     diagnostics.status = "CRITICAL ❌";
     diagnostics.error = err.message;
@@ -52,9 +55,12 @@ export const GET: APIRoute = async () => {
     status: 200,
     headers: {
       "Content-Type": "application/json",
-      "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+      "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+      "CDN-Cache-Control": "no-store",
+      "Vercel-CDN-Cache-Control": "no-store",
       "Pragma": "no-cache",
-      "Surrogate-Control": "no-store",
+      "Expires": "0",
+      "X-Sentinel-Nonce": nonce,
       "X-Sentinel-Verified": "true"
     },
   });
