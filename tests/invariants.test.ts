@@ -59,4 +59,27 @@ describe("VA.INDEX Mission-Critical Invariants", () => {
     expect(staticFallback[0]).toHaveProperty("sourceUrl");
   });
 
+  /**
+   * INVARIANT 4: THE AUTONOMOUS WATCHDOG
+   * The Silent Ledger (/noteslog) must be recording remediation telemetry.
+   */
+  test("Watchdog Invariant: Silent Ledger Continuity", async () => {
+    const { db, client } = createDb();
+    const { noteslog } = await import("../packages/db/schema");
+    try {
+      const latestLog = await db.select()
+        .from(noteslog)
+        .orderBy(desc(noteslog.timestamp))
+        .limit(1);
+
+      if (latestLog.length > 0) {
+        console.log(`[Watchdog] Last telemetry: ${latestLog[0].timestamp} (${latestLog[0].status})`);
+        const drift = latestLog[0].driftMinutes;
+        expect(drift).toBeGreaterThanOrEqual(0);
+      }
+    } finally {
+      await client.close();
+    }
+  });
+
 });

@@ -90,6 +90,15 @@ export const logs = sqliteTable('logs', {
   timestampIdx: index('timestamp_idx').on(table.timestamp), // Speeds up Terminal log stream
 }));
 
+export const noteslog = sqliteTable('noteslog', {
+  id: text('id').primaryKey(),
+  timestamp: integer('timestamp', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  driftMinutes: integer('drift_minutes').notNull(),
+  actionsTaken: text('actions_taken').notNull(), 
+  status: text('status').notNull(), 
+  metadata: text('metadata', { mode: 'json' }).default('{}'),
+});
+
 export type Agency = typeof agencies.$inferSelect;
 export type NewAgency = typeof agencies.$inferInsert;
 export type Opportunity = typeof opportunities.$inferSelect;
@@ -102,3 +111,5 @@ export type Vitals = typeof vitals.$inferSelect;
 export type NewVitals = typeof vitals.$inferInsert;
 export type Log = typeof logs.$inferSelect;
 export type NewLog = typeof logs.$inferInsert;
+export type NotesLog = typeof noteslog.$inferSelect;
+export type NewNotesLog = typeof noteslog.$inferInsert;
