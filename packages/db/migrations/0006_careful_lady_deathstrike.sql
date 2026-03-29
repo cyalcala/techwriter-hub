@@ -8,7 +8,7 @@ CREATE TABLE `extraction_rules` (
 	`created_at` integer
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `extraction_rules_source_name_unique` ON `extraction_rules` (`source_name`);--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS `extraction_rules_source_name_unique` ON `extraction_rules` (`source_name`);--> statement-breakpoint
 PRAGMA foreign_keys=OFF;--> statement-breakpoint
 CREATE TABLE `__new_opportunities` (
 	`id` text PRIMARY KEY NOT NULL,
@@ -36,10 +36,10 @@ INSERT INTO `__new_opportunities`("id", "title", "company", "type", "source_url"
 DROP TABLE `opportunities`;--> statement-breakpoint
 ALTER TABLE `__new_opportunities` RENAME TO `opportunities`;--> statement-breakpoint
 PRAGMA foreign_keys=ON;--> statement-breakpoint
-CREATE UNIQUE INDEX `title_company_idx` ON `opportunities` (`title`,`company`);--> statement-breakpoint
-CREATE UNIQUE INDEX `tier_latest_idx` ON `opportunities` (`tier`,`latest_activity_ms`);--> statement-breakpoint
-CREATE INDEX `active_idx` ON `opportunities` (`is_active`);--> statement-breakpoint
-CREATE INDEX `source_platform_idx` ON `opportunities` (`source_platform`);--> statement-breakpoint
-CREATE INDEX `type_idx` ON `opportunities` (`type`);--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS `title_company_idx` ON `opportunities` (`title`,`company`);--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS `tier_latest_idx` ON `opportunities` (`tier`,`latest_activity_ms`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `active_idx` ON `opportunities` (`is_active`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `source_platform_idx` ON `opportunities` (`source_platform`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `type_idx` ON `opportunities` (`type`);--> statement-breakpoint
 ALTER TABLE `system_health` ADD `consecutive_failures` integer DEFAULT 0;--> statement-breakpoint
-CREATE INDEX `timestamp_idx` ON `logs` (`timestamp`);
+CREATE INDEX IF NOT EXISTS `timestamp_idx` ON `logs` (`timestamp`);
