@@ -40,8 +40,8 @@ export const opportunities = sqliteTable('opportunities', {
   metadata: text('metadata', { mode: 'json' }).notNull().default('{}'), // Extended JSON (salary, tags, etc.)
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 }, (table) => ({
-  titleCompanyIdx: uniqueIndex('title_company_idx').on(table.title, table.company),
-  tierLatestIdx: uniqueIndex('tier_latest_idx').on(table.tier, table.latestActivityMs), // Speeds up Astro feed
+  titleCompanyIdx: index('title_company_idx').on(table.title, table.company),
+  tierLatestIdx: index('tier_latest_idx').on(table.tier, table.latestActivityMs), // Speeds up Astro feed
   activeIdx: index('active_idx').on(table.isActive), // Eliminates full scans on the "Live" toggle
   sourcePlatformIdx: index('source_platform_idx').on(table.sourcePlatform), // Janitor's primary filter
   typeIdx: index('type_idx').on(table.type), // Speeds up agency/direct filtering
