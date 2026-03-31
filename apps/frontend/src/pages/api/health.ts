@@ -15,9 +15,9 @@ export const GET: APIRoute = async () => {
     const stats = await db.select({
       total: sql<number>`count(*)`,
       gold: sql<number>`sum(case when tier = 1 then 1 else 0 end)`,
-      newToday: sql<number>`sum(case when created_at > unixepoch('now', '-24 hours') * 1000 then 1 else 0 end)`,
-      maxScraped: sql<number>`max(scraped_at)`,
-      maxCreated: sql<number>`max(created_at)`,
+      newToday: sql<number>`sum(case when last_seen_at > unixepoch('now', '-24 hours') * 1000 then 1 else 0 end)`,
+      maxScraped: sql<number>`max(last_seen_at)`,
+      maxCreated: sql<number>`max(last_seen_at)`,
     }).from(schema.opportunities).where(eq(schema.opportunities.isActive, true));
 
     const { total, gold, newToday, maxScraped, maxCreated } = stats[0];

@@ -22,12 +22,12 @@ export const resilienceWatchdogTask = schedules.task({
       const STALENESS_THRESHOLD_MS = stalenessThresholdHrs * 60 * 60 * 1000;
       
       // 1. Audit Ingestion Pulse
-      const latestSignal = await db.select({ scrapedAt: opportunities.scrapedAt })
+      const latestSignal = await db.select({ lastSeenAt: opportunities.lastSeenAt })
         .from(opportunities)
-        .orderBy(desc(opportunities.scrapedAt))
+        .orderBy(desc(opportunities.lastSeenAt))
         .limit(1);
       
-      const lastPulse = latestSignal[0]?.scrapedAt ? new Date(latestSignal[0].scrapedAt).getTime() : 0;
+      const lastPulse = latestSignal[0]?.lastSeenAt ? new Date(latestSignal[0].lastSeenAt).getTime() : 0;
       const isStale = (nowMs - lastPulse) > STALENESS_THRESHOLD_MS;
 
       if (isStale) {
