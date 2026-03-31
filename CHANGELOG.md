@@ -1,6 +1,15 @@
 ## [2026-04-01] — [Opportunities: ACTIVE | Agencies: 59]
 **Status: MISSION RE-ALIGNED — STRICT HIERARCHY ENFORCED**
 
+## [2026-03-31] — [Opportunities: 78 | Agencies: 59]
+**Status: AUTO-PROCESSED**
+
+### ✨ Major Features
+* feat: enforce strict hierarchy sorting and hardened deduplication (214ac91)
+
+---
+
+
 ### 🛡️ Reliability & Fixes
 * **Strict Hierarchy Alignment**: Resolved major sorting failure where "Decay Math" was causing Silver jobs to interleve with Platinum. Enforced strict `tier ASC, latestActivityMs DESC` sorting at the database layer.
 * **Database Hardening**: Expanded unique index to `(title, company, sourceUrl)` to treat multi-source signals as distinct entities, preventing fresh data from being swallowed by stale records.

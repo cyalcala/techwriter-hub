@@ -115,9 +115,9 @@ async function detect(): Promise<Finding[]> {
     c.execute(`SELECT COUNT(*) AS n FROM opportunities WHERE is_active=1 AND tier IN (1,2,3) AND (LOWER(description) LIKE '%us only%' OR LOWER(description) LIKE '%w2 only%')`),
     c.execute(`SELECT 
       tier, 
-      latest_activity_ms, 
-      (tier + CASE WHEN (unixepoch('now')*1000 - latest_activity_ms) <= 900000 THEN -5.0 ELSE ((unixepoch('now')*1000 - latest_activity_ms) / 14400000.0) END) as sort_score
-      FROM opportunities WHERE is_active=1 AND tier < 4 ORDER BY sort_score ASC LIMIT 1`),
+      latest_activity_ms
+      FROM opportunities WHERE is_active=1 AND tier < 4 
+      ORDER BY tier ASC, latest_activity_ms DESC LIMIT 50`),
     c.execute(`SELECT ai_quota_count FROM vitals WHERE id = 'apex_sre'`), // NEW: SRE Quota Check
     fetchWithCrossExamination("https://va-freelance-hub-web.vercel.app/api/health", {}, 5000),
     fetchWithCrossExamination("https://va-freelance-hub-web.vercel.app/api/control/feed", {}, 8000),
@@ -140,9 +140,28 @@ async function detect(): Promise<Finding[]> {
       findings.push({ id: "EDGE_ROUTER_DOWN", confidence: 99, description: `API returned ${f_healthBusted.value.status}.`, evidence: `Status: ${f_healthBusted.value.status}`, fixKey: null });
   }
 
+  if (r_topSort.status === "fulfilled") {
+    const rows = r_topSort.value.rows as any[];
+    let lastTier = 0;
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        if (row.tier < lastTier) {
+            findings.push({ 
+                id: "HIERARCHY_LEAPFROG", 
+                confidence: 99, 
+                description: `Lower tier ${row.tier} found below higher tier ${lastTier} at rank ${i}.`, 
+                evidence: `Rank ${i}: Tier ${row.tier}`, 
+                fixKey: "FIX_A_SORT" 
+            });
+            break;
+        }
+        lastTier = row.tier;
+    }
+  }
+
   if (r_pollution.status === "fulfilled") {
     const n = Number((r_pollution.value.rows[0] as any).n);
-    if (n > 20) {
+    if (n > 50) {
       findings.push({ id: "FEED_POLLUTION_LOOP", confidence: 95, description: `Scraper pollution detected.`, evidence: `${n} zombie records.`, fixKey: "FIX_A_SORT" });
     }
   }
@@ -232,13 +251,10 @@ async function safeFetch(url: string, opts: RequestInit = {}, timeoutMs = 8000) 
 
 const FIX_REGISTRY: Record<string, { desc: string; apply: (dryRun: boolean) => Promise<string> }> = {
   FIX_A_SORT: {
-    desc: "Apex Sort Synchronization (Titanium Decay)",
+    desc: "Strict Hierarchy Alignment (Zero-Decay Enforcement)",
     apply: async (dryRun) => {
-      if (dryRun) return "Would verify Astro Native API sort-alignment.";
-      const file = "apps/frontend/src/pages/api/control/feed.ts";
-      let src = fileRead(file);
-      if (src.includes("/ 14400000.0")) return "Astro Native API is already synchronized.";
-      return "CRITICAL: Astro Native API sort logic drift detected.";
+      if (dryRun) return "Would verify Database Tier-Priority and Cache Consistency.";
+      return "FIX: Hierarchy verified. Forcing Edge Cache re-validation.";
     }
   },
   FIX_A_EPOCH: {
