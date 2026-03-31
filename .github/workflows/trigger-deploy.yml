@@ -54,7 +54,7 @@ jobs:
           VERSION=$(grep -oE "[0-9]{8}\.[0-9]+" deploy.log | head -n 1)
           if [ ! -z "$VERSION" ]; then
             echo "Promoting version: $VERSION"
-            bunx trigger.dev@4.4.3 promote $VERSION --env prod
+            bunx trigger.dev@4.4.3 promote $VERSION --env prod --config jobs/trigger.config.ts
           else
             echo "::error::Could not detect version for promotion. Deployment likely failed."
             exit 1
