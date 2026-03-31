@@ -92,6 +92,7 @@ export async function runAtsSniper() {
             tags: JSON.stringify([...source.tags, "ats-sniper"]),
             description: description.substring(0, 500),
             scrapedAt: now,
+            lastSeenAt: now,
             createdAt: now,
             isActive: true,
             tier,
@@ -106,6 +107,7 @@ export async function runAtsSniper() {
               target: [opportunitiesSchema.title, opportunitiesSchema.company],
               set: { 
                 scrapedAt: now,
+                lastSeenAt: now,
                 isActive: true,
                 tier: sql`excluded.tier`,
                 latestActivityMs: now.getTime()

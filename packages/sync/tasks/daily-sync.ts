@@ -90,6 +90,7 @@ export const dailySyncTask = task({
             await db.update(agencies)
               .set({ 
                 lastSync: new Date(),
+                lastSeenAt: new Date(),
                 metadata: { ...(local.metadata as any), [remote.source]: remote.rawMetadata }
               })
               .where(eq(agencies.id, local.id));
@@ -116,6 +117,7 @@ export const dailySyncTask = task({
             slug: agency.name.toLowerCase().replace(/\s+/g, '-'),
             status: (res.ok ? "active" : "quiet") as "active" | "quiet",
             lastSync: new Date(),
+            lastSeenAt: new Date(),
             verifiedAt: new Date(),
             metadata: { [agency.source]: agency.rawMetadata }
           };
@@ -126,6 +128,7 @@ export const dailySyncTask = task({
             slug: agency.name.toLowerCase().replace(/\s+/g, '-'),
             status: "quiet" as "active" | "quiet",
             lastSync: new Date(),
+            lastSeenAt: new Date(),
             verifiedAt: new Date(),
             metadata: { [agency.source]: agency.rawMetadata }
           };

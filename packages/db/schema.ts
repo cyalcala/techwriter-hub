@@ -10,6 +10,7 @@ export const agencies = sqliteTable('agencies', {
   description: text('description'),
   status: text('status', { enum: ['active', 'quiet'] }).default('active'),
   lastSync: integer('last_sync', { mode: 'timestamp' }).notNull(),
+  lastSeenAt: integer('last_seen_at', { mode: 'timestamp' }),
   verifiedAt: integer('verified_at', { mode: 'timestamp' }),
   metadata: text('metadata', { mode: 'json' }), // raw JSON from APIs
   score: integer('score'), // search-relevancy score
@@ -32,6 +33,7 @@ export const opportunities = sqliteTable('opportunities', {
   description: text('description'),
   postedAt: integer('posted_at', { mode: 'timestamp' }),
   scrapedAt: integer('scraped_at', { mode: 'timestamp' }).notNull(),
+  lastSeenAt: integer('last_seen_at', { mode: 'timestamp' }),
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
   tier: integer('tier').notNull().default(3), // 1=Gold, 2=Silver, 3=Bronze, 4=Trash
   contentHash: text('content_hash'),
