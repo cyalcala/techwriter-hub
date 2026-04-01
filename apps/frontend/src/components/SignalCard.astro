@@ -1,103 +1,75 @@
 ---
-const { signal } = Astro.props;
+const { signal, index } = Astro.props;
 
-function formatRelativeTime(dateInput: Date | number | null) {
-  if (!dateInput) return 'New Signal';
-  const now = new Date();
-  const date = new Date(dateInput);
-  const diffMs = now.getTime() - date.getTime();
-  
-  if (diffMs < 60000) return 'Seconds ago';
-  
-  const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 60) return `${diffMins}m ago`;
-  
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  if (diffHours < 24) return `${diffHours}h ago`;
-  
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return `${diffDays}d ago`;
-  
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-}
-
-const ageHrs = signal.latestActivityMs ? Math.max(0, (Date.now() - signal.latestActivityMs) / 3600000) : 0;
-const isFresh = ageHrs < 1; 
-const displayDate = formatRelativeTime(signal.latestActivityMs);
-
-// Defensive Tags Parsing: Drizzle mode: 'json' can be a string in some Edge runtimes
+// Defensive Tags Parsing
 const rawTags = signal.tags || [];
 const tags = (typeof rawTags === 'string' ? JSON.parse(rawTags) : rawTags) as string[];
 
-const tierClass = signal.tier === 0 ? 'tier-platinum' : signal.tier === 1 ? 'tier-gold' : 'tier-silver';
-const tierLabelClass = signal.tier === 0 ? 'bg-[#FFD700] text-black' : signal.tier === 1 ? 'bg-[#50C878] text-white' : 'bg-oat-200 text-blueberry-800/60';
-const tierName = signal.tier === 0 ? 'Platinum' : signal.tier === 1 ? 'Gold' : 'Silver';
+const rawDisplayTags = signal.displayTags || [];
+const displayTags = (typeof rawDisplayTags === 'string' ? JSON.parse(rawDisplayTags) : rawDisplayTags) as string[];
 
-const reasoningTags = tags.filter((t: string) => !['ats-sniper', 'agency', 'direct'].includes(t.toLowerCase())).slice(0, 2);
+const ageHrs = signal.latestActivityMs ? Math.max(0, (Date.now() - signal.latestActivityMs) / 3600000) : 0;
+const isFresh = ageHrs < 4; 
+
+const tierClass = signal.tier === 0 
+  ? 'border-amber-200/50 bg-amber-50/10' 
+  : signal.tier === 1 
+    ? 'border-emerald-200/30' 
+    : 'border-oat-100';
 ---
 
 <a 
   href={signal.sourceUrl} 
   target="_blank" 
-  class={`opp-item flex flex-col sm:flex-row sm:items-center justify-between p-5 sm:p-5 rounded-2xl border-2 transition-all group relative active:scale-[0.98] gap-4 ${tierClass} ${isFresh ? 'ring-2 ring-emerald-400/20' : 'hover:shadow-lg hover:-translate-y-0.5'}`}
+  class={`opp-item flex items-start gap-3 p-3 rounded-xl border transition-all group relative active:scale-[0.98] hover:bg-white hover:shadow-md hover:border-blueberry-900/10 ${tierClass}`}
   data-search={`${signal.title} ${signal.company} ${tags.join(' ')}`.toLowerCase()}
   data-age={ageHrs}
 >
-  <div class="flex items-center gap-4 sm:gap-6 w-full overflow-hidden relative z-10">
-    <div class="flex sm:flex-col items-center gap-2 sm:gap-0 sm:w-24 shrink-0">
-      <span class="text-[9px] font-black text-blueberry-800/40 uppercase tracking-tighter w-full">{displayDate}</span>
-      <span class={`px-2 py-0.5 text-[8px] font-black uppercase rounded-lg border border-black/5 shrink-0 mt-1 ${tierLabelClass}`}>
-        {tierName}
-      </span>
+  <div class="flex items-center gap-2 shrink-0 mt-0.5">
+    <span class="text-[11px] font-black text-blueberry-800/20 italic tabular-nums w-4 shrink-0">{index}.</span>
+    {signal.companyLogo ? (
+      <img src={signal.companyLogo} class="w-5 h-5 rounded-md object-contain grayscale group-hover:grayscale-0 transition-all shrink-0" alt="" />
+    ) : (
+      <div class="w-5 h-5 rounded-md bg-oat-100 flex items-center justify-center shrink-0">
+        <span class="text-[8px] font-black text-blueberry-800/30">{signal.company.charAt(0)}</span>
+      </div>
+    )}
+  </div>
+
+  <div class="min-w-0 flex-1">
+    <div class="flex items-start justify-between gap-2">
+      <h3 class="text-[13px] font-black text-blueberry-900 leading-tight group-hover:text-blueberry-600 transition-colors truncate">
+        {signal.title}
+      </h3>
+      {isFresh && <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 mt-1 shadow-[0_0_8px_rgba(16,185,129,0.4)]"></span>}
     </div>
-    
-    <div class="h-10 w-[1px] bg-oat-200/50 hidden sm:block"></div>
-    
-    <div class="min-w-0 flex-1">
-      <div class="flex items-center gap-2 mb-1 flex-wrap">
-        <h3 class="text-[17px] font-black text-blueberry-900 leading-tight uppercase tracking-tight break-words font-heading group-hover:text-blueberry-600 transition-colors">{signal.title}</h3>
-        {isFresh && <span class="bg-emerald-500 w-2 h-2 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>}
-      </div>
+
+    <div class="flex items-center gap-1.5 flex-wrap mt-1">
+      <span class="text-[9px] text-blueberry-800/50 font-bold uppercase tracking-tight truncate max-w-[100px]">
+        {signal.company || 'Direct'}
+      </span>
       
-      <div class="flex items-center gap-2 flex-wrap">
-        <span class="text-[10px] text-blueberry-800/70 font-bold uppercase tracking-widest truncate max-w-[150px]">{signal.company || 'Direct Client'}</span>
-        <span class="h-1 w-1 rounded-full bg-oat-300"></span>
-        <span class="text-[9px] font-black text-blueberry-800/20 uppercase tracking-[0.2em]">{signal.sourcePlatform}</span>
-        
-        {reasoningTags.length > 0 && <span class="h-1 w-1 rounded-full bg-oat-300"></span>}
-        {reasoningTags.map(tag => (
-          <span class="px-1.5 py-0.5 bg-blueberry-50 text-blueberry-400 text-[8px] font-black uppercase rounded border border-blueberry-100/50">
-            {tag}
-          </span>
-        ))}
-      </div>
+      {displayTags.slice(0, 2).map((tag: string) => (
+        <span class={`px-1.5 py-0.5 text-[7px] font-black uppercase rounded shadow-sm border border-black/5 ${
+          tag === 'PREMIUM' ? 'bg-amber-100 text-amber-700' : 
+          tag === 'HIGH PAY' ? 'bg-emerald-100 text-emerald-700' : 
+          'bg-oat-100 text-blueberry-800/50'
+        }`}>
+          {tag}
+        </span>
+      ))}
     </div>
   </div>
 
-  <div class="flex items-center justify-end text-blueberry-800/20 relative z-10 shrink-0">
-     <div class="w-10 h-10 rounded-full bg-oat-50 group-hover:bg-blueberry-900 flex items-center justify-center transition-all scale-90 group-hover:scale-100 shadow-sm border border-oat-200/50">
-       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" class="text-blueberry-400 group-hover:text-white"><path d="M7 17l9.2-9.2M17 17V7H7"/></svg>
-     </div>
+  <div class="shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" class="text-blueberry-300"><path d="M7 17l9.2-9.2M17 17V7H7"/></svg>
   </div>
 </a>
 
 <style>
   .opp-item {
-    content-visibility: auto; /* Skip rendering off-screen cards */
-    contain-intrinsic-size: 100px; /* Estimated height for layout calculation */
-    will-change: transform, opacity; /* Promote to GPU composite layer */
-  }
-  .tier-platinum {
-    background: linear-gradient(to bottom right, #FFFFFF, #FFFAF0);
-    border-color: rgba(255, 215, 0, 0.3);
-  }
-  .tier-gold {
-    background: linear-gradient(to bottom right, #FFFFFF, #F0FFF4);
-    border-color: rgba(80, 200, 120, 0.2);
-  }
-  .tier-silver {
-    background: #FFFFFF;
-    border-color: rgba(226, 232, 240, 0.8);
+    content-visibility: auto;
+    contain-intrinsic-size: 60px;
+    will-change: transform, opacity;
   }
 </style>

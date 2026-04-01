@@ -1,4 +1,34 @@
 
+## [2026-04-01] — [Opportunities: 252 | Agencies: 59]
+**Status: MASTER DIRECTORY TRANSITION — FUNCTIONAL SILOS ACTIVE**
+
+### ✨ Major Features
+* **Master Directory UI**: Transformed the flat feed into a Workbound-style directory with 10 functional domains (VA, Design, Writing, etc.).
+* **Titanium Taxonomy Engine**: Implemented `packages/db/taxonomy.ts` for automated signal classification and relevance scoring.
+* **Ranked Tiered Playbook**: Enforced numbered ranking within each silo, ensuring Platinum signals maintain the highest visibility.
+* **Retroactive Re-Sifting**: Re-processed all 252 existing signals to populate the new functional directory grid.
+
+### 🛡️ Reliability & Fixes
+* **Schema Hardening**: Migrated Turso DB to include `relevanceScore` and `displayTags` columns.
+* **Harvester Synchronization**: Aligned `scrape-opportunities.ts` and `ats-harvester.ts` with the new sifter response structure.
+* **Watchdog Coherency**: Verified all Sentinel Watchdogs are aligned with the new hierarchical data structure.
+
+---
+
+## [2026-04-01] — [Opportunities: 58 | Agencies: 59]
+
+---
+
+
+## [2026-04-01] — [Opportunities: 58 | Agencies: 59]
+**Status: AUTO-PROCESSED**
+
+### ⚓ Internal Maintenance
+* chore: update documentation after api fix (9d991a4)
+
+---
+
+
 ## [2026-04-01] — [Opportunities: 58 | Agencies: 59]
 **Status: AUTO-PROCESSED**
 

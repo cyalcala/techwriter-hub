@@ -8,6 +8,15 @@ export enum OpportunityTier {
   PLATINUM = 0, GOLD = 1, SILVER = 2, BRONZE = 3, TRASH = 4
 }
 
+import { JobDomain, mapTitleToDomain, extractDisplayTags } from "../../packages/db/taxonomy";
+
+export interface SiftResult {
+  tier: OpportunityTier;
+  domain: JobDomain;
+  displayTags: string[];
+  relevanceScore: number;
+}
+
 const GEO_EXCLUSION_KILLS = [
   "us only","us citizens only","usa only","united states only",
   "must be authorized to work in the us","us work authorization required",
@@ -162,7 +171,7 @@ export function siftOpportunity(
   company: string, 
   sourcePlatform: string,
   priorityAgencies: string[] = []
-): OpportunityTier {
+): SiftResult {
   const t  = (title || "").toLowerCase().trim();
   const d  = (description || "").toLowerCase();
   const c  = (company || "").toLowerCase().trim();
@@ -170,16 +179,44 @@ export function siftOpportunity(
   const sp = (sourcePlatform || "").toLowerCase();
   const body = `${t} ${d} ${c}`;
 
+  // 1. Core Tiering Logic (Extracted for clarity)
+  const tier = calculateTier(t, d, c, co, sp, body, priorityAgencies);
+  
+  // 2. Taxonomy Mapping
+  const domain = mapTitleToDomain(title, description);
+  
+  // 3. Display Tag Extraction (Labeling)
+  const displayTags = extractDisplayTags(title, description);
+  
+  // 4. Gravity Scoring (Ranked Competition)
+  // Base logic: Tier (0-3) * 100 + Metadata Hits
+  let relevanceScore = (3 - tier) * 100; 
+  if (displayTags.includes("PH-DIRECT")) relevanceScore += 50;
+  if (displayTags.includes("PREMIUM")) relevanceScore += 30;
+  if (displayTags.includes("HIGH PAY")) relevanceScore += 20;
+
+  return {
+    tier,
+    domain,
+    displayTags,
+    relevanceScore
+  };
+}
+
+/**
+ * Internal Tier Calculation Logic (Original Sifter Logic)
+ */
+function calculateTier(
+  t: string, d: string, c: string, co: string, sp: string, body: string,
+  priorityAgencies: string[]
+): OpportunityTier {
   // 0. PRE-FLIGHT: Absolute PH Intent Check
   const phKeywords = ["philippines", "filipino", "pinoy", "tagalog", "manila", "cebu", "ph", "sea", "southeast asia"];
   const hasDirectPHInTitle = phKeywords.some(k => t.includes(k));
   
-  // 1. AGENCY PRIORITY (Titanium Sensor)
+  // 1. AGENCY PRIORITY
   const isPriorityAgency = priorityAgencies.some(a => co.includes(a.toLowerCase()) || sp.includes(a.toLowerCase()));
   if (isPriorityAgency) return OpportunityTier.PLATINUM;
-  
-  // 1. HARD KILLS - Highest Precedence
-  // If it's a direct PH match in title, we might bypass some geo kills, but generally we want to be ruthless.
   
   if (!hasDirectPHInTitle) {
     for (const k of TITLE_GEO_KILLS) if (t.includes(k)) return OpportunityTier.TRASH;
@@ -188,7 +225,6 @@ export function siftOpportunity(
   for (const k of GEO_EXCLUSION_KILLS) if (body.includes(k)) return OpportunityTier.TRASH;
   for (const k of LANGUAGE_KILLS) if (t.includes(k)) return OpportunityTier.TRASH;
   
-  // High-level Corporate Kills
   const CORP_KILLS = [
     "chief executive","chief technology","chief operating","chief financial",
     "chief marketing","chief people"," ceo"," cto"," coo"," cfo"," cmo",
@@ -203,17 +239,14 @@ export function siftOpportunity(
   ];
   for (const k of CORP_KILLS) if (t.includes(k)) return OpportunityTier.TRASH;
 
-  // 2. TECH KILLS (Unless allowlisted)
   for (const k of TECH_HARD_KILLS) if (t.includes(k) && !TECH_ALLOWLIST.some(o => t.includes(o))) return OpportunityTier.TRASH;
   for (const k of TECH_CONTEXT_KILLS) {
     if (t.includes(k) && !TECH_ALLOWLIST.some(o => t.includes(o))) return OpportunityTier.TRASH;
   }
 
-  // 3. RUTHLESS COMPANY FILTERING
   const COMPANY_KILLS = ["canonical", "gitlab", "ge healthcare", "nextiva", "toptal", "upwork", "fiverr"];
   for (const k of COMPANY_KILLS) if (c.includes(k) && !hasDirectPHInTitle) return OpportunityTier.TRASH;
 
-  // 4. MANAGER / SENIORITY / ENTERPRISE FILTERING
   const isElevationRole = SENIORITY_VA_EXCEPTIONS.some(e => t.includes(e));
   const isAchievableBaseRole = ACHIEVABLE_ROLES.some(r => t.includes(r));
   const isSupportRole = [
@@ -227,26 +260,19 @@ export function siftOpportunity(
                      PLATINUM_CITIES.some(ci => body.includes(ci)) || 
                      PLATINUM_PLATFORMS.some(p => sp.includes(p));
 
-  // Hard Kill: Enterprise / Regional / Director without PH signal
   if (t.includes("enterprise") || t.includes("regional") || t.includes("director") || t.includes("global head")) {
     if (!hasPHSignal) return OpportunityTier.TRASH;
   }
 
-  // Manager / Senior / Lead Logic
   if (t.includes("manager") || SENIORITY_SOFT_KILLS.some(k => t.includes(k))) {
     const isCommonVAManager = ["social media manager", "community manager", "ads manager", "content manager"].some(m => t.includes(m));
-    
     if (isElevationRole || isCommonVAManager) {
         if (t.includes("manager") && !hasPHSignal && !isCommonVAManager) return OpportunityTier.TRASH;
     } else {
         if (!hasPHSignal) return OpportunityTier.TRASH;
-        if (t.includes("revenue operations") || t.includes("customer success manager") || t.includes("product manager")) {
-             if (!body.includes("virtual assistant") && !body.includes(" va ")) return OpportunityTier.TRASH;
-        }
     }
   }
 
-  // 5. POSITIVE SIGNAL CHECK (Must be a VA role or have a PH Signal)
   const hasSpecificAchievableRole = isAchievableBaseRole || isElevationRole || isSupportRole;
   const hasGenericVARole = body.includes("virtual assistant") || body.includes(" va ");
   
@@ -254,14 +280,12 @@ export function siftOpportunity(
      return OpportunityTier.TRASH;
   }
 
-  // 6. TIERING
   const hasStrongPHSignal = hasDirectPHInTitle || 
                             PLATINUM_PLATFORMS.some(p => sp.includes(p)) ||
                             (t.includes("philippines") && (t.includes("only") || t.includes("based")));
 
   if (hasStrongPHSignal) return OpportunityTier.PLATINUM;
   
-  // Weak signals (description only) get GOLD at best to prevent poisoning
   const hasWeakPHSignal = PLATINUM_DIRECT.some(s => body.includes(s)) || 
                           PLATINUM_CITIES.some(ci => body.includes(ci));
                           

@@ -198,7 +198,7 @@ export async function harvest(options?: { unhealthySources?: string[] }) {
     const fingerprint = `${normalizeTitle(item.title)}|${(item.company || '').toLowerCase()}|${item.sourceUrl}`;
     if (processedFingerprints.has(fingerprint)) continue;
     
-    const tier = siftOpportunity(
+    const siftResult = siftOpportunity(
       item.title, 
       item.description ?? "", 
       item.company ?? "Generic", 
@@ -206,7 +206,7 @@ export async function harvest(options?: { unhealthySources?: string[] }) {
       priorityAgencyNames
     );
 
-    if (tier === OpportunityTier.TRASH) continue;
+    if (siftResult.tier === OpportunityTier.TRASH) continue;
 
     // ── DATA INTEGRITY SHIELD (ZOD) ──
     const validationResult = OpportunitySchema.safeParse({
@@ -215,9 +215,11 @@ export async function harvest(options?: { unhealthySources?: string[] }) {
       title: item.title.trim(), 
       company: (item.company || 'Generic').trim(),
       sourcePlatform: normalizePlatform(item.sourcePlatform || "Generic"),
-      tags: item.tags || [],
+      tags: [...(item.tags || []), siftResult.domain], // Inject Domain into tags
       locationType: normalizeLocation(item.locationType || "remote"),
-      tier: tier ?? 3,
+      tier: siftResult.tier ?? 3,
+      relevanceScore: siftResult.relevanceScore,
+      displayTags: siftResult.displayTags,
       scrapedAt: new Date(),
       lastSeenAt: new Date(),
       latestActivityMs: item.postedAt ? new Date(item.postedAt).getTime() : 0 // Sentinel 0 if no posted date
@@ -267,6 +269,8 @@ export async function harvest(options?: { unhealthySources?: string[] }) {
             lastSeenAt: new Date(), // COMMANDER'S PATCH: Force freshness on collision
             isActive: true,
             tier: sql`excluded.tier`,
+            relevanceScore: sql`excluded.relevance_score`,
+            displayTags: sql`excluded.display_tags`,
             contentHash: sql`excluded.content_hash`,
             sourceUrl: sql`excluded.source_url`,
             latestActivityMs: sql`CASE 

@@ -7,22 +7,21 @@ import MirrorStage from '../components/MirrorStage.astro';
 import { getSortedSignals, getLatestMirror } from '@va-hub/db/sorting';
 import { db, schema } from '@va-hub/db/client';
 import { sql, eq } from 'drizzle-orm';
+import { JobDomain, DOMAIN_MANIFEST } from '@va-hub/db/taxonomy';
 import staticFallback from '../data/static_fallback.json';
 
-// BUST THE CACHE: Break the "3-hour stale" Vercel/CDN lock
+// BUST THE CACHE
 Astro.response.headers.set('Cache-Control', 'public, no-cache, s-maxage=0, must-revalidate');
 
-// Variables initialization
 let initialSignals = [];
 let mirrorSignals = [];
 let healthStats = { status: 'STANDBY', lastHeartbeat: null, isFallback: false };
 let dbError = null;
 
 try {
-  // Titanium-Grade Edge Orchestrator: Unified 2s Race-Timeout for ALL SSR Data
   if (process.env.TURSO_DATABASE_URL) {
     const dataPromise = Promise.all([
-      getSortedSignals(250),
+      getSortedSignals(400), // Fetch more for the directory
       getLatestMirror(10),
       db.select({ 
         maxSync: sql<number>`max(last_seen_at)`, 
@@ -30,7 +29,7 @@ try {
     ]);
 
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error("Edge Latency Threshold Exceeded")), 2000)
+      setTimeout(() => reject(new Error("Edge Latency Threshold Exceeded")), 3000)
     );
     
     const [signals, mirror, stats] = await Promise.race([dataPromise, timeoutPromise]) as any;
@@ -39,128 +38,133 @@ try {
     mirrorSignals = mirror;
     
     if (stats[0]?.maxSync) {
-      const syncDate = new Date(stats[0].maxSync);
       healthStats = { 
         status: 'ACTIVE', 
         isFallback: false,
-        lastHeartbeat: syncDate.toISOString() // Pass raw ISO string for client-side formatting
+        lastHeartbeat: new Date(stats[0].maxSync).toISOString()
       };
     }
   } else {
     throw new Error("Edge Configuration Missing");
   }
 } catch (err: any) {
-  console.error("🔴 Edge Architect Alert: Fail-Soft Engaged.", err.message);
   initialSignals = staticFallback;
   mirrorSignals = staticFallback.slice(0, 10);
-  healthStats = { 
-    status: 'SURVIVAL_MODE', 
-    isFallback: true,
-    lastHeartbeat: 'PRE-CACHED' 
-  };
+  healthStats = { status: 'SURVIVAL_MODE', isFallback: true, lastHeartbeat: 'PRE-CACHED' };
   dbError = 'OFFLINE';
+}
+
+// ── DOMAIN ORCHESTRATION ──
+const domains = DOMAIN_MANIFEST.map(d => ({
+  ...d,
+  signals: initialSignals.filter(sig => {
+      const tags = typeof sig.tags === 'string' ? JSON.parse(sig.tags) : sig.tags;
+      return tags.includes(d.domain);
+  })
+})).filter(d => d.signals.length > 0);
+
+// Add "General" for everything else
+const mappedIds = new Set(domains.flatMap(d => d.signals.map(s => s.id)));
+const generalSignals = initialSignals.filter(s => !mappedIds.has(s.id));
+if (generalSignals.length > 0) {
+    domains.push({
+        domain: JobDomain.GENERAL,
+        description: "Uncategorized high-intent signals.",
+        signals: generalSignals,
+        keywords: []
+    });
 }
 ---
 
-<Layout title="Live Feed | VA.INDEX">
-  <main class="max-w-[1200px] mx-auto px-6 py-12">
-    <header class="mb-16">
-      <div class="flex items-center gap-6 mb-8 group cursor-default">
-        <div class="flex items-center gap-2">
-          <div class={`${healthStats.isFallback ? 'text-amber-500' : 'text-emerald-500'}`}>
-            <div class="pulse-dot-inner"></div>
-          </div>
-          <span class="text-[10px] font-black text-blueberry-500 tracking-[0.3em] uppercase transition-all group-hover:tracking-[0.5em]">LIVE SIGNALS</span>
-        </div>
-        
-        <div class="h-4 w-[1px] bg-oat-200"></div>
-
-        <div class="flex items-center gap-2 px-3 py-1 bg-white/50 border border-oat-200/50 rounded-full shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] backdrop-blur-sm transition-all hover:shadow-md hover:border-emerald-500/30 group/pulse">
-          <span class="text-[9px] font-black text-blueberry-800/40 uppercase tracking-tighter">System Pulse:</span>
-          <span class={`text-[10px] font-black uppercase tracking-tight ${healthStats.isFallback ? 'text-amber-600' : 'text-emerald-600'}`}>
+<Layout title="Master Directory | VA.INDEX">
+  <main class="max-w-[1400px] mx-auto px-4 sm:px-8 py-10">
+    <header class="mb-12">
+      <div class="flex items-center gap-4 mb-6">
+        <div class="flex items-center gap-2 px-3 py-1 bg-white border border-oat-200 rounded-full shadow-sm">
+          <div class={`w-2 h-2 rounded-full ${healthStats.isFallback ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`}></div>
+          <span class="text-[10px] font-black text-blueberry-900/40 uppercase tracking-widest leading-none">
             {healthStats.status}
           </span>
-          {healthStats.lastHeartbeat && (
-            <span 
-              id="syncClock"
-              data-sync={healthStats.lastHeartbeat}
-              class="text-[9px] font-bold text-blueberry-800/40 group-hover/pulse:text-blueberry-900 transition-colors"
-            >
-              Synced --:--
-            </span>
-          )}
+          <span id="syncClock" data-sync={healthStats.lastHeartbeat} class="text-[9px] font-bold text-blueberry-900/30 border-l border-oat-200 pl-2 ml-1">
+            Synced --:--
+          </span>
         </div>
       </div>
-      
-      {healthStats.isFallback && (
-        <div class="mb-8 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-1000">
-           <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
-             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-           </div>
-           <div>
-             <p class="text-xs font-bold text-amber-900 uppercase tracking-tight">Survival Mode Active</p>
-             <p class="text-[11px] text-amber-800/70 font-medium">Turso edge database is currently unreachable. Serving high-intent pre-cached fallback signals.</p>
-           </div>
-        </div>
-      )}
 
-      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-8 mb-12">
-        <div class="max-w-2xl">
-          <h1 class="text-4xl sm:text-6xl font-black text-blueberry-900 mb-6 leading-[0.9] tracking-tighter uppercase whitespace-pre-line font-heading transition-all hover:tracking-tight">
-            Live Signals. Automated Capture. 
-            <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-500">Your Next Job, Found.</span>
+      <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-10">
+        <div>
+          <h1 class="text-4xl sm:text-6xl font-black text-blueberry-900 mb-4 leading-[0.85] tracking-tight uppercase font-heading">
+            The Master Directory of <br/>
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-500">Global Remote Work.</span>
           </h1>
-          <p class="text-lg text-blueberry-800/70 font-medium leading-relaxed max-w-xl">
-             Indestructible harvesting of high-intent remote roles. We surgically prioritize Filipino-accessible VA and non-tech opportunities by purging global noise at the edge.
+          <p class="text-lg text-blueberry-800/60 font-medium max-w-xl">
+            Surgically curated remote opportunities for the Filipino workforce. <br/>
+            Ranked by intent. Organized by function. Zero noise.
           </p>
         </div>
-      </div>
 
-      <div class="flex flex-col sm:flex-row items-center gap-4">
-        <div class="relative w-full sm:max-w-md group">
-          <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none transition-colors group-focus-within:text-emerald-500 text-blueberry-800/30">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+        <div class="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+          <div class="relative w-full sm:w-80 group">
+            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-blueberry-800/30">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+            </div>
+            <input 
+              type="text" 
+              id="oppSearch" 
+              placeholder="Search 100+ sites..." 
+              class="bg-white border-2 border-oat-200/50 rounded-2xl pl-12 pr-4 py-3.5 text-sm text-blueberry-900 focus:outline-none focus:border-emerald-500/30 transition-all font-medium w-full shadow-sm"
+            />
           </div>
-          <input 
-            type="text" 
-            id="oppSearch" 
-            placeholder="Sift through signals..." 
-            class="bg-white border-2 border-oat-200/50 rounded-2xl pl-12 pr-6 py-4 text-sm text-blueberry-900 focus:outline-none focus:border-blueberry-900/10 focus:ring-4 focus:ring-blueberry-500/5 transition-all font-medium placeholder:text-blueberry-800/30 w-full shadow-sm"
-          />
-        </div>
-        <div class="flex items-center gap-1.5 p-1 bg-oat-100/50 border border-oat-200/50 rounded-2xl shadow-inner overflow-hidden shrink-0" id="timeFilters">
-          <button data-filter="all" class="time-btn active">All</button>
-          <button data-filter="24" class="time-btn text-emerald-600">24h</button>
-          <button data-filter="72" class="time-btn">3d</button>
+          <div class="flex gap-1 p-1 bg-oat-100/50 border border-oat-200/50 rounded-2xl" id="timeFilters">
+             <button data-filter="all" class="time-btn active">Live</button>
+             <button data-filter="24" class="time-btn">24h</button>
+          </div>
         </div>
       </div>
     </header>
 
-    <MirrorStage signals={mirrorSignals.length > 0 ? mirrorSignals : initialSignals.slice(0, 10)} />
+    <MirrorStage signals={mirrorSignals} />
 
-    <div class="grid grid-cols-1 gap-3" id="oppsGrid">
-      {initialSignals.map((sig) => (
-        <SignalCard signal={sig} />
+    <!-- ── DIRECTORY GRID ── -->
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 mt-12" id="directoryGrid">
+      {domains.map((domain) => (
+        <section class="domain-column flex flex-col bg-white/40 border border-oat-200/40 rounded-3xl p-1 shadow-sm hover:shadow-md transition-shadow">
+           <div class="p-6 pb-4">
+              <h2 class="text-lg font-black text-blueberry-900 uppercase tracking-tight leading-none mb-1">
+                {domain.domain}
+              </h2>
+              <p class="text-[10px] font-bold text-blueberry-800/40 uppercase tracking-widest">
+                {domain.description}
+              </p>
+           </div>
+           
+           <div class="flex flex-col gap-1 p-2">
+              {domain.signals.map((sig, idx) => (
+                <SignalCard signal={sig} index={idx + 1} />
+              ))}
+           </div>
+        </section>
       ))}
     </div>
 
-    <div id="emptyState" class="hidden py-40 text-center text-blueberry-800/30 font-black uppercase tracking-widest text-sm italic">
-      No matching signals found.
+    <div id="emptyState" class="hidden py-40 text-center">
+       <span class="text-blueberry-800/20 font-black uppercase tracking-[0.3em] text-xs italic">No matching signals in current view.</span>
     </div>
   </main>
 </Layout>
 
 <script is:inline>
-  function initFeed() {
+  function initDirectory() {
     const search = document.getElementById('oppSearch');
     const filters = document.getElementById('timeFilters');
-    const grid = document.getElementById('oppsGrid');
+    const grid = document.getElementById('directoryGrid');
     const empty = document.getElementById('emptyState');
     if (!grid) return;
 
-    // PERFORMANCE: Pre-calculate the item dataset once on load, NOT in the input loop.
+    const columns = Array.from(grid.querySelectorAll('.domain-column'));
     const items = Array.from(grid.querySelectorAll('.opp-item')).map(el => ({
       el,
+      parent: el.closest('.domain-column'),
       text: el.dataset.search || "",
       age: parseFloat(el.dataset.age || "999")
     }));
@@ -171,27 +175,35 @@ try {
     let debounceTimer;
 
     function run() {
-      let count = 0;
-      
-      // OPTIMIZATION: Bulk layout grouping. 
-      // Avoid querySelectorAll inside the loop. Use the pre-cached 'items' array.
+      let totalVisible = 0;
+      const columnVisibility = new Map();
+
+      // Individual Item Sifting
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
         const isVisible = item.text.includes(q) && item.age <= limit;
         
-        // Use classList for better performance over direct style manipulation
         if (isVisible) {
           item.el.classList.remove('hidden');
-          item.el.classList.add('flex');
-          count++;
+          columnVisibility.set(item.parent, true);
+          totalVisible++;
         } else {
-          item.el.classList.remove('flex');
           item.el.classList.add('hidden');
         }
-      }
+      } e
       
+      // Column Pruning
+      for (let i = 0; i < columns.length; i++) {
+        const col = columns[i];
+        if (columnVisibility.get(col)) {
+          col.classList.remove('hidden');
+        } else {
+          col.classList.add('hidden');
+        }
+      }
+
       if (empty) {
-        if (count === 0) empty.classList.remove('hidden');
+        if (totalVisible === 0) empty.classList.remove('hidden');
         else empty.classList.add('hidden');
       }
     }
@@ -199,18 +211,16 @@ try {
     if (search) {
       search.addEventListener('input', (e) => {
         clearTimeout(debounceTimer);
-        // debounce slightly for paint cycles, but keep it "Snap-Fast"
         debounceTimer = setTimeout(() => {
           q = e.target.value.toLowerCase().trim();
           run();
-        }, 10); 
+        }, 30); 
       });
     }
 
     if (btns) {
       btns.forEach(btn => {
         btn.addEventListener('click', (e) => {
-          e.preventDefault();
           btns.forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
           const val = btn.dataset.filter;
@@ -220,35 +230,33 @@ try {
       });
     }
 
-    // --- System Pulse: Local Timezone Orchestrator ---
+    // System Sync Clock
     const clock = document.getElementById('syncClock');
     if (clock && clock.dataset.sync) {
       const date = new Date(clock.dataset.sync);
-      const formatter = new Intl.DateTimeFormat(undefined, {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-      });
-      clock.innerText = `Synced ${formatter.format(date)}`;
-      
-      // Real-time proof: Update every minute to ensure it's "alive"
-      setInterval(() => {
-        clock.innerText = `Synced ${formatter.format(date)}`;
-      }, 60000);
+      const update = () => {
+          const formatter = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: true });
+          clock.innerText = `Synced ${formatter.format(date)}`;
+      };
+      update();
+      setInterval(update, 60000);
     }
   }
 
-  document.addEventListener('DOMContentLoaded', initFeed);
-  // Re-init for View Transitions
-  document.addEventListener('astro:after-swap', initFeed);
-  initFeed();
+  document.addEventListener('DOMContentLoaded', initDirectory);
+  document.addEventListener('astro:after-swap', initDirectory);
+  initDirectory();
 </script>
 
 <style>
   .time-btn {
-    @apply px-6 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all cursor-pointer text-blueberry-800/40 hover:text-blueberry-900;
+    @apply px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all cursor-pointer text-blueberry-800/40 hover:text-blueberry-900;
   }
   .time-btn.active {
     @apply bg-white text-blueberry-900 shadow-sm border border-black/5;
+  }
+  .domain-column {
+    content-visibility: auto;
+    contain-intrinsic-size: 400px;
   }
 </style>

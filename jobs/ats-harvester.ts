@@ -72,29 +72,31 @@ export async function runAtsSniper(db: any) {
             title = raw.title; url = raw.link; description = raw.description || "";
           }
 
-          const tier = siftOpportunity(title, description, source.name, source.type);
+          const siftResult = siftOpportunity(title, description || "", source.name, source.type);
           totalSifted++;
 
-          if (tier === OpportunityTier.TRASH) {
+          if (siftResult.tier === OpportunityTier.TRASH) {
             logger.debug(`[sniper] Rejected: ${title} (${source.name}) - TRASH`);
             continue;
           }
 
-          logger.info(`[sniper] Captured: ${title} (${source.name}) - TIER ${tier}`);
+          logger.info(`[sniper] Captured: ${title} (${source.name}) - TIER ${siftResult.tier}`);
           batch.push({
             id: uuidv4(),
-            title,
+            title: title.trim(),
             company: source.name,
             type: "direct",
             sourceUrl: url,
             sourcePlatform: source.type,
-            tags: JSON.stringify([...source.tags, "ats-sniper"]),
-            description: description.substring(0, 500),
+            tags: JSON.stringify([...(source.tags || []), siftResult.domain, "ats-sniper"]), // Inject Domain
+            description: (description || "").substring(0, 500),
             scrapedAt: now,
             lastSeenAt: now,
             createdAt: now,
             isActive: true,
-            tier,
+            tier: siftResult.tier,
+            relevanceScore: siftResult.relevanceScore,
+            displayTags: JSON.stringify(siftResult.displayTags),
             latestActivityMs: now.getTime()
           });
         }
@@ -109,6 +111,8 @@ export async function runAtsSniper(db: any) {
                 lastSeenAt: now,
                 isActive: true,
                 tier: sql`excluded.tier`,
+                relevanceScore: sql`excluded.relevance_score`,
+                displayTags: sql`excluded.display_tags`,
                 latestActivityMs: now.getTime()
               }
             });

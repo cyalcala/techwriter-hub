@@ -1,5 +1,5 @@
 import { db, schema } from './client';
-import { desc, not, eq, sql } from 'drizzle-orm';
+import { desc, not, eq, sql, and } from 'drizzle-orm';
 
 /**
  * PH-First Decay Algorithm (SQL-Native)
@@ -8,18 +8,43 @@ import { desc, not, eq, sql } from 'drizzle-orm';
  * 3. Gravity Calculation: (Tier * 24.0) + (Age in Hours)
  * 4. Freshness Boost: -12.0h if < 15min old.
  */
-export async function getSortedSignals(limit = 50) {
+export async function getSortedSignals(limit = 100) {
   const now = Date.now();
   
-  // OPTIMIZATION: Shift the math to LibSQL. 
-  // Result code is O(1) in terms of Edge memory usage.
+  // RANKING LOGIC: Tier first (0=Platinum), then Relevance Score, then Date.
   const query = db.select()
   .from(schema.opportunities)
   .where(not(eq(schema.opportunities.tier, 4)))
-  .orderBy(schema.opportunities.tier, desc(schema.opportunities.latestActivityMs))
+  .orderBy(
+    schema.opportunities.tier, 
+    desc(schema.opportunities.relevanceScore), 
+    desc(schema.opportunities.latestActivityMs)
+  )
   .limit(limit);
 
   return await query;
+}
+
+/**
+ * Domain-Specific Fetcher
+ * Used to populate the functional silos in the Master Directory UI.
+ */
+export async function getSignalsByDomain(domain: string, limit = 20) {
+  return await db.select()
+    .from(schema.opportunities)
+    .where(
+      and(
+        not(eq(schema.opportunities.tier, 4)),
+        eq(schema.opportunities.isActive, true),
+        sql`${schema.opportunities.tags} LIKE ${'%' + domain + '%'}`
+      )
+    )
+    .orderBy(
+      schema.opportunities.tier, 
+      desc(schema.opportunities.relevanceScore), 
+      desc(schema.opportunities.latestActivityMs)
+    )
+    .limit(limit);
 }
 
 /**

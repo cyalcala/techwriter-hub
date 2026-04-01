@@ -35,6 +35,12 @@ export const OpportunitySchema = z.object({
   lastSeenAt: z.date().default(() => new Date()),
   isActive: z.boolean().default(true),
   tier: z.coerce.number().int().min(0).max(4).default(3),
+  relevanceScore: z.coerce.number().int().default(0),
+  displayTags: z.preprocess((val) => {
+    if (Array.isArray(val)) return JSON.stringify(val);
+    if (typeof val === 'string') return val;
+    return "[]";
+  }, z.string().optional().default("[]")),
   contentHash: z.string().optional().nullable(),
   latestActivityMs: z.coerce.number().int().default(() => Date.now()),
   companyLogo: z.string().url().trim().optional().nullable().or(z.literal("")),
