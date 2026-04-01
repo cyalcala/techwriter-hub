@@ -22,7 +22,7 @@ export const GET: APIRoute = async () => {
                 WHEN (unixepoch('now') * 1000 - latest_activity_ms) <= 900000 THEN -5.0 
                 ELSE ((unixepoch('now') * 1000 - latest_activity_ms) / 14400000.0) 
             END
-        )`
+        )`.as('sortScore')
     })
     .from(schema.opportunities)
     .where(eq(schema.opportunities.isActive, true))
