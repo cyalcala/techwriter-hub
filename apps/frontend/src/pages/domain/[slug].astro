@@ -1,0 +1,82 @@
+---
+export const prerender = false;
+import Layout from '../../layouts/Layout.astro';
+import SignalCard from '../../components/SignalCard.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+
+import { getSortedSignals } from '@va-hub/db/sorting';
+import { JobDomain, DOMAIN_MANIFEST, getDomainBySlug } from '@va-hub/db/taxonomy';
+import staticFallback from '../../data/static_fallback.json';
+
+const { slug } = Astro.params;
+const domain = getDomainBySlug(slug || '');
+
+if (!domain) {
+  return Astro.redirect('/404');
+}
+
+const manifest = DOMAIN_MANIFEST.find(d => d.domain === domain);
+let signals = [];
+
+try {
+  if (process.env.TURSO_DATABASE_URL) {
+    const allSignals = await getSortedSignals(1000);
+    signals = allSignals.filter(sig => {
+      const tags = typeof sig.tags === 'string' ? JSON.parse(sig.tags) : sig.tags;
+      return tags.includes(domain);
+    });
+  } else {
+    throw new Error("Edge Configuration Missing");
+  }
+} catch (err) {
+  signals = staticFallback.filter(sig => {
+      const tags = typeof sig.tags === 'string' ? JSON.parse(sig.tags) : sig.tags;
+      return tags.includes(domain);
+  });
+}
+---
+
+<Layout title={`${domain} | VA.INDEX`}>
+  <main class="max-w-[1200px] mx-auto px-6 py-10">
+    <Breadcrumbs domain={domain} />
+
+    <header class="mb-12">
+      <div class="flex items-center gap-6 mb-6">
+        <div class="w-16 h-16 rounded-3xl bg-white shadow-md border border-oat-200/50 flex items-center justify-center text-4xl shrink-0">
+          {manifest?.symbol || "🌐"}
+        </div>
+        <div>
+          <h1 class="text-4xl sm:text-5xl font-black text-blueberry-900 uppercase tracking-tight leading-none mb-2">
+            {domain}
+          </h1>
+          <p class="text-lg text-blueberry-800/60 font-medium max-w-2xl">
+            {manifest?.description}
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <div class="px-4 py-2 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center gap-2">
+          <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+          <span class="text-xs font-black text-emerald-700 uppercase tracking-widest">
+            {signals.length} Live Signals Detected
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <div class="flex flex-col gap-3">
+      {signals.map((sig, idx) => (
+        <SignalCard signal={sig} index={idx + 1} />
+      ))}
+    </div>
+
+    {signals.length === 0 && (
+      <div class="py-40 text-center border-2 border-dashed border-oat-200 rounded-3xl">
+        <span class="text-blueberry-800/20 font-black uppercase tracking-[0.3em] text-xs italic">
+          No active signals found in this domain.
+        </span>
+      </div>
+    )}
+  </main>
+</Layout>

@@ -7,7 +7,7 @@ import MirrorStage from '../components/MirrorStage.astro';
 import { getSortedSignals, getLatestMirror } from '@va-hub/db/sorting';
 import { db, schema } from '@va-hub/db/client';
 import { sql, eq } from 'drizzle-orm';
-import { JobDomain, DOMAIN_MANIFEST } from '@va-hub/db/taxonomy';
+import { JobDomain, DOMAIN_MANIFEST, getDomainSlug } from '@va-hub/db/taxonomy';
 import staticFallback from '../data/static_fallback.json';
 
 // BUST THE CACHE
@@ -138,31 +138,47 @@ if (generalSignals.length > 0) {
 
     <!-- ── DIRECTORY GRID ── -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-12 items-start" id="directoryGrid">
-      {domains.map((domain) => (
-        <section class="domain-column flex flex-col bg-white/60 border border-oat-200/50 rounded-3xl p-1 shadow-sm hover:shadow-md transition-all duration-300">
-           <div class="p-6 pb-4 relative">
-              <div class="flex items-center gap-3 mb-3">
-                 <div class="w-10 h-10 rounded-2xl bg-white shadow-sm border border-oat-200/50 flex items-center justify-center text-xl shrink-0 group-hover:scale-110 transition-transform">
-                    {domain.symbol}
-                 </div>
-                 <div class="min-w-0">
-                    <h2 class="text-xl font-black text-blueberry-900 uppercase tracking-tight leading-none truncate">
-                      {domain.domain}
-                    </h2>
-                 </div>
-              </div>
-              <p class="text-[10px] font-bold text-blueberry-800/40 uppercase tracking-widest leading-normal">
-                {domain.description}
-              </p>
-           </div>
-           
-           <div class="flex flex-col gap-2.5 p-2">
-              {domain.signals.map((sig, idx) => (
-                <SignalCard signal={sig} index={idx + 1} />
-              ))}
-           </div>
-        </section>
-      ))}
+      {domains.map((domain) => {
+        const slug = getDomainSlug(domain.domain);
+        const totalSignals = domain.signals.length;
+        const visibleSignals = domain.signals.slice(0, 15);
+        
+        return (
+          <section class="domain-column flex flex-col bg-white/60 border border-oat-200/50 rounded-3xl p-1 shadow-sm hover:shadow-md transition-all duration-300">
+             <div class="p-6 pb-4 relative">
+                <a href={`/domain/${slug}`} class="flex items-center gap-3 mb-3 group/title hover:opacity-80 transition-all">
+                   <div class="w-10 h-10 rounded-2xl bg-white shadow-sm border border-oat-200/50 flex items-center justify-center text-xl shrink-0 group-hover/title:scale-110 transition-transform">
+                      {domain.symbol}
+                   </div>
+                   <div class="min-w-0">
+                      <h2 class="text-xl font-black text-blueberry-900 uppercase tracking-tight leading-none">
+                        {domain.domain}
+                      </h2>
+                   </div>
+                </a>
+                <p class="text-[10px] font-bold text-blueberry-800/40 uppercase tracking-widest leading-normal mb-1">
+                  {domain.description}
+                </p>
+             </div>
+             
+             <div class="flex flex-col gap-2.5 p-2">
+                {visibleSignals.map((sig, idx) => (
+                  <SignalCard signal={sig} index={idx + 1} />
+                ))}
+                
+                {totalSignals > 15 && (
+                  <a 
+                    href={`/domain/${slug}`}
+                    class="mt-2 flex items-center justify-center py-4 rounded-xl border-2 border-dashed border-oat-200 text-[10px] font-black text-blueberry-800/30 uppercase tracking-[0.2em] hover:border-blueberry-900/10 hover:text-blueberry-900 hover:bg-white transition-all group"
+                  >
+                    See all {totalSignals} sites
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" class="ml-2 group-hover:translate-x-1 transition-transform"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
+                  </a>
+                )}
+             </div>
+          </section>
+        );
+      })}
     </div>
 
     <div id="emptyState" class="hidden py-40 text-center">

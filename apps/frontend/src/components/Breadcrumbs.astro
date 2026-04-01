@@ -1,0 +1,30 @@
+---
+interface Props {
+  domain?: string;
+}
+
+const { domain } = Astro.props;
+---
+
+<nav class="flex items-center gap-2 mb-8 text-[10px] font-black uppercase tracking-widest leading-none">
+  <a 
+    href="/" 
+    class="text-blueberry-800/40 hover:text-blueberry-900 transition-colors flex items-center gap-1 group"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" class="group-hover:-translate-x-0.5 transition-transform"><path d="m15 18-6-6 6-6"/></svg>
+    Home
+  </a>
+
+  {domain && (
+    <>
+      <span class="text-blueberry-800/10">/</span>
+      <span class="text-blueberry-900 bg-blueberry-50 px-2 py-0.5 rounded shadow-sm">
+        {domain}
+      </span>
+    </>
+  )}
+</nav>
+
+<style>
+  a { text-decoration: none; }
+</style>

@@ -143,7 +143,6 @@ export function mapTitleToDomain(title: string, description: string = ""): JobDo
 export function extractDisplayTags(title: string, description: string): string[] {
   const content = `${title} ${description}`.toLowerCase();
   const badges: string[] = [];
-
   if (content.includes("philippines") || content.includes("tagalog")) badges.push("PH-DIRECT");
   if (content.includes("premium") || content.includes("titanium")) badges.push("PREMIUM");
   if (content.includes("$") || content.includes("₱") || content.includes("salary")) badges.push("HIGH PAY");
@@ -152,4 +151,27 @@ export function extractDisplayTags(title: string, description: string): string[]
   if (content.includes("urgent") || content.includes("immediately")) badges.push("URGENT");
   
   return [...new Set(badges)];
+}
+
+/**
+ * Converts a JobDomain to a URL-friendly slug.
+ */
+export function getDomainSlug(domain: string): string {
+  return domain
+    .toLowerCase()
+    .replace(/ & /g, '-')
+    .replace(/ /g, '-')
+    .replace(/[^\w-]/g, '');
+}
+
+/**
+ * Reverse lookup for JobDomain by its slug.
+ */
+export function getDomainBySlug(slug: string): JobDomain | null {
+  for (const domain of Object.values(JobDomain)) {
+    if (getDomainSlug(domain) === slug) {
+      return domain as JobDomain;
+    }
+  }
+  return null;
 }
