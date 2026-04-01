@@ -1,4 +1,18 @@
 
+## [2026-04-01] — [Opportunities: 59 | Agencies: 59]
+**Status: MASTER DIRECTORY UI OPTIMIZED — BRANDING DE-CLUTTERED**
+
+### ✨ Major Features
+* **Priority Sorting**: Enforced new canonical column order: 1. VA Support, 2. BPO Services, 3. Sales & Growth.
+* **Branding Removal**: Removed "Priority" badge markers for a cleaner, high-signal aesthetic.
+* **UX Depth**: Implemented 3D "liftoff" hover effects and increased vertical card spacing (`gap-2.5`) for improved navigability.
+
+### ⚓ Internal Maintenance
+* chore: update documentation after api fix (9d991a4)
+
+---
+
+
 ## [2026-04-01] — [Opportunities: 58 | Agencies: 59]
 **Status: AUTO-PROCESSED**
 
