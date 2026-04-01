@@ -2,7 +2,6 @@
 const currentPath = Astro.url.pathname;
 const isHome = currentPath === '/';
 const isAgencies = currentPath === '/agencies';
-const isAbout = currentPath === '/about';
 ---
 <nav class="fixed top-0 left-0 right-0 z-50 border-b border-blueberry-800/10 bg-white/70 backdrop-blur-2xl">
   <div class="max-w-[1200px] mx-auto px-6 h-20 flex items-center justify-between">
@@ -46,12 +45,8 @@ const isAbout = currentPath === '/about';
         href="/agencies" 
         class={`relative z-10 px-8 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 w-1/2 text-center ${isAgencies ? 'text-blueberry-900' : 'text-blueberry-800/40 hover:text-blueberry-900'}`}
       >
-        Sift
+        Agencies List
       </a>
-    </div>
-    
-    <div class="flex items-center gap-6">
-      <a href="/about" class={`text-[10px] font-black uppercase tracking-widest transition-all ${isAbout ? 'text-blue-600' : 'text-blueberry-800/40 hover:text-blueberry-900'}`}>Mission</a>
     </div>
   </div>
 </nav>
