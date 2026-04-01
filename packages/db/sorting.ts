@@ -9,13 +9,18 @@ import { desc, not, eq, sql, and } from 'drizzle-orm';
  * 4. Freshness Boost: -12.0h if < 15min old.
  */
 export async function getSortedSignals(limit = 100) {
-  const now = Date.now();
-  
-  // RANKING LOGIC: Tier first (0=Platinum), then Relevance Score, then Date.
+  const staleBoundary = Date.now() - (48 * 60 * 60 * 1000); // 48 Hours
+
+  // RANKING LOGIC: 
+  // 1. Freshness Decay (Penalize > 48h)
+  // 2. Tier (0=Platinum)
+  // 3. Relevance Score
+  // 4. Date
   const query = db.select()
   .from(schema.opportunities)
   .where(not(eq(schema.opportunities.tier, 4)))
   .orderBy(
+    sql`CASE WHEN ${schema.opportunities.latestActivityMs} < ${staleBoundary} THEN 1 ELSE 0 END`, // Decay Penalty
     schema.opportunities.tier, 
     desc(schema.opportunities.relevanceScore), 
     desc(schema.opportunities.latestActivityMs)
@@ -30,6 +35,8 @@ export async function getSortedSignals(limit = 100) {
  * Used to populate the functional silos in the Master Directory UI.
  */
 export async function getSignalsByDomain(domain: string, limit = 20) {
+  const staleBoundary = Date.now() - (48 * 60 * 60 * 1000); // 48 Hours
+
   return await db.select()
     .from(schema.opportunities)
     .where(
@@ -40,6 +47,7 @@ export async function getSignalsByDomain(domain: string, limit = 20) {
       )
     )
     .orderBy(
+      sql`CASE WHEN ${schema.opportunities.latestActivityMs} < ${staleBoundary} THEN 1 ELSE 0 END`, // Decay Penalty
       schema.opportunities.tier, 
       desc(schema.opportunities.relevanceScore), 
       desc(schema.opportunities.latestActivityMs)

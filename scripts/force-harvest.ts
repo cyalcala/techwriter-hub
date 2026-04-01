@@ -6,7 +6,7 @@ async function force() {
   try {
     // Setting a fake key to at least bypass some initial checks 
     // if harvest() or its children use process.env directly.
-    process.env.GEMINI_API_KEY = "dummy_for_manual_verification";
+    // process.env.GEMINI_API_KEY = "dummy_for_manual_verification";
     
     // We run the harvest and hope the non-AI sources populate the DB.
     const result = await harvest();
