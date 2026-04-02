@@ -1,5 +1,5 @@
 import { expect, test, describe, mock, afterAll } from "bun:test";
-import { siftOpportunity, OpportunityTier } from "../jobs/lib/sifter";
+import { siftOpportunity, OpportunityTier } from "@va-hub/core/sieve";
 import { createDb } from "../packages/db/client";
 import { opportunities } from "../packages/db/schema";
 import { desc } from "drizzle-orm";

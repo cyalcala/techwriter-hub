@@ -1,6 +1,6 @@
 import { db } from "../packages/db/client";
 import { opportunities } from "../packages/db/schema";
-import { siftOpportunity } from "../jobs/lib/sifter";
+import { siftOpportunity } from "@va-hub/core/sieve";
 import { eq, sql } from "drizzle-orm";
 
 async function reSiftAll() {
@@ -11,23 +11,26 @@ async function reSiftAll() {
 
   let updated = 0;
   for (const opp of allOpps) {
-    const newTier = siftOpportunity(
-      `${opp.title} (${opp.company})`,
+    const result = siftOpportunity(
+      opp.title,
       opp.description || "",
-      opp.sourcePlatform || ""
+      opp.company || "Generic",
+      opp.sourcePlatform || "Generic"
     );
 
-    if (newTier !== opp.tier) {
+    if (result.tier !== opp.tier) {
       await db.update(opportunities)
         .set({ 
-          tier: newTier,
-          isActive: newTier !== 4
+          tier: result.tier,
+          isActive: result.tier !== 4,
+          relevanceScore: result.relevanceScore,
+          displayTags: JSON.stringify(result.displayTags)
         })
         .where(eq(opportunities.id, opp.id));
       updated++;
     } else {
       // Even if tier is same, ensure isActive is correct
-      const shouldBeActive = newTier !== 4;
+      const shouldBeActive = result.tier !== 4;
       if (opp.isActive !== shouldBeActive) {
         await db.update(opportunities)
           .set({ isActive: shouldBeActive })

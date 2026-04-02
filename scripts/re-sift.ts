@@ -1,6 +1,6 @@
 import { db } from "../packages/db/client";
 import { opportunities } from "../packages/db/schema";
-import { siftOpportunity } from "../jobs/lib/sifter";
+import { siftOpportunity } from "@va-hub/core/sieve";
 import { eq } from "drizzle-orm";
 
 async function reSiftAll() {
@@ -11,15 +11,20 @@ async function reSiftAll() {
   let bronzeAdded = 0;
 
   for (const opp of allOpps) {
-    const newTier = siftOpportunity(opp.title, opp.description || "", opp.sourcePlatform || "");
+    const result = siftOpportunity(opp.title, opp.description || "", opp.company || "Generic", opp.sourcePlatform || "Generic");
     
-    if (newTier !== opp.tier) {
+    if (result.tier !== opp.tier) {
       await db.update(opportunities)
-        .set({ tier: newTier, isActive: newTier !== 4 })
+        .set({ 
+          tier: result.tier, 
+          isActive: result.tier !== 4,
+          relevanceScore: result.relevanceScore,
+          displayTags: JSON.stringify(result.displayTags)
+        })
         .where(eq(opportunities.id, opp.id));
       
       updatedCount++;
-      if (newTier === 3) bronzeAdded++;
+      if (result.tier === 3) bronzeAdded++;
     }
   }
 

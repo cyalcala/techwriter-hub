@@ -10,7 +10,7 @@ import { probeAgencies } from "./lib/agency-sensor";
 import { config } from "@va-hub/config";
 import { sql, eq, and, not } from "drizzle-orm";
 import { isLikelyScam } from "./lib/trust";
-import { siftOpportunity, OpportunityTier } from "./lib/sifter";
+import { siftOpportunity, OpportunityTier } from "@va-hub/core/sieve";
 import { v4 as uuidv4 } from "uuid";
 import { healBatchWithLLM } from "./lib/autonomous-harvester";
 import { agencies as agenciesSchema } from "@va-hub/db/schema";

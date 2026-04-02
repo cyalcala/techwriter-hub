@@ -1,4 +1,4 @@
-import { siftOpportunity, OpportunityTier } from "../jobs/lib/sifter";
+import { siftOpportunity, OpportunityTier } from "@va-hub/core/sieve";
 
 const testCases = [
   { title: "Virtual Assistant", company: "Remote Co", desc: "Helping with admin tasks" },
@@ -9,6 +9,6 @@ const testCases = [
 ];
 
 testCases.forEach(tc => {
-  const tier = siftOpportunity(tc.title, tc.company, tc.desc);
-  console.log(`TITLE: ${tc.title.padEnd(35)} | TIER: ${OpportunityTier[tier]}`);
+  const result = siftOpportunity(tc.title, tc.desc, tc.company, "test-harness");
+  console.log(`TITLE: ${tc.title.padEnd(35)} | TIER: ${OpportunityTier[result.tier]}`);
 });

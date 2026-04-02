@@ -1,5 +1,5 @@
 import { createDb } from "../jobs/lib/db";
-import { siftOpportunity } from "../jobs/lib/sifter";
+import { siftOpportunity } from "@va-hub/core/sieve";
 import { sql } from "drizzle-orm";
 
 async function wash() {

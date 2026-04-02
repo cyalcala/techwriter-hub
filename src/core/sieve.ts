@@ -1,7 +1,7 @@
 /**
- * VA.INDEX Signal Sifter v10.0
+ * VA.INDEX Codified Core: The Sieve v11.0
  * Philippine-First Five-Tier Classification
- * Ruthless Indexing Engine
+ * Autonomous Filtering Engine
  */
 
 export enum OpportunityTier {
@@ -48,6 +48,8 @@ const TITLE_GEO_KILLS = [
   " north america", " south america", " emea", " apac only", " latam",
   "united kingdom", "london-based", "ny-based", "sf-based", "la-based",
   "atlanta-based", "chicago-based", "austin-based", "seattle-based",
+  "atlanta-based", "chicago-based", "austin-based", "seattle-based",
+  "dallas-based", "denver-based", "phoenix-based",
 ];
 
 const LANGUAGE_KILLS = [
@@ -55,7 +57,6 @@ const LANGUAGE_KILLS = [
   "bilingual spanish","bilingual french","bilingual japanese","mandarin",
   "cantonese","korean speaker","portuguese speaker","italian speaker",
   "dutch speaker","scandinavian speaker","fluent in spanish","fluent in french",
-  "kannada","telugu","tamil","hindi","bengali",
 ];
 
 const TECH_HARD_KILLS = [
@@ -67,67 +68,31 @@ const TECH_HARD_KILLS = [
   "data engineer","data scientist","data architect","analytics engineer",
   "security engineer","penetration tester","network engineer","network administrator",
   "database administrator"," dba","qa engineer"," sdet","test automation",
-  "blockchain developer","smart contract","embedded systems","firmware engineer",
-  "computer vision","nlp engineer","quant developer","quantitative analyst",
-  "systems administrator"," programmer"," coder","scientist",
-  "technical lead","tech lead","lead engineer","lead developer","architecture lead",
 ];
-
-const TECH_CONTEXT_KILLS = [" developer"," engineer"," architect"];
 
 const TECH_ALLOWLIST = [
   "technical support","technical writer","technical recruiter",
   "no-code","prompt engineer","it support","help desk",
 ];
 
-const SENIORITY_HARD_KILLS = [
-  "chief executive","chief technology","chief operating","chief financial",
-  "chief marketing","chief people"," ceo"," cto"," coo"," cfo"," cmo",
-  "vice president"," vp of"," svp"," evp","general manager","managing director",
-  "director of ","head of ","senior manager","senior director","associate director",
-  "principal engineer","staff engineer","distinguished"," fellow","president of","partner at",
-  "enterprise ","product manager","project manager","program manager","division manager",
-  "manager,","manager -","regional manager","country manager",
-];
-
-const SENIORITY_SOFT_KILLS = ["senior ","lead ","team lead","team manager"];
-
-const SENIORITY_VA_EXCEPTIONS = [
-  "senior va","lead va","senior virtual assistant","lead virtual assistant",
-  "senior executive assistant","senior admin","senior administrative",
-  "senior ea","senior customer support","senior copywriter",
-  "senior content writer","senior bookkeeper","senior social media",
-];
-
 const ACHIEVABLE_ROLES = [
   "virtual assistant"," va ","admin assistant","administrative",
   "executive assistant"," ea ","personal assistant"," pa ",
   "office coordinator","operations coordinator","project coordinator",
-  "scheduling coordinator","calendar manager","inbox manager","workflow coordinator",
   "customer support","customer service","customer success","client support",
   "support specialist","support representative","support agent",
-  "help desk","live chat","chat support","community manager","community moderator","customer experience",
+  "help desk","live chat","chat support","community manager","community moderator",
   "content writer","blog writer","copywriter","copy editor","proofreader",
-  "editor","article writer","seo writer","content creator","newsletter writer",
-  "email copywriter","scriptwriter","caption writer","product description writer","technical writer",
-  "social media manager","social media coordinator","social media assistant","social media specialist",
-  "digital marketing assistant","marketing coordinator","email marketing","content scheduler",
+  "social media manager","social media coordinator","social media assistant",
+  "digital marketing assistant","marketing coordinator","email marketing",
   "graphic designer","visual designer","brand designer","logo designer",
-  "canva","presentation designer","infographic designer","video editor",
-  "reel editor","photo editor","thumbnail designer","creative assistant",
+  "video editor","reel editor","photo editor","creative assistant",
   "bookkeeper","accounting assistant","accounts payable","accounts receivable",
-  "invoice specialist","payroll assistant","financial assistant","billing coordinator",
-  "quickbooks","xero","expense tracker",
   "data entry","research assistant","web researcher","market researcher",
-  "data collector","list builder","prospect researcher","data annotator",
-  "crm specialist","data cleaning",
   "sales support","sales coordinator","sales assistant","lead generation",
-  "outreach assistant","appointment setter","cold email specialist","sales admin",
   "recruiter assistant","hr assistant","talent coordinator","sourcing assistant",
-  "onboarding coordinator","people operations",
   "e-commerce assistant","amazon va","shopify va","etsy va","ebay va",
-  "product lister","order processor","inventory assistant","listing specialist",
-  "online tutor","english tutor","esl teacher","course assistant","lms coordinator",
+  "online tutor","english tutor","esl teacher",
   "zapier","make.com","airtable","notion","clickup","no-code","automation specialist",
 ];
 
@@ -143,15 +108,12 @@ const PLATINUM_DIRECT = [
 
 const PLATINUM_CITIES = [
   "manila","metro manila"," ncr","cebu","cebu city","davao","quezon city",
-  " qc","makati","bgc","bonifacio global city","taguig","pasig","mandaluyong",
-  "antipolo","pampanga","angeles city","iloilo","cagayan de oro"," cdo",
-  "bacolod","zamboanga","caloocan","valenzuela","paranaque",
+  "makati","bgc","taguig","pasig","mandaluyong",
 ];
 
 const PLATINUM_PLATFORMS = [
   "vajobsph", "phcareers", "buhaydigital", "phjobs", "onlinejobs", "jobs.ph", "kalibrr",
-  "virtualassistantph", "remoteworkph", "hiringph", "recruitinghiringph", "pinoyprogrammer", "bpoinph",
-  "supportshepherd", "athena", "cloudstaff", "outsourceaccess", "remotemotivation"
+  "virtualassistantph", "remoteworkph", "hiringph", "recruitinghiringph"
 ];
 
 const GOLD_SIGNALS = [
@@ -162,9 +124,11 @@ const GOLD_SIGNALS = [
 const SILVER_SIGNALS = [
   "fully remote","100% remote","remote-first","work from anywhere","worldwide",
   "global remote","all timezones","async-first","location independent",
-  "distributed team","fully distributed","remote only","work from home anywhere",
 ];
 
+/**
+ * 🧬 THE BOUNCER: Multi-stage sifter for Philippine-remote viability.
+ */
 export function siftOpportunity(
   title: string, 
   description: string, 
@@ -179,17 +143,16 @@ export function siftOpportunity(
   const sp = (sourcePlatform || "").toLowerCase();
   const body = `${t} ${d} ${c}`;
 
-  // 1. Core Tiering Logic (Extracted for clarity)
+  // 1. Core Tiering Logic
   const tier = calculateTier(t, d, c, co, sp, body, priorityAgencies);
   
   // 2. Taxonomy Mapping
   const domain = mapTitleToDomain(title, description);
   
-  // 3. Display Tag Extraction (Labeling)
+  // 3. Display Tag Extraction
   const displayTags = extractDisplayTags(title, description);
   
-  // 4. Gravity Scoring (Ranked Competition)
-  // Base logic: Tier (0-3) * 100 + Metadata Hits
+  // 4. Gravity Scoring
   let relevanceScore = (3 - tier) * 100; 
   if (displayTags.includes("PH-DIRECT")) relevanceScore += 50;
   if (displayTags.includes("PREMIUM")) relevanceScore += 30;
@@ -203,18 +166,13 @@ export function siftOpportunity(
   };
 }
 
-/**
- * Internal Tier Calculation Logic (Original Sifter Logic)
- */
 function calculateTier(
   t: string, d: string, c: string, co: string, sp: string, body: string,
   priorityAgencies: string[]
 ): OpportunityTier {
-  // 0. PRE-FLIGHT: Absolute PH Intent Check
   const phKeywords = ["philippines", "filipino", "pinoy", "tagalog", "manila", "cebu", "ph", "sea", "southeast asia"];
   const hasDirectPHInTitle = phKeywords.some(k => t.includes(k));
   
-  // 1. AGENCY PRIORITY
   const isPriorityAgency = priorityAgencies.some(a => co.includes(a.toLowerCase()) || sp.includes(a.toLowerCase()));
   if (isPriorityAgency) return OpportunityTier.PLATINUM;
   
@@ -225,29 +183,11 @@ function calculateTier(
   for (const k of GEO_EXCLUSION_KILLS) if (body.includes(k)) return OpportunityTier.TRASH;
   for (const k of LANGUAGE_KILLS) if (t.includes(k)) return OpportunityTier.TRASH;
   
-  const CORP_KILLS = [
-    "chief executive","chief technology","chief operating","chief financial",
-    "chief marketing","chief people"," ceo"," cto"," coo"," cfo"," cmo",
-    "vice president"," vp of"," svp"," evp","managing director",
-    "director of ","head of ","senior director","associate director",
-    "principal engineer","staff engineer",
-    "revenue operations","business operations manager","strategy manager",
-    "sales operations","enterprise customer success","enterprise account",
-    "enterprise sales","enterprise support manager",
-    "onlyfans","of chatter","chatter for onlyfans",
-    "side hustle","earn money from home","student looking for",
-  ];
-  for (const k of CORP_KILLS) if (t.includes(k)) return OpportunityTier.TRASH;
-
   for (const k of TECH_HARD_KILLS) if (t.includes(k) && !TECH_ALLOWLIST.some(o => t.includes(o))) return OpportunityTier.TRASH;
-  for (const k of TECH_CONTEXT_KILLS) {
-    if (t.includes(k) && !TECH_ALLOWLIST.some(o => t.includes(o))) return OpportunityTier.TRASH;
-  }
 
   const COMPANY_KILLS = ["canonical", "gitlab", "ge healthcare", "nextiva", "toptal", "upwork", "fiverr"];
   for (const k of COMPANY_KILLS) if (c.includes(k) && !hasDirectPHInTitle) return OpportunityTier.TRASH;
 
-  const isElevationRole = SENIORITY_VA_EXCEPTIONS.some(e => t.includes(e));
   const isAchievableBaseRole = ACHIEVABLE_ROLES.some(r => t.includes(r));
   const isSupportRole = [
     "customer service", "customer support", "client support", "support specialist", 
@@ -260,20 +200,7 @@ function calculateTier(
                      PLATINUM_CITIES.some(ci => body.includes(ci)) || 
                      PLATINUM_PLATFORMS.some(p => sp.includes(p));
 
-  if (t.includes("enterprise") || t.includes("regional") || t.includes("director") || t.includes("global head")) {
-    if (!hasPHSignal) return OpportunityTier.TRASH;
-  }
-
-  if (t.includes("manager") || SENIORITY_SOFT_KILLS.some(k => t.includes(k))) {
-    const isCommonVAManager = ["social media manager", "community manager", "ads manager", "content manager"].some(m => t.includes(m));
-    if (isElevationRole || isCommonVAManager) {
-        if (t.includes("manager") && !hasPHSignal && !isCommonVAManager) return OpportunityTier.TRASH;
-    } else {
-        if (!hasPHSignal) return OpportunityTier.TRASH;
-    }
-  }
-
-  const hasSpecificAchievableRole = isAchievableBaseRole || isElevationRole || isSupportRole;
+  const hasSpecificAchievableRole = isAchievableBaseRole || isSupportRole;
   const hasGenericVARole = body.includes("virtual assistant") || body.includes(" va ");
   
   if (!hasSpecificAchievableRole && !hasGenericVARole && !hasPHSignal) {
@@ -290,9 +217,6 @@ function calculateTier(
                           PLATINUM_CITIES.some(ci => body.includes(ci));
                           
   if (hasWeakPHSignal) return OpportunityTier.GOLD; 
-  
-  const isRegionalOrGlobalSupport = isSupportRole && (GOLD_SIGNALS.some(s => body.includes(s)) || SILVER_SIGNALS.some(s => body.includes(s)));
-  if (isRegionalOrGlobalSupport) return OpportunityTier.GOLD;
 
   if (GOLD_SIGNALS.some(s => body.includes(s))) return OpportunityTier.GOLD;
   if (SILVER_SIGNALS.some(s => body.includes(s))) return OpportunityTier.SILVER;

@@ -2,7 +2,7 @@ import { task, logger } from "@trigger.dev/sdk/v3";
 import { createDb } from "@va-hub/db/client";
 import { opportunities as opportunitiesSchema, type NewOpportunity } from "@va-hub/db/schema";
 import { atsSources } from "@va-hub/config/ats-sources";
-import { siftOpportunity, OpportunityTier } from "./lib/sifter";
+import { siftOpportunity, OpportunityTier } from "@va-hub/core/sieve";
 import { v4 as uuidv4 } from 'uuid';
 import { sql } from "drizzle-orm";
 
@@ -125,6 +125,29 @@ export async function runAtsSniper(db: any) {
     }
 
     logger.info(`[sniper] Audit Complete. Captured ${totalCaptured}/${totalSifted} signals.`);
+
+    // ── HEARTBEAT MANDATE ──
+    const { systemHealth } = await import("@va-hub/db/schema");
+    await db.insert(systemHealth)
+      .values({
+        id: "ATS_SNIPER",
+        sourceName: "ATS Sniper (Engine A)",
+        status: "HEALTHY",
+        lastSuccess: new Date(),
+        updatedAt: new Date(),
+        consecutiveFailures: 0
+      })
+      .onConflictDoUpdate({
+        target: [systemHealth.id],
+        set: { 
+          status: "HEALTHY",
+          lastSuccess: new Date(),
+          updatedAt: new Date(),
+          consecutiveFailures: 0,
+          errorMessage: null
+        }
+      });
+
     return { totalCaptured, totalSifted };
   } catch (err: any) {
     logger.error(`[sniper] Fatal error in runAtsSniper: ${err.message}`);
