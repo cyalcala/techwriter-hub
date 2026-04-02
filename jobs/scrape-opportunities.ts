@@ -10,7 +10,7 @@ import { probeAgencies } from "./lib/agency-sensor";
 import { config } from "@va-hub/config";
 import { sql, eq, and, not } from "drizzle-orm";
 import { isLikelyScam } from "./lib/trust";
-import { siftOpportunity, OpportunityTier } from "@va-hub/core/sieve";
+import { siftOpportunity, siftWithDualLLM, OpportunityTier } from "@va-hub/core/sieve";
 import { v4 as uuidv4 } from "uuid";
 import { healBatchWithLLM } from "./lib/autonomous-harvester";
 import { agencies as agenciesSchema } from "@va-hub/db/schema";
@@ -199,15 +199,20 @@ export async function harvest(options?: { unhealthySources?: string[] }) {
     const fingerprint = `${normalizeTitle(item.title)}|${(item.company || '').toLowerCase()}|${item.sourceUrl}`;
     if (processedFingerprints.has(fingerprint)) continue;
     
-    const siftResult = siftOpportunity(
-      item.title, 
-      item.description ?? "", 
-      item.company ?? "Generic", 
-      item.sourcePlatform ?? "Generic",
-      priorityAgencyNames
-    );
+    
+    // 🧬 THE TITANIUM INGESTION PROTOCOL: Dual-LLM Sifting
+    // We pass the raw signal to Cerebras (Tier 1) and Gemini (Tier 2)
+    const rawPayload = (item as any).__raw || JSON.stringify(item);
+    
+    const siftResult = await siftWithDualLLM(rawPayload, {
+      title: item.title,
+      company: item.company,
+      sourcePlatform: item.sourcePlatform
+    });
 
-    if (siftResult.tier === OpportunityTier.TRASH) continue;
+    if (!siftResult || siftResult.tier === OpportunityTier.TRASH) {
+      continue;
+    }
 
     // ── DATA INTEGRITY SHIELD (ZOD) ──
     const validationResult = OpportunitySchema.safeParse({

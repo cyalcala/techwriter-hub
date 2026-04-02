@@ -1,4 +1,5 @@
 import { readFileSync } from "fs";
+import type { NewOpportunity } from "../../packages/db/schema";
 
 /**
  * Apex SRE Gemini AI Bridge
@@ -101,5 +102,90 @@ ${codebaseContext}
     return JSON.parse(resultText) as FixProtocol;
   } catch (e) {
     throw new Error("[Gemini Bridge] Failed to parse AI response into FixProtocol JSON. Content: " + data?.candidates?.[0]?.content?.parts?.[0]?.text);
+  }
+}
+
+/**
+ * 🎓 THE SCHOLAR (Tier 2)
+ * Powered by Gemini 2.5 Flash-Lite (Free Tier)
+ * Mandate: Deep reasoning, data normalization, and Drizzle ORM mapping.
+ */
+export async function polishOpportunity(tier1Payload: any): Promise<Partial<NewOpportunity>> {
+  if (!API_KEY) {
+    throw new Error("[Gemini Tier 2] CRITICAL: GEMINI_API_KEY is not set.");
+  }
+
+  const prompt = `
+YOU ARE THE SCHOLAR (Tier 2). 
+YOUR MISSION: Take the pre-extracted job data from Tier 1 and polish it for final database ingestion.
+
+### TIER 1 INPUT:
+${JSON.stringify(tier1Payload, null, 2)}
+
+### YOUR INSTRUCTIONS:
+1. **NORMALIZATION**: Clean up titles (remove "Senior", "Junior" if redundant, fix casing).
+2. **TAGGING**: Generate appropriate technical and domain tags (JSON array).
+3. **MAPPING**: Ensure all fields align with the Drizzle ORM schema.
+4. **FALLBACKS**: If a field is missing, provide a sensible default based on the description.
+
+### DB SCHEMA CONTEXT:
+- title (string)
+- company (string)
+- sourceUrl (string)
+- sourcePlatform (string)
+- tags (JSON array of strings)
+- locationType (string: 'remote', 'hybrid', 'onsite')
+- payRange (string | null)
+- description (string)
+- type (string: 'agency', 'direct')
+
+### OUTPUT RULES:
+- Respond ONLY with valid JSON encompassing the Partial<NewOpportunity> object.
+
+### JSON STRUCTURE:
+{
+  "title": string,
+  "company": string,
+  "sourceUrl": string,
+  "sourcePlatform": string,
+  "tags": string[],
+  "locationType": string,
+  "payRange": string | null,
+  "description": string,
+  "type": "agency" | "direct"
+}
+`;
+
+  try {
+    const response = await fetch(ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.1,
+          responseMimeType: "application/json"
+        }
+      }),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`[Gemini Tier 2] API Error: ${response.status} - ${errorBody}`);
+    }
+
+    const data = await response.json();
+    return JSON.parse(data.candidates[0].content.parts[0].text) as Partial<NewOpportunity>;
+  } catch (error) {
+    console.error(`[Gemini Tier 2] Polish failure: ${error instanceof Error ? error.message : error}`);
+    // PASS-THROUGH ON FAILURE: Return the Tier 1 payload as-is if Tier 2 fails (Prudence mandate)
+    return {
+      title: tier1Payload.title,
+      company: tier1Payload.company || "Generic",
+      sourceUrl: tier1Payload.originalSourceUrl || "",
+      sourcePlatform: tier1Payload.sourcePlatform || "Generic",
+      description: tier1Payload.description,
+      locationType: tier1Payload.location || "remote",
+    };
   }
 }

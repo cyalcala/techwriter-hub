@@ -91,7 +91,8 @@ export async function fetchATSJobs(db: any): Promise<NewOpportunity[]> {
         locationType: "remote",
         isActive: true,
         type: "agency",
-      }));
+        __raw: JSON.stringify(job)
+      } as any));
     } catch (e) {
       return [];
     }
@@ -146,7 +147,8 @@ export async function fetchATSJobs(db: any): Promise<NewOpportunity[]> {
         locationType: "remote",
         isActive: true,
         type: "agency",
-      }));
+        __raw: JSON.stringify(job)
+      } as any));
     } catch (e) {
       return [];
     }

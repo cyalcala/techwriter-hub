@@ -131,7 +131,8 @@ export async function fetchRSSFeed(source: Source): Promise<NewOpportunity[]> {
         scrapedAt: new Date(),
         isActive: true,
         contentHash: toHash(title, sourceUrl),
-      });
+        __raw: JSON.stringify(rawItem)
+      } as any);
     }
 
     return results;

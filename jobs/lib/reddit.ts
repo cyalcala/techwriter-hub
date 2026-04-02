@@ -106,7 +106,8 @@ export async function fetchRedditJobs(): Promise<NewOpportunity[]> {
           scrapedAt: new Date(),
           isActive: true,
           contentHash: toHash(title, sourceUrl),
-        });
+          __raw: JSON.stringify(p)
+        } as any);
       }
 
       console.log(`[reddit] ${sub.label}: ${posts.length} posts analyzed`);

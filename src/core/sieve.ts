@@ -9,6 +9,8 @@ export enum OpportunityTier {
 }
 
 import { JobDomain, mapTitleToDomain, extractDisplayTags } from "../../packages/db/taxonomy";
+import { extractMacroSieve, type MacroSieveResult } from "../../scripts/lib/cerebras";
+import { askGemini, polishOpportunity, type FixProtocol } from "../../scripts/lib/gemini";
 
 export interface SiftResult {
   tier: OpportunityTier;
@@ -164,6 +166,47 @@ export function siftOpportunity(
     displayTags,
     relevanceScore
   };
+}
+
+/**
+ * ⚡ DUAL-LLM PIPELINE: The Apex SRE Ingestion Logic
+ * Tier 1: Cerebras (Macro-Sieve)
+ * Tier 2: Gemini (Deep Reasoning & Mapping)
+ */
+export async function siftWithDualLLM(rawText: string, metadata: any = {}): Promise<SiftResult | null> {
+  // PHASE 1: Cerebras Macro-Sieve (The Tier 1 Sieve)
+  const tier1 = await extractMacroSieve(rawText, metadata);
+
+  if (!tier1.pass_to_tier2 || !tier1.extracted_payload) {
+    console.warn(`[Tier 1] Bounced Signal: ${tier1.rejection_reason || "Heuristic REJECTED"}`);
+    return null;
+  }
+
+  const payload = tier1.extracted_payload;
+
+  // PHASE 2: Check for PH Compatibility (Fail-Closed)
+  if (!payload.is_ph_compatible) {
+    console.warn(`[Tier 1] Bounced Signal: Geographic Boundary breach.`);
+    return null;
+  }
+
+  // PHASE 3: Tier 2 Polish & Mapping (Gemini)
+  // Strictly polish and map to Drizzle ORM schemas.
+  const polished = await polishOpportunity(payload);
+
+  // PHASE 4: Heuristic Enrichment & Scoring
+  // Final scoring based on the polished data.
+  const heuristic = siftOpportunity(
+    polished.title || payload.title,
+    polished.description || payload.description,
+    polished.company || payload.company || "Generic",
+    polished.sourcePlatform || payload.sourcePlatform || "Generic"
+  );
+
+  return {
+    ...heuristic,
+    ...polished, // Override with polished fields
+  } as SiftResult;
 }
 
 function calculateTier(
