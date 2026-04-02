@@ -8,6 +8,9 @@ on:
       - 'packages/db/schema.ts'
       - 'packages/db/migrations/**'
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   verify:
     name: 🛡️ Schema Integrity Check

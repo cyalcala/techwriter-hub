@@ -15,14 +15,11 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 const model = genAI.getGenerativeModel({ 
   model: "gemini-2.5-flash-lite",
   systemInstruction: `
-    YOU ARE THE VA.INDEX SIGNAL EXTRACTION ARCHITECT.
-    Your mission is to generate robust JSONata transformation rules that map mutated source JSON into our strict schema.
+    YOU ARE THE VA.INDEX SIGNAL SCHOLAR.
+    Your mission is to map raw signals from Tier 1 into our final schema.
     
     CRITICAL CONSTRAINTS:
-    - Return ONLY valid JSON containing a "rule" (string) and "data" (array of initial results).
-    - The JSONata rule must handle future payloads of the same structure.
-    - Ensure sourceUrl is always an absolute URL.
-    - If fields are missing, provide sensible defaults based on the context.
+    - Receive raw data validated by Tier 1.
     - Respond in application/json format.
   `,
   generationConfig: {
@@ -30,6 +27,40 @@ const model = genAI.getGenerativeModel({
     responseMimeType: "application/json",
   }
 });
+
+/**
+ * Tier 1 (The Macro-Sieve & Sanitizer) - Cerebras API
+ * Validates intent, niche, and geography before deep reasoning.
+ */
+async function callCerebrasTier1(payload: any): Promise<{ pass_to_tier2: boolean; extracted_payload: any }> {
+  try {
+    const response = await fetch("https://api.cerebras.ai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.CEREBRAS_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "qwen-3-235b-a22b-instruct-2507",
+        messages: [
+          {
+            role: "system",
+            content: "You are the macro-sieve. Extract (Intent, Niche, Geography). Return ONLY JSON: { pass_to_tier2: boolean, extracted_payload: object }. Set pass_to_tier2: true ONLY if the job is remote/Filipino-friendly."
+          },
+          { role: "user", content: JSON.stringify(payload) }
+        ],
+        response_format: { type: "json_object" }
+      }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error?.message || "Cerebras API Error");
+    return JSON.parse(data.choices[0].message.content);
+  } catch (err) {
+    console.error("[Cerebras Tier 1] Failure:", (err as Error).message);
+    return { pass_to_tier2: false, extracted_payload: null };
+  }
+}
 
 /**
  * Minifies a JSON payload to maximize Gemini's context window.
@@ -97,15 +128,23 @@ export async function healBatchWithLLM(db: any, rawJson: any, sourceName: string
     console.warn(`[Healer] Rule Engine Error (skipping to LLM):`, (cacheErr as Error).message);
   }
 
-  // 2. SLOW PATH: Gemini Discovery with Self-Correction
+  // 2. TIER 1: Cerebras Sanitizer (Macro-Sieve)
+  const tier1 = await callCerebrasTier1(rawJson);
+  if (!tier1.pass_to_tier2) {
+    console.log(`[Healer] Tier 1 rejected data for ${sourceName}. Reasons: Non-Philippine or High Noise.`);
+    return [];
+  }
+
+  // 3. TIER 2: Gemini Discovery (The Scholar)
   const { checkAndIncrementAiQuota } = await import("./job-utils.js");
   const canCallAi = await checkAndIncrementAiQuota(db);
   if (!canCallAi) return [];
 
   const minified = minifyPayload(rawJson);
   let currentPrompt = `
-    Source "${sourceName}" has mutated. 
-    Analyze this minified payload and generate a JSONata rule for extraction.
+    Source "${sourceName}" validated by Tier 1. 
+    Analyze this minified payload (extracted from Sanitizer) and generate a JSONata rule.
+    Extracted Metadata: ${JSON.stringify(tier1.extracted_payload)}
     
     PAYLOAD: ${minified}
   `;
