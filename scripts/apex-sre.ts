@@ -221,6 +221,16 @@ async function runSreSuite() {
     if (certOutput.includes("ALL GATES PASSED")) {
       console.log(`\n🎉 System is HEALTHY. Suite completed in ${((Date.now() - startTime) / 1000).toFixed(2)}s.`);
       
+      // 4. PHASE 4: CHRONOS HEARTBEAT (Vector 5: Active Triage)
+      // New: Maintenance Ship Triage for stale signals
+      console.log("\n--- [PHASE 4] CHRONOS HEARTBEAT (VECTOR 5) ---");
+      try {
+        await $`bun run scripts/semantic-heartbeat.ts --limit 10`.quiet();
+        console.log("✅ Chronos Heartbeat mission complete.");
+      } catch (err: any) {
+        console.error(`⚠️ Chronos Heartbeat dropout: ${err.message}`);
+      }
+
       // TRIGGER STRATEGIC HUNT (BETTERMENT)
       await runStrategicHunt();
       

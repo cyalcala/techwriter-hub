@@ -46,6 +46,7 @@ jobs:
           TRIGGER_API_KEY: ${{ secrets.TRIGGER_API_KEY }}
           VERCEL_DEPLOY_WEBHOOK: ${{ secrets.VERCEL_DEPLOY_WEBHOOK }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          CEREBRAS_API_KEY: ${{ secrets.CEREBRAS_API_KEY }}
           # Fallback to GITHUB_TOKEN if PAT is not provided; critical for GitAgent
           GITHUB_PAT: ${{ secrets.GITHUB_PAT || secrets.GITHUB_TOKEN }}
         run: bun run scripts/apex-sre.ts
