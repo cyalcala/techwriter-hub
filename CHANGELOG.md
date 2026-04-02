@@ -3,6 +3,16 @@
 **Status: AUTO-PROCESSED**
 
 ### ✨ Major Features
+* feat: activate Codified Core v8.3 (Dual-LLM Ingestion & Active Triage) (b06c4e6)
+* feat: implement custom agency sorting priority for Outsource Angel, Pearl Talent, and Virtual/VA companies (4495686)
+
+---
+
+
+## [2026-04-02] — [Opportunities: 78 | Agencies: 59]
+**Status: AUTO-PROCESSED**
+
+### ✨ Major Features
 * feat: implement custom agency sorting priority for Outsource Angel, Pearl Talent, and Virtual/VA companies (4495686)
 
 ---

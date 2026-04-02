@@ -9,6 +9,7 @@
     "@trigger.dev/sdk": "4.4.3",
     "@va-hub/config": "workspace:*",
     "@va-hub/db": "workspace:*",
+    "cheerio": "^1.0.0",
     "drizzle-orm": "^0.45.1",
     "fast-xml-parser": "^5.5.6",
     "jsonata": "^2.1.0",

@@ -19,7 +19,7 @@ export const activeTriage = task({
     // 1. Fetch opportunities to check
     const pending = await db.select()
       .from(opportunities)
-      .where(and(eq(opportunities.isActive, 1), isNotNull(opportunities.sourceUrl)))
+      .where(and(eq(opportunities.isActive, true), isNotNull(opportunities.sourceUrl)))
       .limit(limit);
 
     if (pending.length === 0) {
@@ -41,7 +41,7 @@ export const activeTriage = task({
 
         if (response.status === 404) {
           logger.warn(`[Triage] 404 Detected for ${opp.id}. Archiving.`);
-          await db.update(opportunities).set({ isActive: 0 }).where(eq(opportunities.id, opp.id));
+          await db.update(opportunities).set({ isActive: false }).where(eq(opportunities.id, opp.id));
           staleCount++;
           continue;
         }
@@ -75,14 +75,20 @@ export const activeTriage = task({
 
         if (triage.result === "stale") {
           logger.warn(`[Triage] STALE Detected: ${triage.reason}. Archiving ${opp.id}.`);
-          await db.update(opportunities).set({ isActive: 0 }).where(eq(opportunities.id, opp.id));
+          const currentMetadata = typeof opp.metadata === "string" ? JSON.parse(opp.metadata) : opp.metadata;
+          await db.update(opportunities)
+            .set({ 
+              isActive: false, 
+              metadata: { ...currentMetadata, triageReason: triage.reason, triagedAt: new Date().toISOString() } 
+            })
+            .where(eq(opportunities.id, opp.id));
           staleCount++;
         } else {
           logger.info(`[Triage] Verified Active: ${opp.id}`);
         }
 
         // Respect the Fleet's Temporal Pacing (prevent rate limits)
-        await wait.forDuration({ seconds: 2 });
+        await wait.for({ seconds: 2 });
       } catch (err) {
         logger.error(`[Triage] Failed to check ${opp.id}:`, (err as Error).message);
       }
