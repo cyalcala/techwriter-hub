@@ -10,7 +10,7 @@ import { probeAgencies } from "./lib/agency-sensor";
 import { config } from "@va-hub/config";
 import { sql, eq, and, not } from "drizzle-orm";
 import { isLikelyScam } from "./lib/trust";
-import { siftOpportunity, siftWithDualLLM, OpportunityTier } from "@va-hub/core/sieve";
+import { siftOpportunity, siftWithDualLLM, OpportunityTier, generateIdempotencyHash } from "@va-hub/core/sieve";
 import { v4 as uuidv4 } from "uuid";
 import { healBatchWithLLM } from "./lib/autonomous-harvester";
 import { agencies as agenciesSchema } from "@va-hub/db/schema";
@@ -200,15 +200,36 @@ export async function harvest(options?: { unhealthySources?: string[] }) {
     if (processedFingerprints.has(fingerprint)) continue;
     
     
+    // 🧬 THE TITANIUM IDEMPOTENCY SHIELD: MD5(JobTitle + Company)
+    const idempotencyHash = generateIdempotencyHash(item.title, item.company || "Generic");
+    
+    // Check Turso for existing hash
+    const existing = await db.select({ id: opportunitiesSchema.id })
+      .from(opportunitiesSchema)
+      .where(eq(opportunitiesSchema.contentHash, idempotencyHash))
+      .limit(1);
+
+    if (existing.length > 0) {
+      // DROP IT immediately - Silent discard for performance
+      continue;
+    }
+
     // 🧬 THE TITANIUM INGESTION PROTOCOL: Dual-LLM Sifting
     // We pass the raw signal to Cerebras (Tier 1) and Gemini (Tier 2)
     const rawPayload = (item as any).__raw || JSON.stringify(item);
     
-    const siftResult = await siftWithDualLLM(rawPayload, {
-      title: item.title,
-      company: item.company,
-      sourcePlatform: item.sourcePlatform
-    });
+    let siftResult = null;
+    try {
+      siftResult = await siftWithDualLLM(rawPayload, {
+        title: item.title,
+        company: item.company,
+        sourcePlatform: item.sourcePlatform
+      });
+    } catch (llmErr: any) {
+      // GRACEFUL DEGRADATION: Log error, continue loop
+      await recordLog(`LLM Pipeline Failure for ${item.title}: ${llmErr.message}`, "warn", { source: item.sourcePlatform });
+      continue;
+    }
 
     if (!siftResult || siftResult.tier === OpportunityTier.TRASH) {
       continue;
@@ -226,6 +247,7 @@ export async function harvest(options?: { unhealthySources?: string[] }) {
       tier: siftResult.tier ?? 3,
       relevanceScore: siftResult.relevanceScore,
       displayTags: siftResult.displayTags,
+      contentHash: idempotencyHash,
       scrapedAt: normalizeDate(new Date()),
       lastSeenAt: normalizeDate(new Date()),
       latestActivityMs: item.postedAt ? normalizeDate(item.postedAt).getTime() : normalizeDate(new Date()).getTime() // 🛡️ Normalized Sentinel
@@ -306,7 +328,7 @@ export async function harvest(options?: { unhealthySources?: string[] }) {
 
 export const scrapeOpportunitiesTask = schedules.task({
   id: "harvest-opportunities",
-  cron: "*/30 * * * *",
+  cron: "*/10 * * * *",
   queue: { concurrencyLimit: 1 },
   run: async (payload: any, { ctx }: any) => {
     const triggerSource = payload?.source || (ctx as any).trigger?.id || 'schedule';

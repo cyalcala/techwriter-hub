@@ -11,6 +11,15 @@ export enum OpportunityTier {
 import { JobDomain, mapTitleToDomain, extractDisplayTags } from "../../packages/db/taxonomy";
 import { extractMacroSieve, type MacroSieveResult } from "../../scripts/lib/cerebras";
 import { askGemini, polishOpportunity, type FixProtocol } from "../../scripts/lib/gemini";
+import crypto from "node:crypto";
+
+/**
+ * 🧬 THE IDEMPOTENCY SHIELD: MD5(JobTitle + Company)
+ */
+export function generateIdempotencyHash(title: string, company: string): string {
+  const normalized = `${title.toLowerCase().trim()}${company.toLowerCase().trim()}`;
+  return crypto.createHash("md5").update(normalized).digest("hex");
+}
 
 export interface SiftResult {
   tier: OpportunityTier;
@@ -226,6 +235,14 @@ function calculateTier(
   for (const k of GEO_EXCLUSION_KILLS) if (body.includes(k)) return OpportunityTier.TRASH;
   for (const k of LANGUAGE_KILLS) if (t.includes(k)) return OpportunityTier.TRASH;
   
+  // 🛡️ SECURITY SHIELD: Negative Guardrails
+  const videoAudioKeywords = ["video", "audio", "reel", "youtube", "tiktok", "podcast", "editor", "animator"];
+  const isVideoAudio = videoAudioKeywords.some(k => t.includes(k));
+  if (isVideoAudio && (t.includes("copywriter") || t.includes("writer"))) {
+    // FORCE ROUTING: Video/Audio kills Writer classification
+    console.warn(`[Guardrail] Diverting suspected Audio/Video role from Writer to Creative: ${t}`);
+  }
+
   for (const k of TECH_HARD_KILLS) if (t.includes(k) && !TECH_ALLOWLIST.some(o => t.includes(o))) return OpportunityTier.TRASH;
 
   const COMPANY_KILLS = ["canonical", "gitlab", "ge healthcare", "nextiva", "toptal", "upwork", "fiverr"];
