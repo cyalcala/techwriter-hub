@@ -1,6 +1,7 @@
 {
   "framework": "astro",
   "installCommand": "bun install",
-  "buildCommand": "cd apps/frontend && bun run build",
+  "buildCommand": "if [ -d 'apps/frontend' ]; then cd apps/frontend && bun run build; else bun run build; fi",
   "outputDirectory": "apps/frontend/.vercel/output"
 }
+
