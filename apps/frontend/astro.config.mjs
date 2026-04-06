@@ -13,6 +13,7 @@ export default defineConfig({
     speedInsights: { enabled: true },
     edgeMiddleware: false,
     maxDuration: 60, // SRE requirement
+    includeFiles: [],
   }),
   integrations: [tailwind()],
   vite: {
@@ -30,16 +31,12 @@ export default defineConfig({
     // 🛡️ SECRET SHIELD: Astro server-mode already isolates frontmatter from client bundles.
     // No compile-time `define` needed — it was destructively replacing secrets in SSR code too.
     ssr: {
-      // 🧬 TITANIUM BUNDLE STRATEGY: Inline EVERYTHING.
-      // 1. Mandatory for Windows: Avoids 'EPERM: operation not permitted, symlink' failures in the Vercel NFT trace.
-      // 2. Bun Compatibility: Bypasses complex .bun/ symlink trees that often break the Vercel adapter's file tracing.
-      // 3. Optimization: Results in faster cold-starts by including all logic in a single server entrypoint.
-      noExternal: true
+      // 🧬 TITANIUM BUNDLE STRATEGY: Inline Monorepo Packages
+      noExternal: ['@va-hub/db', '@va-hub/config']
     },
     build: {
       rollupOptions: {
         output: {
-          // 📦 GRANULAR CHUNKING: Prevent massive vendor.js bloat
           manualChunks(id) {
             if (id.includes('node_modules')) {
               if (id.includes('htmx.org')) return 'htmx';
@@ -49,6 +46,14 @@ export default defineConfig({
           }
         }
       }
-    }
+    },
+    plugins: [
+      {
+        name: 'require-polyfill',
+        renderChunk(code) {
+          return `import { createRequire as __cr } from 'node:module';\nconst require = __cr(import.meta.url);\n${code}`;
+        }
+      }
+    ]
   }
 });
