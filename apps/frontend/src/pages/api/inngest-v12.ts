@@ -24,12 +24,14 @@ const v12Ping = inngest.createFunction(
  * 🚜 JOB HARVESTED WORKER (V12)
  */
 const jobHarvestedWorker = inngest.createFunction(
-  { id: "job-harvested", name: "Job Harvested (V12)", triggers: [{ event: "job.harvested" }] },
-  async (args) => {
-    console.log("🧬 [V12] Invoking Lazy-Load Proxy for job.harvested...");
-    const { jobHarvested } = await import("../../lib/inngest/functions");
-    // @ts-ignore - Internal execution
-    return jobHarvested.fn(args);
+  { 
+    id: "v12-job-harvested", 
+    name: "Job Harvested (V12)", 
+    triggers: [{ event: "v12/job.harvested" }] 
+  },
+  async (ctx) => {
+    const { startHarvest } = await import("../../lib/ai/waterfall");
+    return startHarvest(ctx);
   }
 );
 
@@ -60,9 +62,9 @@ export const GET = async (context: any) => {
         triggers: [{ event: "v12/ping" }]
       },
       {
-        id: "job-harvested",
+        id: "v12-job-harvested",
         name: "Job Harvested (V12)",
-        triggers: [{ event: "job.harvested" }]
+        triggers: [{ event: "v12/job.harvested" }]
       }
     ]
   };

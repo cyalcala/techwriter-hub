@@ -1,5 +1,10 @@
 import { AIExtractionSchema, type AIExtraction } from "../../../../../packages/db/validation";
+import { db } from "../../../../../packages/db";
+import { opportunities } from "../../../../../packages/db/schema";
+import { eq } from "drizzle-orm";
 import * as cheerio from "cheerio";
+import crypto from "node:crypto";
+import { siftOpportunity } from "../../../../../src/core/sieve";
 
 /**
  * Priority 3.1: Token Guard (HTML Sanitization)
@@ -203,4 +208,106 @@ export async function runAIWaterfall(html: string): Promise<AIExtraction> {
   }
 
   throw new Error("[Waterfall] V12 CRITICAL FAILURE: All 5 AI models failed validation/extraction.");
+}
+
+/**
+ * 🚜 START HARVEST: The Atomic Ingestion Entrypoint
+ * Encapsulates the entire V12 workflow for lazy-loading.
+ */
+export async function startHarvest(ctx: any) {
+  const { event, step } = ctx;
+  const { raw_title, raw_company, raw_url, raw_html } = event.data;
+  
+  console.log(`🚜 [V12_WORKER] Harvesting: ${raw_title} (${raw_company})`);
+
+  // 1. MD5 Idempotency Shield
+  const md5_hash = crypto
+    .createHash("md5")
+    .update((raw_title + raw_company).toLowerCase().trim())
+    .digest("hex");
+
+  // 2. Check Vault for duplicates
+  const existing = await step.run("check-idempotency", async () => {
+    const records = await db
+      .select()
+      .from(opportunities)
+      .where(eq(opportunities.md5_hash, md5_hash));
+    return records.length > 0 ? records[0] : null;
+  });
+
+  if (existing) {
+    return { status: "dropped", reason: "duplicate_md5", md5_hash };
+  }
+
+  // 3. One-Pass Orchestration
+  return await step.run("ai-extraction-and-sift", async () => {
+    try {
+      const extraction = await runAIWaterfall(raw_html);
+      
+      // 🛡️ Fail-Closed: Discard if not PH compatible or Trash (Tier 4)
+      if (!extraction.isPhCompatible || extraction.tier === 4) {
+        return { status: "dropped", reason: "not_ph_compatible", md5_hash };
+      }
+
+      // 4. Insert into Vault
+      await db.insert(opportunities).values({
+        id: crypto.randomUUID(),
+        md5_hash,
+        title: extraction.title,
+        company: extraction.company,
+        url: raw_url,
+        description: extraction.description,
+        salary: extraction.salary,
+        niche: extraction.niche,
+        type: extraction.type,
+        locationType: extraction.locationType,
+        sourcePlatform: "V12 Intelligence Mesh",
+        scrapedAt: new Date(),
+        isActive: true,
+        tier: extraction.tier,
+        relevanceScore: extraction.relevanceScore,
+        latestActivityMs: Date.now(),
+        metadata: JSON.stringify({ 
+          ...extraction.metadata, 
+          raw_title, 
+          raw_company 
+        }),
+      });
+
+      return { status: "inserted", md5_hash, model: extraction.metadata?.model };
+    } catch (err: any) {
+      console.error(`[V12_FALLBACK] ${err.message}. Invoking Heuristic Sifter...`);
+      
+      // 🚨 EMERGENCY FALLBACK
+      const heuristic = siftOpportunity(raw_title, raw_html, raw_company, "V12 Fallback");
+      
+      if (heuristic.tier === 4) {
+        return { status: "dropped", reason: "heuristic_reject", md5_hash };
+      }
+
+      await db.insert(opportunities).values({
+        id: crypto.randomUUID(),
+        md5_hash,
+        title: raw_title,
+        company: raw_company,
+        url: raw_url,
+        description: raw_html,
+        niche: heuristic.domain,
+        sourcePlatform: "V12 Fallback",
+        scrapedAt: new Date(),
+        isActive: true,
+        tier: heuristic.tier,
+        relevanceScore: heuristic.relevanceScore,
+        latestActivityMs: Date.now(),
+        metadata: JSON.stringify({ 
+          fallback: true, 
+          reason: err.message,
+          raw_title, 
+          raw_company 
+        }),
+      });
+
+      return { status: "inserted_fallback", md5_hash };
+    }
+  });
 }
