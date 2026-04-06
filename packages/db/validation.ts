@@ -40,7 +40,7 @@ export const OpportunitySchema = z.object({
 
 export const AIExtractionSchema = z.object({
   title: z.string().min(2).max(255).trim(),
-  company: z.string().min(1).max(255).trim(),
+  company: z.string().nullable().optional().catch("Confidential Client"),
   salary: z.string().trim().optional().nullable(),
   description: z.string().min(10).trim(),
   niche: z.preprocess((val) => {
