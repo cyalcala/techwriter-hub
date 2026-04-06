@@ -38,12 +38,50 @@ export const OpportunitySchema = z.object({
   metadata: z.string().optional().default("{}")
 }).strip();
 
+export const AIExtractionSchema = z.object({
+  title: z.string().min(2).max(255).trim(),
+  company: z.string().min(1).max(255).trim(),
+  salary: z.string().trim().optional().nullable(),
+  description: z.string().min(10).trim(),
+  niche: z.preprocess((val) => {
+    if (typeof val !== 'string') return val;
+    const normalized = val.toUpperCase().replace(/\s+/g, '_');
+    
+    // Exact Match
+    if (VA_NICHES.includes(normalized as any)) return normalized;
+
+    // Fuzzy Routing (The Intelligence Mesh)
+    if (normalized.includes('ACCOUNTING') || normalized.includes('BOOKKEEPER')) return 'ADMIN_BACKOFFICE';
+    if (normalized.includes('DEVELOPER') || normalized.includes('SOFTWARE')) return 'TECH_ENGINEERING';
+    if (normalized.includes('MARKETING') || normalized.includes('SOCIAL_MEDIA')) return 'MARKETING';
+    if (normalized.includes('SALES') || normalized.includes('GROWTH')) return 'SALES_GROWTH';
+    if (normalized.includes('DESIGN') || normalized.includes('EDITOR') || normalized.includes('CREATIVE')) return 'CREATIVE_MULTIMEDIA';
+    if (normalized.includes('CUSTOMER') || normalized.includes('SUPPORT') || normalized.includes('BPO')) return 'BPO_SERVICES';
+    if (normalized.includes('VIRTUAL_ASSISTANT') || normalized.includes('VA')) return 'VA_SUPPORT';
+
+    return "INVALID_NICHE"; // Force Zod error for hallucinations
+  }, z.enum(VA_NICHES)),
+  tier: z.coerce.number().int().min(0).max(4).default(3),
+  relevanceScore: z.coerce.number().int().min(0).max(100).default(50),
+  isPhCompatible: z.preprocess((val) => {
+    if (typeof val === 'boolean') return val;
+    if (typeof val === 'string') return val.toLowerCase() === 'true' || val.toLowerCase() === 'yes';
+    return true; // Default to pass
+  }, z.boolean().default(true)),
+  type: z.enum(["agency", "direct"]).default("agency"),
+  locationType: z.string().default("remote"),
+  metadata: z.record(z.any()).optional().default({})
+}).strip();
+
 export type ValidOpportunity = z.infer<typeof OpportunitySchema>;
+export type AIExtraction = z.infer<typeof AIExtractionSchema>;
 
 export function validateOpportunity(data: any): ValidOpportunity | null {
   const result = OpportunitySchema.safeParse(data);
-  if (result.success) {
-    return result.data;
-  }
-  return null;
+  return result.success ? result.data : null;
+}
+
+export function validateAIExtraction(data: any): AIExtraction | null {
+  const result = AIExtractionSchema.safeParse(data);
+  return result.success ? result.data : null;
 }
