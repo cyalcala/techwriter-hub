@@ -2,6 +2,8 @@ import type { APIRoute } from 'astro';
 import { db, schema, normalizeDate } from '@va-hub/db';
 import { sql, eq } from 'drizzle-orm';
 
+export const prerender = false;
+
 export const GET: APIRoute = async () => {
   const diagnostics: Record<string, any> = {
     timestamp: new Date().toISOString(),

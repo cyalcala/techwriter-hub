@@ -3,7 +3,6 @@ import { db } from "../../../../../packages/db"; // Root packages/db
 import { opportunities } from "../../../../../packages/db/schema";
 import { eq } from "drizzle-orm";
 import crypto from "crypto";
-import { v4 as uuidv4 } from "uuid";
 
 import { runAIWaterfall } from "../ai/waterfall";
 import { siftOpportunity } from "../../../../../src/core/sieve";
@@ -52,7 +51,7 @@ export const jobHarvested = inngest.createFunction(
 
         // 4. Insert V12 Result into Vault
         await db.insert(opportunities).values({
-          id: uuidv4(),
+          id: crypto.randomUUID(),
           md5_hash,
           title: extraction.title,
           company: extraction.company,
@@ -87,7 +86,7 @@ export const jobHarvested = inngest.createFunction(
         }
 
         await db.insert(opportunities).values({
-          id: uuidv4(),
+          id: crypto.randomUUID(),
           md5_hash,
           title: raw_title,
           company: raw_company,

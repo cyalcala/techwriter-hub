@@ -4,6 +4,8 @@ import { serve } from "inngest/astro";
 import { inngest } from "../../lib/inngest/client";
 import { jobHarvested } from "../../lib/inngest/functions";
 
+console.log("INNGEST_INIT_V12"); // THE UNIQUE LOG
+
 const handler = serve({
   client: inngest,
   functions: [
