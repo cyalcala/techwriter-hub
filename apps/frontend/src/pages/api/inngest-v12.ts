@@ -15,8 +15,11 @@ const inngest = new Inngest({
  * This function is defined locally to ensure the Handshake always succeeds.
  */
 const v12DiscoveryProbe = inngest.createFunction(
-  { id: "v12-discovery-probe", name: "V12 Discovery Probe" },
-  { event: "v12/probe.ping" },
+  { 
+    id: "v12-discovery-probe", 
+    name: "V12 Discovery Probe",
+    triggers: [{ event: "v12/probe.ping" }] 
+  },
   async ({ event, step }) => {
     await step.run("log-handshake", async () => {
       console.log("V12 Handshake Successful at", new Date().toISOString());
@@ -33,10 +36,14 @@ const jobHarvestedProxy = async (args: any) => {
 
 // We create a wrapper function for discovery that handles the triggers correctly
 const jobHarvestedWorker = inngest.createFunction(
-  { id: "job-harvested", name: "Job Harvested (V12)" },
-  { event: "job.harvested" },
+  { 
+    id: "job-harvested", 
+    name: "Job Harvested (V12)",
+    triggers: [{ event: "job.harvested" }] 
+  },
   jobHarvestedProxy as any
 );
+
 
 const handler = serve({
   client: inngest,
