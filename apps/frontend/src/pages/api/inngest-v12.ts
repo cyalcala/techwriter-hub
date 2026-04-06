@@ -26,9 +26,14 @@ const v12Ping = inngest.createFunction(
 );
 
 // 🛡️ NATIVE EXPORTS: Use the SDK's built-in Astro handlers
-export const { GET, POST, PUT } = serve({
+const handler = serve({
   client: inngest,
   functions: [
     v12Ping,
   ],
 });
+
+export const GET = async (ctx: any) => handler.GET(ctx);
+export const POST = async (ctx: any) => handler.POST(ctx);
+export const PUT = async (ctx: any) => handler.PUT(ctx);
+

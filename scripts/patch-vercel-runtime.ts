@@ -27,15 +27,26 @@ const walk = (dir: string): string[] => {
 
 const patch = () => {
   console.log('🛡️  Initiating SRE Titanium Patch: Vercel Metadata Surgery...');
+  console.log(`📂 Current Working Directory: ${process.cwd()}`);
   
   // Search in .vercel/output/functions
   const functionsDir = join(process.cwd(), '.vercel', 'output', 'functions');
-  const configs = walk(functionsDir);
+  console.log(`🔍 Searching in PRIMARY path: ${functionsDir}`);
+  
+  let configs = walk(functionsDir);
   
   if (configs.length === 0) {
-    console.warn('⚠️  No .vc-config.json files found. Build artifact missing?');
+    console.warn('⚠️  No .vc-config.json files found in PRIMARY path. Searching in APPS/FRONTEND...');
+    const frontendDir = join(process.cwd(), 'apps', 'frontend', '.vercel', 'output', 'functions');
+    console.log(`🔍 Searching in SECONDARY path: ${frontendDir}`);
+    configs = walk(frontendDir);
+  }
+  
+  if (configs.length === 0) {
+    console.warn('⚠️  No .vc-config.json files found. Build artifact missing or path mismatched?');
     return;
   }
+
   
   let patchedCount = 0;
   for (const configPath of configs) {
