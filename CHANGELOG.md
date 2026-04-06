@@ -3,6 +3,19 @@
 **Status: AUTO-PROCESSED**
 
 ### 🛡️ Reliability & Fixes
+* fix: upgrade vercel adapter to v8 and force node 22 runtime (bf5ed2d)
+* fix: bump Vercel node engine to 22.x for node:sqlite support (5ded969)
+
+### ⚓ Internal Maintenance
+* chore: V12 Triple-Lock Integration - Force Inngest Route Registration (b1640f6)
+
+---
+
+
+## [2026-04-06] — [Opportunities: 0 | Agencies: 59]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
 * fix: bump Vercel node engine to 22.x for node:sqlite support (5ded969)
 
 ### ⚓ Internal Maintenance
