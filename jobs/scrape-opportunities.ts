@@ -10,6 +10,7 @@ import { probeAgencies } from "./lib/agency-sensor";
 import { config } from "@va-hub/config";
 import { v4 as uuidv4 } from "uuid";
 import { normalizeDate } from "@va-hub/db";
+import { fetchWeWorkRemotelyJobs } from "./lib/weworkremotely";
 
 // V10/V12 Intelligence Bridge
 import { inngest } from "@va-hub/pulse";
@@ -50,7 +51,8 @@ export async function harvest(options?: { unhealthySources?: string[] }) {
       name: s.name, 
       fn: () => fetchJSONFeed(s as any) 
     })),
-    { id: "agency-sensor", name: "Agency Sensor", fn: () => probeAgencies(db) }
+    { id: "agency-sensor", name: "Agency Sensor", fn: () => probeAgencies(db) },
+    { id: "weworkremotely", name: "We Work Remotely", fn: fetchWeWorkRemotelyJobs }
   ];
 
   let totalEmitted = 0;
