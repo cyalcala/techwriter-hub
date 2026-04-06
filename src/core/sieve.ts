@@ -26,6 +26,7 @@ export interface SiftResult {
   domain: JobDomain;
   displayTags: string[];
   relevanceScore: number;
+  md5_hash: string;
 }
 
 const GEO_EXCLUSION_KILLS = [
@@ -173,7 +174,8 @@ export function siftOpportunity(
     tier,
     domain,
     displayTags,
-    relevanceScore
+    relevanceScore,
+    md5_hash: generateIdempotencyHash(title, company || "Generic")
   };
 }
 
@@ -215,6 +217,7 @@ export async function siftWithDualLLM(rawText: string, metadata: any = {}): Prom
   return {
     ...heuristic,
     ...polished, // Override with polished fields
+    md5_hash: generateIdempotencyHash(polished.title || payload.title, polished.company || payload.company || "Generic"),
   } as SiftResult;
 }
 

@@ -206,7 +206,7 @@ export async function harvest(options?: { unhealthySources?: string[] }) {
     // Check Turso for existing hash
     const existing = await db.select({ id: opportunitiesSchema.id })
       .from(opportunitiesSchema)
-      .where(eq(opportunitiesSchema.contentHash, idempotencyHash))
+      .where(eq(opportunitiesSchema.md5_hash, idempotencyHash))
       .limit(1);
 
     if (existing.length > 0) {
@@ -247,7 +247,7 @@ export async function harvest(options?: { unhealthySources?: string[] }) {
       tier: siftResult.tier ?? 3,
       relevanceScore: siftResult.relevanceScore,
       displayTags: siftResult.displayTags,
-      contentHash: idempotencyHash,
+      md5_hash: idempotencyHash,
       scrapedAt: normalizeDate(new Date()),
       lastSeenAt: normalizeDate(new Date()),
       latestActivityMs: item.postedAt ? normalizeDate(item.postedAt).getTime() : normalizeDate(new Date()).getTime() // 🛡️ Normalized Sentinel
@@ -291,16 +291,15 @@ export async function harvest(options?: { unhealthySources?: string[] }) {
       await db.insert(opportunitiesSchema)
         .values(batch)
         .onConflictDoUpdate({
-          target: [opportunitiesSchema.title, opportunitiesSchema.company, opportunitiesSchema.sourceUrl],
+          target: [opportunitiesSchema.md5_hash],
           set: { 
             scrapedAt: normalizeDate(new Date()),
             lastSeenAt: normalizeDate(new Date()), // COMMANDER'S PATCH: Force freshness on collision
             isActive: true,
             tier: sql`excluded.tier`,
             relevanceScore: sql`excluded.relevance_score`,
-            displayTags: sql`excluded.display_tags`,
-            contentHash: sql`excluded.content_hash`,
-            sourceUrl: sql`excluded.source_url`,
+            md5_hash: sql`excluded.md5_hash`,
+            url: sql`excluded.url`,
             latestActivityMs: sql`CASE 
               WHEN excluded.latest_activity_ms > 0 THEN excluded.latest_activity_ms 
               ELSE ${opportunitiesSchema.latestActivityMs} 
