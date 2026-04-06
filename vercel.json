@@ -1,6 +1,6 @@
 {
   "framework": "astro",
-  "installCommand": "npm install --legacy-peer-deps",
+  "installCommand": "BUN_INSTALL_BACKEND=copyfile HUSKY=0 bun install",
   "buildCommand": "if [ -d 'apps/frontend' ]; then cd apps/frontend && bun run build; else bun run build; fi",
   "outputDirectory": "apps/frontend/.vercel/output"
 }
