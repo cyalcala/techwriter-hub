@@ -1,127 +1,61 @@
-import { schedules, task, logger } from "@trigger.dev/sdk/v3";
-import { createDb } from "../src/lib/db";
+import { schedules, logger } from "@trigger.dev/sdk/v3";
+import { Inngest } from "inngest";
+import * as cheerio from "cheerio";
 
-export const hourlySnapshot = schedules.task({
-  id: "hourly-snapshot",
+// 1. Initialize Minimal Inngest Client for Emitter
+const inngest = new Inngest({ 
+  id: "va-freelance-hub-emitter",
+  eventKey: process.env.INNGEST_EVENT_KEY 
+});
+
+export const hourlyHarvest = schedules.task({
+  id: "hourly-harvest",
   cron: "0 * * * *",
   maxDuration: 120,
   queue: { concurrencyLimit: 1 },
   run: async () => {
-    const { client, db } = createDb();
     try {
-      logger.info("SNAPSHOT_START", {
-        ts: Date.now()
-      });
+      const targetUrl = "https://weworkremotely.com/remote-jobs";
       
-      const snapshot = {
-        timestamp: new Date().toISOString(),
-        type: "hourly-automated",
-        trigger: "scheduled",
-        system: {
-          health: await captureHealth(client),
-          listings: await captureListings(client),
-          taskStatus: await captureTaskStatus(),
-          environment: captureEnvironment()
+      // 2. Harvesting (Not Scraping) - Capture public signals
+      const response = await fetch(targetUrl);
+      const html = await response.text();
+      const $ = cheerio.load(html);
+
+      // 3. Extract logic (Lightweight)
+      const jobs: any[] = [];
+      
+      // Select the first 3 jobs to minimize payload/compute
+      $("section.jobs li a").slice(0, 3).each((_, el) => {
+        const $el = $(el);
+        const title = $el.find(".title").text().trim();
+        const company = $el.find(".company").text().trim();
+        const url = "https://weworkremotely.com" + ($el.attr("href") || "");
+        
+        if (title && company) {
+          jobs.push({
+            name: "job.harvested",
+            data: {
+              raw_title: title,
+              raw_company: company,
+              raw_url: url,
+              raw_html: $el.html() || "", // Lightweight snippet
+            },
+          });
         }
-      };
-      
-      await client.execute({
-        sql: `INSERT INTO system_snapshots 
-              (snapshot_data, created_at, type)
-              VALUES (?, ?, ?)`,
-        args: [
-          JSON.stringify(snapshot),
-          new Date().toISOString(),
-          "hourly"
-        ]
       });
-      
-      logger.info("SNAPSHOT_COMPLETE", {
-        timestamp: snapshot.timestamp,
-        totalListings: snapshot.system.listings.total
-      });
-      
+
+      // 4. Emit to Event Bus (The Baton Pass)
+      if (jobs.length > 0) {
+        await inngest.send(jobs);
+        logger.info("HARVEST_EMITTED", { count: jobs.length });
+      }
+
+      return { status: "success", count: jobs.length };
+
     } catch (err: any) {
-      logger.error("SNAPSHOT_FAILED", {
-        error: err.message
-      });
+      logger.error("HARVEST_FAILED", { error: err.message });
       throw err;
-    } finally {
-      client.close();
     }
   }
 });
-
-async function captureHealth(client: any) {
-  try {
-    const r = await client.execute(
-      "SELECT COUNT(*) as c FROM opportunities"
-    );
-    const recent = await client.execute(
-      `SELECT created_at FROM opportunities
-       ORDER BY created_at DESC LIMIT 1`
-    );
-    const count = (r.rows[0] as any).c;
-    const latest = (recent.rows[0] as any)?.created_at;
-    const now = new Date();
-    const lastWrite = new Date(latest);
-    const stalenessHrs = Math.round(
-      (now.getTime() - lastWrite.getTime()) 
-      / 3600000 * 100) / 100;
-    return {
-      status: stalenessHrs < 1 ? "HEALTHY" : "STALE",
-      stalenessHrs,
-      totalListings: count,
-      capturedAt: now.toISOString()
-    };
-  } catch (err: any) {
-    return { status: "ERROR", error: err.message };
-  }
-}
-
-async function captureListings(client: any) {
-  const tiers = await client.execute(
-    `SELECT tier, COUNT(*) as count
-     FROM opportunities
-     GROUP BY tier`
-  );
-  const total = await client.execute(
-    "SELECT COUNT(*) as c FROM opportunities"
-  );
-  return {
-    total: (total.rows[0] as any).c,
-    tiers: tiers.rows.reduce((acc: any, r: any) => {
-      acc[r.tier] = r.count;
-      return acc;
-    }, {})
-  };
-}
-
-async function captureTaskStatus() {
-  try {
-    const r = await fetch(
-      "https://api.trigger.dev/api/v3/runs?limit=7",
-      {
-        headers: {
-          "Authorization": `Bearer ${process.env.TRIGGER_SECRET_KEY}`
-        }
-      }
-    );
-    const data = await r.json();
-    return (data.data || []).map((run: any) => ({
-      task: run.taskIdentifier,
-      status: run.status,
-      lastRun: run.updatedAt
-    }));
-  } catch {
-    return [];
-  }
-}
-
-function captureEnvironment() {
-  return {
-    nodeVersion: process.version,
-    platform: process.platform,
-    capturedAt: new Date().toISOString()
-  };
-}
