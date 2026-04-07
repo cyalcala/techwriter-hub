@@ -117,6 +117,33 @@ export const defaultConfig: NicheConfig = {
       defaultJobType: "VA",
       tags: ["customer support", "marketing", "va"],
       ethical_note: "Public RSS feed provided by Jobspresso for remote job syndication.",
+    },
+    {
+      id: "remotive",
+      name: "Remotive",
+      url: "https://remotive.com/api/remote-jobs/feed",
+      platform: "Remotive",
+      defaultJobType: "full-time",
+      tags: ["remote", "global"],
+      ethical_note: "Public RSS feed provided by Remotive for job syndication.",
+    },
+    {
+      id: "working-nomads",
+      name: "Working Nomads",
+      url: "https://www.workingnomads.com/jobs/rss",
+      platform: "WorkingNomads",
+      defaultJobType: "full-time",
+      tags: ["remote", "global"],
+      ethical_note: "Public RSS feed provided by Working Nomads for job syndication.",
+    },
+    {
+      id: "daily-remote",
+      name: "DailyRemote",
+      url: "https://dailyremote.com/remote-jobs/feed/",
+      platform: "DailyRemote",
+      defaultJobType: "full-time",
+      tags: ["remote", "global"],
+      ethical_note: "Public RSS feed provided by DailyRemote for job syndication.",
     }
   ],
 
