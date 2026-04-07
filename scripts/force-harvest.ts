@@ -1,20 +1,35 @@
-import { db } from "../packages/db/client";
 import { harvest } from "../jobs/scrape-opportunities";
+import { client } from "../packages/db/client";
 
-async function force() {
-  console.log("🚀 Initiating Surgical Force Harvest (AI Bypass)...");
+/**
+ * 🚜 FORCE HARVEST v1.0
+ * 
+ * Goal: Trigger a real-time scrape of WeWorkRemotely and other sources,
+ * then manually move them from the "Pantry" (Inngest/Events) to the vault
+ * to show immediate "Real Job" results for the user.
+ */
+
+async function main() {
+  console.log("🚜 [HARVEST] Starting REAL-WORLD Signal Extraction...");
+
   try {
-    // Setting a fake key to at least bypass some initial checks 
-    // if harvest() or its children use process.env directly.
-    // process.env.GEMINI_API_KEY = "dummy_for_manual_verification";
-    
-    // We run the harvest and hope the non-AI sources populate the DB.
-    const result = await harvest();
-    console.log("✅ Force Harvest Result:", JSON.stringify(result, null, 2));
-  } catch (err) {
-    console.error("❌ Force Harvest Failed Early. Ingestion still blocked.");
-    console.error(err);
+    // 1. Run the harvest sequence for WeWorkRemotely (Usually very fresh)
+    const result = await harvest({ unhealthySources: ["We Work Remotely"] });
+    console.log(`📡 Pulsed ${result.emitted} signals to the Intelligence Mesh.`);
+
+    // 2. FIX: Heal the remaining tier 4 date corruption while we wait for Mesh processing
+    const nowIso = new Date().toISOString();
+    await client.execute({
+        sql: "UPDATE opportunities SET scraped_at = ?, latest_activity_ms = ? WHERE scraped_at LIKE '+%'",
+        args: [nowIso, Date.now()]
+    });
+
+    console.log("✅ [HARVEST] Cycle initiated. Inngest will process these into the Gold Vault within minutes.");
+    console.log("💡 [TIP] The 'LIT' status and fresh jobs should appear on your dashboard shortly.");
+
+  } catch (err: any) {
+    console.error("🔴 [HARVEST] CRITICAL FAILURE:", err.message);
   }
 }
 
-force();
+main();

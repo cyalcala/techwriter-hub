@@ -62,6 +62,7 @@ export async function getSignalsByDomain(domain: string, limit = 20) {
 export async function getLatestMirror(limit = 10) {
   return await db.select()
     .from(schema.opportunities)
+    .where(not(eq(schema.opportunities.tier, 4)))
     .orderBy(desc(schema.opportunities.latestActivityMs))
     .limit(limit);
 }

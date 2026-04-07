@@ -77,7 +77,15 @@ try {
 }
 
 // ── DOMAIN ORCHESTRATION ──
-const topDomains = [JobDomain.VA_SUPPORT, JobDomain.BPO_SERVICES, JobDomain.SALES_GROWTH];
+const topDomains = [
+  JobDomain.VA_SUPPORT, 
+  JobDomain.CREATIVE_MULTIMEDIA, 
+  JobDomain.TECH_ENGINEERING, 
+  JobDomain.MARKETING,
+  JobDomain.SALES_GROWTH,
+  JobDomain.BPO_SERVICES,
+  JobDomain.ADMIN_BACKOFFICE
+];
 
 // ── ADAPTIVE BRIDGE: MAP LEGACY DATA TO V10 NICHE TAXONOMY ──
 const rawList = (initialSignals && initialSignals.length > 0) ? initialSignals : staticFallback;
