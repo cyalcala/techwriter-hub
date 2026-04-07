@@ -21,6 +21,7 @@ let initialSignals = [];
 let mirrorSignals = [];
 let healthStats = { status: 'STANDBY', lastHeartbeat: null, isFallback: false };
 let dbError = null;
+const CACHE_BUST = Date.now();
 
 try {
   if (process.env.TURSO_DATABASE_URL) {
@@ -29,7 +30,9 @@ try {
       getLatestMirror(10),
       db.select({ 
         maxSync: sql<number>`max(scraped_at)`, 
-      }).from(schema.opportunities).where(eq(schema.opportunities.isActive, true))
+      }).from(schema.opportunities).where(eq(schema.opportunities.isActive, true)),
+      // CACHE BUST PULSE: Forces Turso to evaluate a fresh timestamp
+      db.run(sql`SELECT ${CACHE_BUST} as pulse`)
     ]);
 
     const timeoutPromise = new Promise((_, reject) => 
