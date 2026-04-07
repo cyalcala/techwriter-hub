@@ -44,15 +44,21 @@ describe("V12 Sync: The Dumb Conveyor Belt", () => {
      * (Chef must save to mapped_payload and set status to PLATED)
      */
     test("Chef Contract: Job is saved with mapped_payload in Supabase", async () => {
-        const { error } = await supabase.from('raw_job_harvests').insert({
+        const payload = {
             id: testJobId,
             source_url: mockMappedPayload.url,
             raw_payload: "<html>RAW DATA</html>",
             source_platform: "TDD_MOCK",
             status: "PLATED",
             mapped_payload: mockMappedPayload
-        });
+        };
+        
+        console.log(`[TDD] Attempting insert for job: ${testJobId}`);
+        const { error } = await supabase.from('raw_job_harvests').insert(payload);
 
+        if (error) {
+            console.error(`[TDD] Supabase Insert Error:`, error);
+        }
         expect(error).toBeNull();
         
         const { data, error: fetchError } = await supabase
@@ -61,6 +67,9 @@ describe("V12 Sync: The Dumb Conveyor Belt", () => {
             .eq('id', testJobId)
             .single();
 
+        if (fetchError) {
+            console.error(`[TDD] Supabase Fetch Error:`, fetchError);
+        }
         expect(fetchError).toBeNull();
         expect(data.status).toBe('PLATED');
         expect(data.mapped_payload).toEqual(mockMappedPayload);
