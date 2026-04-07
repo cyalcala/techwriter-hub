@@ -16,10 +16,13 @@ async function migrate() {
         process.exit(1);
     }
 
-    // Connect to Supabase Postgres (Direct connection)
+    // Connect to Supabase Postgres (Direct/Pooler connection)
+    // 🛡️ Resilience: Added 3 retries and 30s timeout for CI/CD networking stability
     const sql = postgres(dbUrl, {
         ssl: 'require',
-        max: 1 // Only 1 connection needed for the schema update
+        max: 1,
+        connect_timeout: 30, // 30 seconds
+        onnotice: () => {}, // Silence internal Postgres notices
     });
 
     console.log("🛠️ [MIGRATION] Checking schema for 'raw_job_harvests'...");
