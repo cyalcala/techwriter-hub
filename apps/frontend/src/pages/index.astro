@@ -7,7 +7,7 @@ import MirrorStage from '../components/MirrorStage.astro';
 import { getSortedSignals, getLatestMirror } from '@va-hub/db/sorting';
 import { db, schema } from '@va-hub/db/client';
 import { sql, eq } from 'drizzle-orm';
-import { JobDomain, DOMAIN_MANIFEST, getDomainSlug, getDomainLabel, mapTitleToDomain } from '@va-hub/db/taxonomy';
+import { JobDomain, getDomainSlug, getDomainLabel, mapTitleToDomain } from '@va-hub/db/taxonomy';
 // SRE: staticFallback import removed - no phantom data fallback
 
 // BUST THE CACHE
@@ -75,6 +75,37 @@ const topDomains = [
   JobDomain.ADMIN_BACKOFFICE
 ];
 
+const DOMAIN_META: Record<JobDomain, { description: string; symbol: string }> = {
+  [JobDomain.VA_SUPPORT]: {
+    description: "Multi-functional Virtual Assistants and general support roles.",
+    symbol: "🤝",
+  },
+  [JobDomain.CREATIVE_MULTIMEDIA]: {
+    description: "Creative content, video editing, design, and multimedia.",
+    symbol: "🎨",
+  },
+  [JobDomain.TECH_ENGINEERING]: {
+    description: "Software engineering, DevOps, and technical infrastructure.",
+    symbol: "⚙️",
+  },
+  [JobDomain.MARKETING]: {
+    description: "Growth, advertising, and digital marketing strategies.",
+    symbol: "📣",
+  },
+  [JobDomain.SALES_GROWTH]: {
+    description: "Revenue generation and business development.",
+    symbol: "💰",
+  },
+  [JobDomain.BPO_SERVICES]: {
+    description: "Customer support, community management, and BPO operations.",
+    symbol: "🎧",
+  },
+  [JobDomain.ADMIN_BACKOFFICE]: {
+    description: "Backoffice, accounting, CRM management, and invoicing.",
+    symbol: "🏢",
+  },
+};
+
 // ── ADAPTIVE BRIDGE: MAP LEGACY DATA TO V10 NICHE TAXONOMY ──
 // SRE: No fallback - if initialSignals is empty, we already threw above
 const processedSignals = initialSignals.map(sig => {
@@ -99,18 +130,12 @@ const processedMirror = mirrorSignals.map(sig => ({
 }));
 
 
-const domains = DOMAIN_MANIFEST.map(d => ({
-  ...d,
-  signals: processedSignals.filter(sig => sig.niche === d.domain)
-}))
-   .sort((a, b) => {
-      const aIdx = topDomains.indexOf(a.domain);
-      const bIdx = topDomains.indexOf(b.domain);
-      if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
-      if (aIdx !== -1) return -1;
-      if (bIdx !== -1) return 1;
-      return 0; // Maintain original manifest order for others
-   });
+const domains = topDomains.map((domain) => ({
+  domain,
+  description: DOMAIN_META[domain].description,
+  symbol: DOMAIN_META[domain].symbol,
+  signals: processedSignals.filter((sig) => sig.niche === domain),
+}));
 
 ---
 
