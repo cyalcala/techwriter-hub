@@ -64,6 +64,19 @@ export const supabase = createClient(
  * Prevents multiple workers from grabbing the same RAW job.
  */
 export async function claimRawJob(workerId: string, limit: number = 15): Promise<RawJobHarvest[]> {
+  // 0. Release stale locks (crashed workers, aborted local scripts, etc.)
+  // Any lock older than 30 minutes is considered orphaned.
+  const staleThreshold = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+  await supabase
+    .from('raw_job_harvests')
+    .update({
+      status: 'RAW',
+      locked_by: null,
+      updated_at: new Date().toISOString(),
+    })
+    .not('locked_by', 'is', null)
+    .lt('updated_at', staleThreshold);
+
   // 1. Fetch actionable RAW jobs that aren't locked.
   // Skip ghost placeholders so kitchen workers don't endlessly churn unscripted leads.
   const { data, error } = await supabase

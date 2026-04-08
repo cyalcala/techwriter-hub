@@ -106,7 +106,10 @@ export const v12Chef = schedules.task({
             .from('raw_job_harvests')
             .update({ 
               status: 'PLATED', 
-              triage_status: 'PASSED'
+              triage_status: 'PASSED',
+              mapped_payload: extraction,
+              locked_by: null,
+              updated_at: new Date().toISOString()
             })
             .eq('id', job.id);
 
