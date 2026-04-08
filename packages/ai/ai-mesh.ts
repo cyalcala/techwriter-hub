@@ -78,6 +78,7 @@ const PROVIDER_DB_NAME: Record<ModelConfig['provider'], string> = {
 };
 
 export class AIMesh {
+  private static readonly REQUEST_TIMEOUT_MS = 20000;
   private static extractJson(text: string): any {
     try {
       const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -190,6 +191,7 @@ export class AIMesh {
   private static async fetchCerebras(model: string, system: string, user: string) {
     const res = await fetch('https://api.cerebras.ai/v1/chat/completions', {
       method: 'POST',
+      signal: AbortSignal.timeout(this.REQUEST_TIMEOUT_MS),
       headers: { 'Authorization': `Bearer ${process.env.CEREBRAS_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model,
@@ -205,6 +207,7 @@ export class AIMesh {
   private static async fetchGroq(model: string, system: string, user: string) {
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
+      signal: AbortSignal.timeout(this.REQUEST_TIMEOUT_MS),
       headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model,
@@ -220,6 +223,7 @@ export class AIMesh {
   private static async fetchOpenRouter(model: string, system: string, user: string) {
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
+      signal: AbortSignal.timeout(this.REQUEST_TIMEOUT_MS),
       headers: { 'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model,
@@ -235,6 +239,7 @@ export class AIMesh {
   private static async fetchGemini(model: string, system: string, user: string) {
     const res = await fetch(`https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`, {
       method: 'POST',
+      signal: AbortSignal.timeout(this.REQUEST_TIMEOUT_MS),
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: `${system}\n\nCONTENT:\n${user}` }] }],
