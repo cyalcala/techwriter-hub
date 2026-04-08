@@ -3,6 +3,7 @@ import { db } from "../packages/db";
 import { agencies as agencySchema } from "../packages/db/schema";
 import { XMLParser } from "fast-xml-parser";
 import { isNotNull } from "drizzle-orm";
+import { config } from "../packages/config";
 
 /**
  * V12 SIFTER: The Universal Ghost Scout (v12.5)
@@ -14,24 +15,53 @@ import { isNotNull } from "drizzle-orm";
  * 4. User-Agent Masking (Reddit/Cloudflare bypass).
  */
 
-const FEEDS = [
-  { name: 'WWR', url: 'https://weworkremotely.com/remote-jobs.rss', host: 'weworkremotely.com', type: 'xml' },
-  { name: 'Jobicy', url: 'https://jobicy.com/feed/', host: 'jobicy.com', type: 'xml' },
-  { name: 'Remotive', url: 'https://remotive.com/feed', host: 'remotive.com', type: 'xml' },
-  { name: 'RemoteOK', url: 'https://remoteok.com/remote-jobs.rss', host: 'remoteok.com', type: 'xml' },
-  { name: 'Himalayas', url: 'https://himalayas.app/jobs/rss', host: 'himalayas.app', type: 'xml' },
-  { name: 'JS/Remotely', url: 'https://jsremotely.com/rss', host: 'jsremotely.com', type: 'xml' },
-  // REDDIT PRECISION SWARM (PH-FOCUS)
-  { name: 'r/BPOph', url: 'https://www.reddit.com/r/BPOph/new.json?limit=25', host: 'reddit.com', type: 'json' },
-  { name: 'r/VAjobsPH', url: 'https://www.reddit.com/r/VAjobsPH/new.json?limit=25', host: 'reddit.com', type: 'json' },
-  { name: 'r/phcareers', url: 'https://www.reddit.com/r/phcareers/new.json?limit=25', host: 'reddit.com', type: 'json' },
-  { name: 'r/forhire', url: 'https://www.reddit.com/r/forhire/new.json?limit=25', host: 'reddit.com', type: 'json' },
-  { name: 'r/VirtualAssistant', url: 'https://www.reddit.com/r/VirtualAssistant/new.json?limit=25', host: 'reddit.com', type: 'json' }
+type FeedType = "xml" | "json";
+type ScoutFeed = { name: string; url: string; host: string; type: FeedType };
+
+const REDDIT_FEEDS: ScoutFeed[] = [
+  { name: "r/BPOph", url: "https://www.reddit.com/r/BPOph/new.json?limit=25", host: "reddit.com", type: "json" },
+  { name: "r/VAjobsPH", url: "https://www.reddit.com/r/VAjobsPH/new.json?limit=25", host: "reddit.com", type: "json" },
+  { name: "r/phcareers", url: "https://www.reddit.com/r/phcareers/new.json?limit=25", host: "reddit.com", type: "json" },
+  { name: "r/forhire", url: "https://www.reddit.com/r/forhire/new.json?limit=25", host: "reddit.com", type: "json" },
+  { name: "r/VirtualAssistant", url: "https://www.reddit.com/r/VirtualAssistant/new.json?limit=25", host: "reddit.com", type: "json" }
 ];
+
+function hostFromUrl(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return "unknown";
+  }
+}
+
+function buildScoutFeeds(): ScoutFeed[] {
+  // Harvesting-first: feed/json endpoints from config are canonical.
+  const fromConfig: ScoutFeed[] = [
+    ...config.rss_sources.map((s) => ({
+      name: s.name,
+      url: s.url,
+      host: hostFromUrl(s.url),
+      type: "xml" as const,
+    })),
+    ...config.json_sources.map((s) => ({
+      name: s.name,
+      url: s.url,
+      host: hostFromUrl(s.url),
+      type: "json" as const,
+    })),
+  ];
+
+  const dedup = new Map<string, ScoutFeed>();
+  for (const feed of [...fromConfig, ...REDDIT_FEEDS]) {
+    dedup.set(feed.url, feed);
+  }
+  return [...dedup.values()];
+}
 
 async function scout() {
   console.log("🚜 [SCOUT] Launching Refined 'Gold Net' Discovery...");
   const parser = new XMLParser();
+  const FEEDS = buildScoutFeeds();
 
   for (const feed of FEEDS) {
     try {
@@ -99,26 +129,31 @@ async function scout() {
 
   console.log("🚜 [SCOUT] Refined Swarm COMPLETE.");
 
-  // --- AGENCY SWARM (VAULT INTEGRATION) ---
-  console.log("🚜 [SCOUT] Syncing Agency Monitoring from Turso Vault...");
-  const agencyList = await db.select()
-    .from(agencySchema)
-    .where(isNotNull(agencySchema.hiringUrl));
+  // --- OPTIONAL AGENCY SWARM (HTML-heavy paths) ---
+  // Default OFF to stay aligned with harvesting-first strategy.
+  if (process.env.ENABLE_AGENCY_HUNTING === "true") {
+    console.log("🚜 [SCOUT] Syncing Agency Monitoring from Turso Vault...");
+    const agencyList = await db.select()
+      .from(agencySchema)
+      .where(isNotNull(agencySchema.hiringUrl));
 
-  if (!agencyList || agencyList.length === 0) {
-    console.warn("⚠️ [SCOUT] No Agencies found in Vault to monitor.");
+    if (!agencyList || agencyList.length === 0) {
+      console.warn("⚠️ [SCOUT] No Agencies found in Vault to monitor.");
+    } else {
+      console.log(`🎯 [SCOUT] Captured ${agencyList.length} Agencies to monitor.`);
+      const agencyLeads = agencyList.map(a => ({
+        source_url: a.hiringUrl,
+        raw_payload: '||V12_GHOST_LEAD||',
+        source_platform: `Agency: ${a.name}`,
+        status: 'RAW',
+        updated_at: new Date().toISOString()
+      }));
+
+      await supabase.from('raw_job_harvests').upsert(agencyLeads, { onConflict: 'source_url' });
+      console.log(`✅ [SCOUT_OK] ${agencyList.length} Agency Portals added to monitoring.`);
+    }
   } else {
-    console.log(`🎯 [SCOUT] Captured ${agencyList.length} Agencies to monitor.`);
-    const agencyLeads = agencyList.map(a => ({
-      source_url: a.hiringUrl,
-      raw_payload: '||V12_GHOST_LEAD||',
-      source_platform: `Agency: ${a.name}`,
-      status: 'RAW',
-      updated_at: new Date().toISOString()
-    }));
-
-    await supabase.from('raw_job_harvests').upsert(agencyLeads, { onConflict: 'source_url' });
-    console.log(`✅ [SCOUT_OK] ${agencyList.length} Agency Portals added to monitoring.`);
+    console.log("🛡️ [SCOUT] Agency HTML hunting disabled (ENABLE_AGENCY_HUNTING!=true).");
   }
 
   console.log("🚜 [SCOUT] Ultimate Swarm (v12.7.1) MISSION COMPLETE. Kitchen is in 'High-Gear'!");

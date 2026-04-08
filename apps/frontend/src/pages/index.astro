@@ -102,7 +102,7 @@ const processedMirror = mirrorSignals.map(sig => ({
 const domains = DOMAIN_MANIFEST.map(d => ({
   ...d,
   signals: processedSignals.filter(sig => sig.niche === d.domain)
-})).filter(d => d.signals.length > 0)
+}))
    .sort((a, b) => {
       const aIdx = topDomains.indexOf(a.domain);
       const bIdx = topDomains.indexOf(b.domain);
@@ -196,6 +196,12 @@ const domains = DOMAIN_MANIFEST.map(d => ({
                 {visibleSignals.map((sig, idx) => (
                   <SignalCard signal={sig} index={idx + 1} />
                 ))}
+
+                {totalSignals === 0 && (
+                  <div class="mt-2 flex items-center justify-center py-6 rounded-xl border border-dashed border-oat-200 text-[10px] font-black text-blueberry-800/25 uppercase tracking-[0.2em]">
+                    No live signals yet
+                  </div>
+                )}
                 
                 {totalSignals > 15 && (
                   <a 
