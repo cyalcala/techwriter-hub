@@ -78,12 +78,11 @@ export async function claimRawJob(workerId: string, limit: number = 15): Promise
     .lt('updated_at', staleThreshold);
 
   // 1. Fetch actionable RAW jobs that aren't locked.
-  // Skip ghost placeholders so kitchen workers don't endlessly churn unscripted leads.
+  // Include ghost placeholders so kitchen workers can hydrate/fetch on demand.
   const { data, error } = await supabase
     .from('raw_job_harvests')
     .select('*')
     .eq('status', 'RAW')
-    .neq('raw_payload', '||V12_GHOST_LEAD||')
     .is('locked_by', null)
     .order('created_at', { ascending: true })
     .limit(limit);

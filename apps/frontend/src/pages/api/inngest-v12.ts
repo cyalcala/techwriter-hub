@@ -1,3 +1,4 @@
+/**
  * V12 SIFTER: Intelligent "Kitchen Brigade" Orchestrator
  * This route manages the asynchronous processing of raw jobs from the Supabase pantry
  * AND the batched synchronization (Sweep) to the Turso Gold Vault.
@@ -5,20 +6,49 @@
 
 import { Inngest } from "inngest";
 import { serve } from "inngest/astro";
-import crypto from "crypto";
+import { createHash, randomUUID } from "crypto";
+import { siftOpportunity, OpportunityTier } from "../../../../../src/core/sieve";
 
 // 1. Initialize Inngest client
 export const inngestClient = new Inngest({ id: "va-freelance-hub" });
+const GHOST_SENTINEL = "||V12_GHOST_LEAD||";
+
+function htmlToText(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function getCookablePayload(job: { raw_payload?: string; source_url?: string | null }): Promise<string> {
+  if (job.raw_payload && job.raw_payload !== GHOST_SENTINEL && job.raw_payload.length >= 120) {
+    return job.raw_payload;
+  }
+  if (!job.source_url) throw new Error("Missing source_url for ghost hydration");
+
+  const res = await fetch(job.source_url, {
+    signal: AbortSignal.timeout(15000),
+    headers: { "user-agent": "VAHubKitchen/1.0 (+ingest-hydration)" },
+  });
+  if (!res.ok) throw new Error(`Hydration fetch failed: ${res.status}`);
+
+  const html = await res.text();
+  const text = htmlToText(html);
+  if (!text || text.length < 120) throw new Error("Hydration yielded insufficient content");
+  return text.slice(0, 20000);
+}
 
 /**
  * Chef Function: Poll the Supabase Pantry → Extract → Plate to Turso
- * Wakes up every 15 minutes, claims RAW jobs, processes them, and PLATES to Turso.
+ * Wakes up every 10 minutes, claims RAW jobs, processes them, and PLATES to Turso.
  */
 const pantryPoll = inngestClient.createFunction(
   { 
     id: "v12-pantry-chef", 
     name: "V12 Pantry Chef",
-    triggers: [{ cron: "*/15 * * * *" }, { event: "pantry.poll" }] 
+    triggers: [{ cron: "*/10 * * * *" }, { event: "pantry.poll" }] 
   },
   async ({ step }) => {
     // 2. Atomic Claim from Staging Buffer
@@ -35,25 +65,45 @@ const pantryPoll = inngestClient.createFunction(
       const results = [];
 
       for (const job of jobs) {
-        // Skip Ghost Leads that haven't been scraped yet
-        if (job.raw_payload === '||V12_GHOST_LEAD||' || !job.raw_payload || job.raw_payload.length < 100) {
-          await supabase
-            .from('raw_job_harvests')
-            .update({ status: 'RAW', locked_by: null })
-            .eq('id', job.id);
-          results.push({ id: job.id, status: 'skipped_ghost' });
-          continue;
-        }
-
         try {
+          const cookablePayload = await getCookablePayload(job);
+          if (cookablePayload !== job.raw_payload) {
+            await supabase
+              .from("raw_job_harvests")
+              .update({ raw_payload: cookablePayload, updated_at: new Date().toISOString() })
+              .eq("id", job.id);
+          }
+
           // A. AI Extraction
-          const extraction = await AIMesh.extract(job.raw_payload);
+          const extraction = await AIMesh.extract(cookablePayload);
+          const heuristic = siftOpportunity(
+            extraction.title,
+            extraction.description,
+            extraction.company || "Generic",
+            job.source_platform || "V12 Mesh"
+          );
+          const finalExtraction = {
+            ...extraction,
+            niche: heuristic.domain,
+            tier: heuristic.tier,
+            relevanceScore: Math.max(extraction.relevanceScore ?? 0, heuristic.relevanceScore),
+            metadata: {
+              ...(extraction.metadata || {}),
+              sieveTier: heuristic.tier,
+              sieveDomain: heuristic.domain,
+            },
+          };
           
           // B. PH-Compatibility Gate
-          if (!extraction.isPhCompatible || extraction.tier === 4) {
+          if (!extraction.isPhCompatible || heuristic.tier === OpportunityTier.TRASH) {
             await supabase
               .from('raw_job_harvests')
-              .update({ status: 'PROCESSED', triage_status: 'REJECTED' })
+              .update({
+                status: 'PROCESSED',
+                triage_status: 'REJECTED',
+                mapped_payload: finalExtraction,
+                updated_at: new Date().toISOString(),
+              })
               .eq('id', job.id);
             results.push({ id: job.id, status: 'rejected_sifter' });
             continue;
@@ -65,12 +115,12 @@ const pantryPoll = inngestClient.createFunction(
             .update({ 
                status: 'PLATED', 
                triage_status: 'PASSED',
-               mapped_payload: extraction,
+               mapped_payload: finalExtraction,
                updated_at: new Date().toISOString() 
             })
             .eq('id', job.id);
 
-          results.push({ id: job.id, status: 'plated', title: extraction.title });
+          results.push({ id: job.id, status: 'plated', title: finalExtraction.title });
 
         } catch (err: any) {
           const errorMsg = err.message || JSON.stringify(err);
@@ -116,36 +166,47 @@ const syncSweep = inngestClient.createFunction(
     const translocationResult = await step.run("translocate-to-turso", async () => {
       const { db } = await import("../../../../../packages/db");
       const { opportunities } = await import("../../../../../packages/db/schema");
-      const results = { successful_ids: [], skipped_ids: [] };
+      const results: { successful_ids: string[]; skipped_ids: string[] } = { successful_ids: [], skipped_ids: [] };
 
       for (const job of batch) {
         const mapped = job.mapped_payload;
+        const fallbackHeuristic = siftOpportunity(
+          mapped.title || "",
+          mapped.description || "",
+          mapped.company || "Generic",
+          job.source_platform || "V12 Sweep"
+        );
+        const finalMapped = {
+          ...mapped,
+          niche: mapped.niche || fallbackHeuristic.domain,
+          tier: typeof mapped.tier === "number" ? mapped.tier : fallbackHeuristic.tier,
+          relevanceScore: typeof mapped.relevanceScore === "number" ? mapped.relevanceScore : fallbackHeuristic.relevanceScore,
+        };
         
         // Generate MD5 for idempotency check
-        const md5_hash = crypto
-            .createHash("md5")
-            .update((mapped.title || '') + (mapped.company || ''))
+        const md5_hash = createHash("md5")
+            .update((finalMapped.title || '') + (finalMapped.company || ''))
             .digest("hex");
 
         try {
           await db.insert(opportunities).values({
-            id: crypto.randomUUID(),
+            id: randomUUID(),
             md5_hash,
-            title: mapped.title,
-            company: mapped.company || 'Confidential',
+            title: finalMapped.title,
+            company: finalMapped.company || 'Confidential',
             url: job.source_url,
-            description: mapped.description,
-            salary: mapped.salary || null,
-            niche: mapped.niche,
-            type: mapped.type || 'direct',
-            locationType: mapped.locationType || 'remote',
+            description: finalMapped.description,
+            salary: finalMapped.salary || null,
+            niche: finalMapped.niche,
+            type: finalMapped.type || 'direct',
+            locationType: finalMapped.locationType || 'remote',
             sourcePlatform: `V12 Mesh (${job.source_platform})`,
             scrapedAt: new Date(job.created_at),
             isActive: true,
-            tier: mapped.tier,
-            relevanceScore: mapped.relevanceScore,
+            tier: finalMapped.tier,
+            relevanceScore: finalMapped.relevanceScore,
             latestActivityMs: Date.now(),
-            metadata: JSON.stringify(mapped.metadata || {}),
+            metadata: JSON.stringify(finalMapped.metadata || {}),
           }).onConflictDoNothing(); // The Idempotency Shield
 
           results.successful_ids.push(job.id);
@@ -190,11 +251,11 @@ const triggerReset = inngestClient.createFunction(
 
 /**
  * Scout Function: The Harrier Failover
- * A 10-minute cron that runs the harvest sequence.
+ * A 30-minute cron that runs the harvest sequence.
  * This is our "Zero-Credit" bridge that ensures we keep finding jobs if Trigger.dev is paused.
  */
 const scoutFailover = inngestClient.createFunction(
-  { id: "v12-scout-failover", name: "V12 Scout: Harrier Failover", triggers: [{ cron: "*/10 * * * *" }] },
+  { id: "v12-scout-failover", name: "V12 Scout: Harrier Failover", triggers: [{ cron: "*/30 * * * *" }] },
   async ({ step }) => {
     const { harvest } = await import("../../../../../jobs/scrape-opportunities");
     const result = await step.run("execute-harvest", async () => {

@@ -25,6 +25,7 @@
     "sync:framework": "bun run scripts/sync-framework.ts",
     "check-build": "bun run scripts/check-build.ts",
     "ux-audit": "bun run scripts/ux-audit.ts",
+    "budget:free-tier": "bun run scripts/free-tier-budget.ts",
     "prepare": "husky"
   },
   "devDependencies": {

@@ -1,0 +1,28 @@
+name: Cloudflare Hunter Pulse
+
+on:
+  schedule:
+    - cron: "*/10 * * * *" # Every 10 minutes
+  workflow_dispatch:
+
+jobs:
+  ping-cloudflare-hunter:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Cloudflare hunter endpoint
+        env:
+          CLOUDFLARE_HUNTER_URL: ${{ secrets.CLOUDFLARE_HUNTER_URL }}
+          CLOUDFLARE_HUNTER_TOKEN: ${{ secrets.CLOUDFLARE_HUNTER_TOKEN }}
+        run: |
+          if [ -z "$CLOUDFLARE_HUNTER_URL" ]; then
+            echo "CLOUDFLARE_HUNTER_URL is not set. Skipping."
+            exit 0
+          fi
+
+          if [ -n "$CLOUDFLARE_HUNTER_TOKEN" ]; then
+            curl --fail --silent --show-error \
+              -H "Authorization: Bearer $CLOUDFLARE_HUNTER_TOKEN" \
+              "$CLOUDFLARE_HUNTER_URL"
+          else
+            curl --fail --silent --show-error "$CLOUDFLARE_HUNTER_URL"
+          fi

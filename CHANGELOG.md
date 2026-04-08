@@ -1,4 +1,73 @@
 
+## [2026-04-08] — [Opportunities: 3 | Agencies: 59]
+**Status: AUTO-PROCESSED**
+
+### ✨ Major Features
+* feat: harmonize hunter sources and always render all domains (06c733e)
+
+### 🛡️ Reliability & Fixes
+* fix: add AI request timeouts to prevent kitchen stalls (3c2336b)
+* fix: prevent cold-kitchen lock stalls and complete Trigger handoff (d270093)
+* fix: make Supabase migration greenfield-safe (48bf847)
+
+---
+
+
+## [2026-04-08] — [Opportunities: 3 | Agencies: 59]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: add AI request timeouts to prevent kitchen stalls (3c2336b)
+* fix: prevent cold-kitchen lock stalls and complete Trigger handoff (d270093)
+* fix: make Supabase migration greenfield-safe (48bf847)
+* fix: harden V12 failover and restore manual kitchen controls (fe7995e)
+
+---
+
+
+## [2026-04-08] — [Opportunities: 0 | Agencies: 59]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: prevent cold-kitchen lock stalls and complete Trigger handoff (d270093)
+* fix: make Supabase migration greenfield-safe (48bf847)
+* fix: harden V12 failover and restore manual kitchen controls (fe7995e)
+
+---
+
+
+## [2026-04-08] — [Opportunities: 4 | Agencies: 59]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: make Supabase migration greenfield-safe (48bf847)
+* fix: harden V12 failover and restore manual kitchen controls (fe7995e)
+* fix: V12 Sifter Nuclear Reset & Frontend Hardening (Priority 4.3) (0b0d559)
+
+---
+
+
+## [2026-04-08] — [Opportunities: 4 | Agencies: 59]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: make Supabase migration greenfield-safe (48bf847)
+* fix: harden V12 failover and restore manual kitchen controls (fe7995e)
+* fix: V12 Sifter Nuclear Reset & Frontend Hardening (Priority 4.3) (0b0d559)
+
+---
+
+
+## [2026-04-08] — [Opportunities: 4 | Agencies: 59]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
+* fix: harden V12 failover and restore manual kitchen controls (fe7995e)
+* fix: V12 Sifter Nuclear Reset & Frontend Hardening (Priority 4.3) (0b0d559)
+
+---
+
+
 ## [2026-04-08] — [Opportunities: 4 | Agencies: 59]
 **Status: AUTO-PROCESSED**
 

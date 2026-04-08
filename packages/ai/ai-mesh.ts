@@ -44,24 +44,9 @@ Answer ONLY with: PASSED or REJECTED.
  * Includes 20+ diverse free models to bypass RPD/RPM limits.
  */
 const OPENROUTER_FREE_MODELS = [
+  // Keep this list intentionally short and vetted to reduce timeout churn.
   'openrouter/free',
-  'qwen/qwen-2.5-72b-instruct:free',
-  'meta-llama/llama-3.1-70b-instruct:free',
-  'mistralai/mistral-7b-instruct:free',
-  'google/gemma-3-27b-it:free',
-  'liquid/lfm-2.5-1.2b-instruct:free',
-  'microsoft/phi-3-mini-128k-instruct:free',
   'nvidia/nemotron-3-nano-30b-a3b:free',
-  'google/gemma-3-4b-it:free',
-  'meta-llama/llama-3.2-3b-instruct:free',
-  'qwen/qwen3.6-plus:free',
-  'nousresearch/hermes-3-llama-3.1-8b:free',
-  'huggingfaceh4/zephyr-7b-beta:free',
-  'mistralai/mistral-nemo-12b-instruct:free',
-  '01-ai/yi-1.5-34b-chat:free',
-  'sophosympathizer/lfm-2.5-1.2b-it:free',
-  'deepseek/deepseek-chat:free',
-  'google/palm-2-chat-bison:free'
 ];
 
 interface ModelConfig {

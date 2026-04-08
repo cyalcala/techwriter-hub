@@ -75,12 +75,21 @@ async function runMasterAudit() {
     console.log(`- ${p.source?.padEnd(25)}: ${p.count} inserted`);
   });
 
-  const inngestCount = recentPlates.find(p => p.source?.includes('V12 Mesh'))?.count || 0;
-  const triggerCount = recentPlates.find(p => p.source?.includes('Trigger Sifter'))?.count || 0;
+  const countByPrefix = (prefixes: string[]) =>
+    recentPlates
+      .filter((p: any) => prefixes.some((prefix) => String(p.source || '').includes(prefix)))
+      .reduce((sum: number, p: any) => sum + Number(p.count || 0), 0);
+
+  const inngestCount = countByPrefix(["V12 Mesh", "V12 Intelligence Mesh"]);
+  const triggerCount = countByPrefix(["Trigger Sifter"]);
+  const recoveryCount = countByPrefix(["V12 Recovery"]);
+  const totalPlated24h = recentPlates.reduce((sum: number, p: any) => sum + Number(p.count || 0), 0);
 
   console.log("\nVelocity Gauge:");
   console.log(`- Inngest (V12 Mesh): ${inngestCount} jobs/24h`);
   console.log(`- Trigger (Sous Chef): ${triggerCount} jobs/24h`);
+  console.log(`- Recovery/Manual: ${recoveryCount} jobs/24h`);
+  console.log(`- Total Plated: ${totalPlated24h} jobs/24h`);
 
   if (inngestCount > 0 && triggerCount > 0) {
     console.log("🔥 BOTH ARE COOKING! Redundancy confirmed.");
@@ -88,6 +97,8 @@ async function runMasterAudit() {
     console.log("👨‍🍳 Inngest is doing the heavy lifting. Trigger is quiet.");
   } else if (triggerCount > 0) {
     console.log("👨‍🍳 Trigger is doing the heavy lifting. Inngest is quiet.");
+  } else if (totalPlated24h > 0) {
+    console.log("🟡 Plating is active via recovery/manual paths; autonomous cadence needs tuning.");
   } else {
     console.warn("❄️ THE KITCHEN IS COLD. No jobs plated in 24h.");
   }

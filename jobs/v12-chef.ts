@@ -4,7 +4,36 @@ import { AIMesh } from "../packages/ai/ai-mesh";
 import { db } from "../packages/db";
 import { opportunities } from "../packages/db/schema";
 import { eq } from "drizzle-orm";
-import crypto from "crypto";
+import { createHash, randomUUID } from "crypto";
+import { siftOpportunity, OpportunityTier } from "../src/core/sieve";
+const GHOST_SENTINEL = "||V12_GHOST_LEAD||";
+
+function htmlToText(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function getCookablePayload(job: { raw_payload?: string; source_url?: string | null }): Promise<string> {
+  if (job.raw_payload && job.raw_payload !== GHOST_SENTINEL && job.raw_payload.length >= 120) {
+    return job.raw_payload;
+  }
+  if (!job.source_url) throw new Error("Missing source_url for ghost hydration");
+
+  const res = await fetch(job.source_url, {
+    signal: AbortSignal.timeout(15000),
+    headers: { "user-agent": "VAHubSousChef/1.0 (+ghost-hydration)" },
+  });
+  if (!res.ok) throw new Error(`Hydration fetch failed: ${res.status}`);
+
+  const html = await res.text();
+  const text = htmlToText(html);
+  if (!text || text.length < 120) throw new Error("Hydration yielded insufficient content");
+  return text.slice(0, 20000);
+}
 
 /**
  * V12 SIFTER: The Sous Chef (Trigger.dev)
@@ -40,35 +69,54 @@ export const v12Chef = schedules.task({
       const results = [];
 
       for (const job of jobs) {
-        // Skip Ghost Leads that haven't been scraped yet
-        if (job.raw_payload === '||V12_GHOST_LEAD||' || !job.raw_payload || job.raw_payload.length < 100) {
-          await supabase
-            .from('raw_job_harvests')
-            .update({ status: 'RAW', locked_by: null })
-            .eq('id', job.id);
-          results.push({ id: job.id, status: 'skipped_ghost' });
-          continue;
-        }
-
         try {
+          const cookablePayload = await getCookablePayload(job);
+          if (cookablePayload !== job.raw_payload) {
+            await supabase
+              .from("raw_job_harvests")
+              .update({ raw_payload: cookablePayload, updated_at: new Date().toISOString() })
+              .eq("id", job.id);
+          }
+
           // 2. High-Precision AI Extraction
           console.log(`👨‍🍳 [SOUS-CHEF] Sifting Job ${job.id}...`);
-          const extraction = await AIMesh.extract(job.raw_payload);
+          const extraction = await AIMesh.extract(cookablePayload);
+          const heuristic = siftOpportunity(
+            extraction.title,
+            extraction.description,
+            extraction.company || "Generic",
+            job.source_platform || "Trigger Sifter"
+          );
+          const finalExtraction = {
+            ...extraction,
+            niche: heuristic.domain,
+            tier: heuristic.tier,
+            relevanceScore: Math.max(extraction.relevanceScore ?? 0, heuristic.relevanceScore),
+            metadata: {
+              ...(extraction.metadata || {}),
+              sieveTier: heuristic.tier,
+              sieveDomain: heuristic.domain,
+            },
+          };
 
           // 3. Gatekeeper: PH-Compatibility check
-          if (!extraction.isPhCompatible || extraction.tier === 4) {
+          if (!extraction.isPhCompatible || heuristic.tier === OpportunityTier.TRASH) {
             await supabase
               .from('raw_job_harvests')
-              .update({ status: 'PROCESSED', triage_status: 'REJECTED' })
+              .update({
+                status: 'PROCESSED',
+                triage_status: 'REJECTED',
+                mapped_payload: finalExtraction,
+                updated_at: new Date().toISOString()
+              })
               .eq('id', job.id);
             results.push({ id: job.id, status: 'rejected_sifter' });
             continue;
           }
 
           // 4. PLATING: Connect to Turso Gold Vault
-          const md5_hash = crypto
-            .createHash("md5")
-            .update((extraction.title || '') + (extraction.company || ''))
+          const md5_hash = createHash("md5")
+            .update((finalExtraction.title || '') + (finalExtraction.company || ''))
             .digest("hex");
 
           const existing = await db
@@ -78,25 +126,25 @@ export const v12Chef = schedules.task({
 
           if (existing.length === 0) {
             await db.insert(opportunities).values({
-              id: crypto.randomUUID(),
+              id: randomUUID(),
               md5_hash,
-              title: extraction.title,
-              company: extraction.company || 'Confidential',
+              title: finalExtraction.title,
+              company: finalExtraction.company || 'Confidential',
               url: job.source_url,
-              description: extraction.description,
-              salary: extraction.salary || null,
-              niche: extraction.niche,
-              type: extraction.type || 'direct',
-              locationType: extraction.locationType || 'remote',
+              description: finalExtraction.description,
+              salary: finalExtraction.salary || null,
+              niche: finalExtraction.niche,
+              type: finalExtraction.type || 'direct',
+              locationType: finalExtraction.locationType || 'remote',
               sourcePlatform: `Trigger Sifter (${job.source_platform})`,
               scrapedAt: new Date(),
               isActive: true,
-              tier: extraction.tier,
-              relevanceScore: extraction.relevanceScore,
+              tier: finalExtraction.tier,
+              relevanceScore: finalExtraction.relevanceScore,
               latestActivityMs: Date.now(),
-              metadata: JSON.stringify(extraction.metadata || {}),
+              metadata: JSON.stringify(finalExtraction.metadata || {}),
             });
-            results.push({ id: job.id, status: "plated", title: extraction.title });
+            results.push({ id: job.id, status: "plated", title: finalExtraction.title });
           } else {
             results.push({ id: job.id, status: "duplicate" });
           }
@@ -107,7 +155,7 @@ export const v12Chef = schedules.task({
             .update({ 
               status: 'PLATED', 
               triage_status: 'PASSED',
-              mapped_payload: extraction,
+              mapped_payload: finalExtraction,
               locked_by: null,
               updated_at: new Date().toISOString()
             })
