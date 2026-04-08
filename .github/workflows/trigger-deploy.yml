@@ -74,6 +74,7 @@ jobs:
       - name: ⚛️ Trigger Vercel Production Deploy (API)
         env:
           VERCEL_ACCESS_TOKEN: ${{ secrets.VERCEL_ACCESS_TOKEN }}
+          VERCEL_DEPLOY_WEBHOOK: ${{ secrets.VERCEL_DEPLOY_WEBHOOK }}
         run: |
           if [ -n "$VERCEL_ACCESS_TOKEN" ]; then
             payload=$(cat <<EOF
@@ -96,6 +97,14 @@ jobs:
             echo "$response"
             dep_id=$(echo "$response" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p')
             if [ -z "$dep_id" ]; then
+              if echo "$response" | grep -q 'api-deployments-free-per-day'; then
+                echo "Vercel API daily free quota reached; falling back to deploy webhook."
+                if [ -n "$VERCEL_DEPLOY_WEBHOOK" ]; then
+                  curl -sS -X POST "$VERCEL_DEPLOY_WEBHOOK"
+                  echo "Webhook deploy triggered as fallback."
+                  exit 0
+                fi
+              fi
               echo "::error::Failed to create Vercel deployment via API."
               exit 1
             fi
