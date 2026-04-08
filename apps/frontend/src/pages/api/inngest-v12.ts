@@ -201,7 +201,8 @@ const syncSweep = inngestClient.createFunction(
             type: finalMapped.type || 'direct',
             locationType: finalMapped.locationType || 'remote',
             sourcePlatform: `V12 Mesh (${job.source_platform})`,
-            scrapedAt: new Date(job.created_at),
+            // Use current plating time; job.created_at can be much older due URL upsert semantics.
+            scrapedAt: new Date(),
             isActive: true,
             tier: finalMapped.tier,
             relevanceScore: finalMapped.relevanceScore,

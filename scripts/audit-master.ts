@@ -18,8 +18,8 @@ async function runMasterAudit() {
   console.log("📡 Querying Supabase Staging Buffer...");
   const { data: rawJobs, error } = await supabase
     .from("raw_job_harvests")
-    .select("status, created_at")
-    .gte("created_at", yesterday);
+    .select("status, created_at, updated_at")
+    .gte("updated_at", yesterday);
 
   if (error) {
     console.error("❌ Supabase Query Failed:", error.message);
