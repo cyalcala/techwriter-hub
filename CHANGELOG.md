@@ -6,6 +6,20 @@
 * feat: harmonize hunter sources and always render all domains (06c733e)
 
 ### 🛡️ Reliability & Fixes
+* fix: enforce deterministic sieve gate and sane cadence (66de81c)
+* fix: add AI request timeouts to prevent kitchen stalls (3c2336b)
+* fix: prevent cold-kitchen lock stalls and complete Trigger handoff (d270093)
+
+---
+
+
+## [2026-04-08] — [Opportunities: 3 | Agencies: 59]
+**Status: AUTO-PROCESSED**
+
+### ✨ Major Features
+* feat: harmonize hunter sources and always render all domains (06c733e)
+
+### 🛡️ Reliability & Fixes
 * fix: add AI request timeouts to prevent kitchen stalls (3c2336b)
 * fix: prevent cold-kitchen lock stalls and complete Trigger handoff (d270093)
 * fix: make Supabase migration greenfield-safe (48bf847)
