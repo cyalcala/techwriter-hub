@@ -3,6 +3,19 @@
 **Status: AUTO-PROCESSED**
 
 ### 🛡️ Reliability & Fixes
+* fix: force seven-domain rendering on homepage (8e9508d)
+* fix: route hydration through Cloudflare edge proxy (a13523c)
+* fix: connect cloudflare hunter pulse to active secrets (8981e82)
+* fix: correct freshness timestamps and audit windowing (0f49949)
+* fix: keep all seven domains visible on live directory (9f9de64)
+
+---
+
+
+## [2026-04-08] — [Opportunities: 3 | Agencies: 59]
+**Status: AUTO-PROCESSED**
+
+### 🛡️ Reliability & Fixes
 * fix: route hydration through Cloudflare edge proxy (a13523c)
 * fix: connect cloudflare hunter pulse to active secrets (8981e82)
 * fix: correct freshness timestamps and audit windowing (0f49949)

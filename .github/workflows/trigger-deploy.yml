@@ -71,13 +71,49 @@ jobs:
             exit 1
           fi
 
-      - name: ⚛️ Trigger Vercel Synchronization
+      - name: ⚛️ Trigger Vercel Production Deploy (API)
         env:
-          VERCEL_DEPLOY_WEBHOOK: ${{ secrets.VERCEL_DEPLOY_WEBHOOK }}
+          VERCEL_ACCESS_TOKEN: ${{ secrets.VERCEL_ACCESS_TOKEN }}
         run: |
-          if [ -n "$VERCEL_DEPLOY_WEBHOOK" ]; then
-            curl -X POST "$VERCEL_DEPLOY_WEBHOOK"
-            echo "Vercel rebuild triggered."
+          if [ -n "$VERCEL_ACCESS_TOKEN" ]; then
+            payload=$(cat <<EOF
+          {
+            "name": "va-freelance-hub-web",
+            "target": "production",
+            "gitSource": {
+              "type": "github",
+              "repoId": "${{ github.repository_id }}",
+              "ref": "main",
+              "sha": "${{ github.sha }}"
+            }
+          }
+          EOF
+          )
+            response=$(curl -sS -X POST "https://api.vercel.com/v13/deployments" \
+              -H "Authorization: Bearer $VERCEL_ACCESS_TOKEN" \
+              -H "Content-Type: application/json" \
+              --data "$payload")
+            echo "$response"
+            dep_id=$(echo "$response" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p')
+            if [ -z "$dep_id" ]; then
+              echo "::error::Failed to create Vercel deployment via API."
+              exit 1
+            fi
+            echo "Vercel deployment requested: $dep_id"
+            for i in $(seq 1 40); do
+              state=$(curl -sS "https://api.vercel.com/v13/deployments/$dep_id" \
+                -H "Authorization: Bearer $VERCEL_ACCESS_TOKEN" | sed -n 's/.*"readyState":"\([^"]*\)".*/\1/p')
+              echo "Vercel state: ${state:-unknown}"
+              if [ "$state" = "READY" ]; then
+                echo "Vercel deployment is READY."
+                break
+              fi
+              if [ "$state" = "ERROR" ] || [ "$state" = "CANCELED" ]; then
+                echo "::error::Vercel deployment failed with state: $state"
+                exit 1
+              fi
+              sleep 6
+            done
           fi
 
       - name: 🛡️ Wait for Vercel Health (Edge Consistency)
