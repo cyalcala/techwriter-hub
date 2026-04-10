@@ -3,15 +3,14 @@ import { createDb } from "@va-hub/db/client";
 import { noteslog } from "@va-hub/db/schema";
 import { config } from "@va-hub/config";
 import { v4 as uuidv4 } from "uuid";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, gte, sql } from "drizzle-orm";
 
 /**
  * 🕵️ SILENT AUTO-HEALER (WATCHDOG: GOLDILOCKS EDITION)
  * 
- * Pillar 1: Health API Audit (Prefer data-layer truth)
- * Pillar 2: Engine Kickstart (Trigger Harvester - Low Cost)
- * Pillar 3: Vercel Defibrillator (POST Hook - High Cost/Fallback)
- * Pillar 4: Silent Ledger (Write to noteslog)
+ * Pillar 4: Anomaly Detection (Zero-Signal Flatline)
+ * Pillar 5: Surgical Defrost (Self-heal AI Cooldowns)
+ * Pillar 6: Silent Ledger (Write to noteslog)
  */
 export const silentWatchdogTask = schedules.task({
   id: "silent-watchdog",
@@ -130,13 +129,41 @@ export const silentWatchdogTask = schedules.task({
             logger.error(`[watchdog] Cache bust failed: ${hookErr.message}`);
             actionsTaken.push("VERCEL_CACHE_BUST_FAILED");
           }
+      }
+
+      // Pillar 4: Anomaly Detection (Zero-Signal Flatline)
+      const { opportunities } = schema;
+      const TWENTY_FOUR_HOURS_AGO = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const recentJobsResult = await db.select({ count: sql<number>`count(*)` })
+        .from(opportunities)
+        .where(gte(opportunities.createdAt, TWENTY_FOUR_HOURS_AGO));
+      
+      const jobCount = Number(recentJobsResult[0]?.count || 0);
+      metadata.recentJobCount24h = jobCount;
+
+      if (jobCount === 0 && !cooldownActive && heartbeatState === "FRESH") {
+        logger.warn("[watchdog] 🕵️ ANOMALY DETECTED: Heartbeat is FRESH but 0 jobs in 24h. Triggering recovery harvest.");
+        try {
+          await tasks.trigger("harvest-opportunities", { source: "apex-sre-anomaly-recovery" });
+          actionsTaken.push("ANOMALY_RECOVERY_TRIGGERED");
+        } catch (err: any) {
+          actionsTaken.push("ANOMALY_RECOVERY_FAILED");
         }
-      } else if (cooldownActive && (heartbeatState !== "FRESH" || driftMinutes > 60)) {
-        logger.info(`[watchdog] Remediation suppressed by ${slo.remediation_cooldown_minutes}m cooldown.`);
-        actionsTaken.push("REMEDIATION_COOLDOWN_ACTIVE");
-      } else if (actionsTaken.length === 0) {
-        logger.info("[watchdog] System within SLOs. Verification successful.");
-        actionsTaken.push("VERIFIED_IDENTITY_FRESH");
+      }
+
+      // Pillar 4: Surgical Defrost (Self-healing AI blocks)
+      const { aiCooldowns } = schema;
+      const blockedAI = await db.select().from(aiCooldowns).where(eq(aiCooldowns.isBlocked, true));
+      
+      for (const provider of blockedAI) {
+        const updateAgeMin = (Date.now() - (provider.updatedAt?.getTime() || 0)) / 60000;
+        if (updateAgeMin > 15) { // 15-minute soft cooldown
+           logger.info(`[watchdog] ❄️ Surgically defrosting AI Provider: ${provider.providerName}`);
+           await db.update(aiCooldowns)
+             .set({ isBlocked: false, errorCount: 0, updatedAt: new Date() })
+             .where(eq(aiCooldowns.providerName, provider.providerName));
+           actionsTaken.push(`SURGICAL_DEFROST_${provider.providerName.toUpperCase()}`);
+        }
       }
 
     } catch (err: any) {
