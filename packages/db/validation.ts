@@ -40,7 +40,7 @@ export const OpportunitySchema = z.object({
 
 export const AIExtractionSchema = z.object({
   title: z.string().min(2).max(255).trim(),
-  company: z.string().nullable().optional().catch("Confidential Client"),
+  company: z.preprocess((val) => val === null ? "Confidential Client" : val, z.string().min(1).default("Confidential Client").catch("Confidential Client")),
   salary: z.string().trim().optional().nullable(),
   description: z.string().min(10).trim(),
   niche: z.preprocess((val) => {
@@ -70,7 +70,7 @@ export const AIExtractionSchema = z.object({
     if (typeof val === 'string') return val.toLowerCase() === 'true' || val.toLowerCase() === 'yes';
     return true; // Default to pass
   }, z.boolean().default(true)),
-  type: z.enum(["agency", "direct"]).default("agency"),
+  type: z.preprocess((val) => val === null ? "agency" : val, z.enum(["agency", "direct"]).default("agency").catch("agency")),
   locationType: z.string().default("remote"),
   metadata: z.record(z.any()).optional().default({})
 }).strip();

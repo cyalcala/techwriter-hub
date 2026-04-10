@@ -20,7 +20,13 @@ async function extractWithGemini(html: string, url: string) {
 
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${GEMINI_API_KEY}`;
   
-  const prompt = `You are the Phantom Harrier (Scout Ship). Extract job listings from the provided HTML/Markdown. Each listing typically starts with a title and has a link. Extract: { title, company, description, sourceUrl }. Target Niche: Philippines Virtual Assistants. Output strictly a JSON array of objects.`;
+  const prompt = `You are the Phantom Harrier (Scout Ship). Extract job listings from the provided HTML/Markdown. 
+  
+  MANDATE: STRICT PHILIPPINES FOCUS. 
+  Extract only if the job is available to Filipino Virtual Assistants. 
+  Reject if: "US Only", "United Kingdom Only", "W2 required", or specific non-PH residency is required.
+  
+  Target Niche: Philippines Virtual Assistants. Output strictly a JSON array of objects with: { title, company, description, sourceUrl, isPhCompatible: boolean }.`;
 
   try {
     const response = await fetch(endpoint, {
@@ -106,6 +112,10 @@ async function runHarrier() {
         const sourceUrl = job.sourceUrl && job.sourceUrl.startsWith('http') ? job.sourceUrl : target.url;
 
         if (title.length < 5 || title.toLowerCase() === "unknown role") continue;
+        if (job.isPhCompatible === false) {
+          console.warn(`🛡️ [harrier] Dropped non-PH signal: ${title}`);
+          continue;
+        }
 
         // Shared Intelligence: Use the centralized taxonomy for categorization
         const { mapTitleToDomain } = await import("../packages/db/taxonomy");

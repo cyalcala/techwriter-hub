@@ -93,13 +93,25 @@ async function scout() {
         if (!url) url = item.guid?.['#text'] || item.guid;
         if (url?.startsWith('/r/')) url = `https://reddit.com${url}`;
 
+        const title = (item.title || '').toLowerCase();
+        const description = (item.description || item.content || '').toLowerCase();
+        
+        // 🛡️ HEURISTIC GEO-FENCE: Drop obvious non-PH signals immediately
+        const TOXIC_PATTERNS = ["us only", "uk only", "canada only", "w2 only", "usa only", "reside in the us"];
+        const isToxic = TOXIC_PATTERNS.some(p => title.includes(p) || description.includes(p));
+
+        if (isToxic) {
+           console.warn(`🛡️ [SCOUT] Dropped toxic geo-signal: ${item.title}`);
+           return null;
+        }
+
         return {
           url: url,
           host: feed.host,
           platform: feed.name,
           status: 'READY'
         };
-      }).filter(l => l.url && l.url.startsWith('http'));
+      }).filter(l => l && l.url && l.url.startsWith('http'));
 
       console.log(`🎯 [SCOUT] Captured ${leads.length} potential leads from ${feed.name}.`);
 

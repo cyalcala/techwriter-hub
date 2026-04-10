@@ -48,13 +48,10 @@ Answer ONLY with: PASSED or REJECTED.
  * Includes 20+ diverse free models to bypass RPD/RPM limits.
  */
 const OPENROUTER_FREE_MODELS = [
-  'openrouter/auto', // Smart free router
-  'meta-llama/llama-3.2-3b-instruct:free',
+  'openrouter/free', // Meta-model that picks the best available free model
   'meta-llama/llama-3.1-8b-instruct:free',
-  'mistralai/mistral-7b-instruct:free',
-  'google/gemma-2-9b-it:free',
-  'qwen/qwen-2-7b-instruct:free',
-  'microsoft/phi-3-mini-128k-instruct:free',
+  'google/gemini-2.0-flash-exp:free',
+  'qwen/qwen-2-7b-instruct:free'
 ];
 
 interface ModelConfig {
@@ -250,7 +247,7 @@ export class AIMesh {
   }
 
   private static async fetchGemini(model: string, system: string, user: string) {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`, {
       method: 'POST',
       signal: AbortSignal.timeout(this.REQUEST_TIMEOUT_MS),
       headers: { 'Content-Type': 'application/json' },
