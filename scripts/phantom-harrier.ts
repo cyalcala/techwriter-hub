@@ -10,123 +10,144 @@ import { OpportunitySchema } from "../packages/db/validation";
  * Mandate: Extract job signals from raw HTML without brittle selectors.
  */
 
-const CEREBRAS_API_KEY = process.env.CEREBRAS_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-async function extractWithCerebras(html: string, url: string) {
-  if (!CEREBRAS_API_KEY) {
-    console.error("[harrier] CEREBRAS_API_KEY missing.");
+async function extractWithGemini(html: string, url: string) {
+  if (!GEMINI_API_KEY) {
+    console.error("[harrier] GEMINI_API_KEY missing.");
     return [];
   }
 
-  const response = await fetch("https://api.cerebras.ai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${CEREBRAS_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "qwen-3-235b-a22b-instruct-2507",
-      messages: [
-        {
-          role: "system",
-          content: "You are the Phantom Harrier (Scout Ship). Extract job listings from the provided HTML/Markdown. Each listing typically starts with a title and has a link. Extract: { title, company, description, sourceUrl }. Target Niche: Philippines Virtual Assistants. Output JSON array { \"jobs\": [...] }."
-        },
-        { role: "user", content: `Source URL: ${url}\n\nCONTENT:\n${html}` }
-      ],
-      response_format: { type: "json_object" }
-    }),
-  });
-
-  const data = await response.json();
-  const rawContent = data.choices?.[0]?.message?.content;
-  if (!rawContent) return [];
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${GEMINI_API_KEY}`;
   
-  const result = JSON.parse(rawContent);
-  return result.jobs || result.listings || [];
+  const prompt = `You are the Phantom Harrier (Scout Ship). Extract job listings from the provided HTML/Markdown. Each listing typically starts with a title and has a link. Extract: { title, company, description, sourceUrl }. Target Niche: Philippines Virtual Assistants. Output strictly a JSON array of objects.`;
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: `${prompt}\n\nSource URL: ${url}\n\nCONTENT:\n${html}` }] }],
+        generationConfig: { responseMimeType: "application/json" }
+      }),
+    });
+
+    const data = await response.json();
+    const rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!rawContent) return [];
+    
+    const result = JSON.parse(rawContent);
+    return Array.isArray(result) ? result : (result.jobs || result.listings || []);
+  } catch (err: any) {
+    console.error(`[harrier] Gemini extraction failure: ${err.message}`);
+    return [];
+  }
 }
 
 async function runHarrier() {
   console.log("═══ PHANTOM HARRIER (Vector 2) INITIATED ═══");
   
-  const { shouldSkipDiscovery, recordHarvestSuccess } = await import("../packages/db/governance");
+  const { shouldSkipDiscovery, recordHarvestSuccess, emitIngestionHeartbeat } = await import("../packages/db/governance");
 
   // 🛡️ ETHICAL FLEET: Respect the Seat
-  if (await shouldSkipDiscovery('gha', 15)) { // Harrier is heavy, give it a 15-min window
+  if (await shouldSkipDiscovery('harrier', 5)) { 
     console.log("🚥 [FLEET] Harrier is backing off to respect existing harvest seat.");
     return;
   }
 
+  // Clear "Pulse Lost" for the region we are about to harvest
+  await emitIngestionHeartbeat('Phantom Harrier', 'Philippines');
+
+  const { proxyFetch } = await import("../jobs/lib/proxy-fetch");
+
   const targets = [
     {
       name: "OnlineJobs.ph",
-      url: "https://www.onlinejobs.ph/jobseekers/jobsearch?keywords=virtual+assistant"
+      url: "https://www.onlinejobs.ph/jobseekers/jobsearch?keywords=virtual+assistant",
+      niche_hint: "VA_SUPPORT"
+    },
+    {
+      name: "OnlineJobs.ph (Admin)",
+      url: "https://www.onlinejobs.ph/jobseekers/jobsearch?keywords=administrative",
+      niche_hint: "ADMIN_BACKOFFICE"
+    },
+    {
+      name: "OnlineJobs.ph (Sales)",
+      url: "https://www.onlinejobs.ph/jobseekers/jobsearch?keywords=sales",
+      niche_hint: "SALES_GROWTH"
     }
   ];
 
   for (const target of targets) {
     try {
       console.log(`[harrier] Scouting ${target.name}...`);
-      const res = await fetch(target.url, {
-        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36" }
-      });
+      const res = await proxyFetch(target.url);
       
       const rawHtml = await res.text();
+
       const $ = cheerio.load(rawHtml);
       
-      // Target specific containers if possible, or just the main content area
-      // OnlineJobs.ph uses .job-description-list or similar tags
       const content = $('body').text()
-        .replace(/\n\s*\n/g, '\n') // Remove excessive empty lines
-        .replace(/\s{2,}/g, ' ') // Collapse whitespace
-        .slice(0, 10000); // 10k characters is usually enough for current page
+        .replace(/\n\s*\n/g, '\n')
+        .replace(/\s{2,}/g, ' ')
+        .slice(0, 12000);
 
       if (content.length < 500) {
         console.warn(`[harrier] Warn: Content too short (${content.length}). Anti-bot?`);
+        continue;
       }
 
-      const jobs = await extractWithCerebras(content, target.url);
-      console.log(`[harrier] Extracted ${jobs.length} signals.`);
+      const jobs = await extractWithGemini(content, target.url);
+      console.log(`[harrier] Extracted ${jobs.length} signals for ${target.name}.`);
 
       for (const job of jobs) {
         const title = job.title || "Unknown Role";
         const company = job.company || "Unknown Entity";
         const sourceUrl = job.sourceUrl && job.sourceUrl.startsWith('http') ? job.sourceUrl : target.url;
 
-        // SKIP incomplete signals
         if (title.length < 5 || title.toLowerCase() === "unknown role") continue;
+
+        // Shared Intelligence: Use the centralized taxonomy for categorization
+        const { mapTitleToDomain } = await import("../packages/db/taxonomy");
+        const niche = mapTitleToDomain(title, job.description || "");
 
         const validation = OpportunitySchema.safeParse({
           id: uuidv4(),
           title,
           company,
-          type: "direct", // OnlineJobs.ph is direct hire
+          type: "direct",
           sourceUrl,
           sourcePlatform: target.name,
-          tags: ["INFERRED", "scraped", target.name.toLowerCase()],
+          tags: ["PH-DIRECT", "scraped", target.name.toLowerCase()],
           locationType: "remote",
           description: job.description || null,
           postedAt: normalizeDate(new Date()),
           scrapedAt: normalizeDate(new Date()),
           lastSeenAt: normalizeDate(new Date()),
           isActive: true,
-          tier: 3,
-          relevanceScore: 70, 
-          displayTags: ["PH-DIRECT"],
-          latestActivityMs: normalizeDate(new Date()).getTime(),
-          contentHash: `${title}|${company}`.slice(0, 16)
+          tier: 1, // Phantom Harrier targets are high-intent PH roles
+          relevanceScore: 85, 
+          displayTags: ["PH-DIRECT", "VERIFIED"],
+          latestActivityMs: Date.now(),
+          niche: niche,
+          region: "Philippines"
         });
 
         if (validation.success) {
           await db.insert(opportunitiesSchema)
-            .values(validation.data as any) // Cast to bypass Drizzle's strictness on optional id vs required primary key
+            .values(validation.data as any)
             .onConflictDoUpdate({
-              target: [opportunitiesSchema.title, opportunitiesSchema.company, opportunitiesSchema.url],
-              set: { lastSeenAt: normalizeDate(new Date()), isActive: true }
+              target: [opportunitiesSchema.title, opportunitiesSchema.company],
+              set: { 
+                lastSeenAt: normalizeDate(new Date()), 
+                isActive: true,
+                latestActivityMs: Date.now()
+              }
             });
         }
       }
 
-      await recordHarvestSuccess('gha');
+      await recordHarvestSuccess('harrier');
     } catch (err: any) {
       console.error(`[harrier] Failure on ${target.name}:`, err.message);
     }

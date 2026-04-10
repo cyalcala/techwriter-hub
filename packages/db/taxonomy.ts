@@ -51,7 +51,8 @@ export const DOMAIN_MANIFEST: DomainMapping[] = [
     keywords: [
       "accounting", "bookkeeper", "bookkeeping", "invoice", "invoicing", "billing",
       "crm administrator", "crm manager", "data entry", "administrative", "backoffice",
-      "reconcile", "tax specialist", "payroll"
+      "reconcile", "tax specialist", "payroll", "finance", "treasury", "auditor",
+      "legal assistant", "legal support", "compliance", "procurement", "inventory specialist"
     ]
   },
   {
@@ -62,7 +63,8 @@ export const DOMAIN_MANIFEST: DomainMapping[] = [
       "customer support", "customer service", "customer success", "client support",
       "support specialist", "support agent", "help desk", "live chat", "chat support",
       "community manager", "moderator", "csr", "call center", "voice", "non-voice",
-      "telemarketing", "bpo"
+      "telemarketing", "bpo", "concierge", "front desk", "receptionist",
+      "technical support", "tier 1 support", "tier 2 support", "collections"
     ]
   },
   {
@@ -84,7 +86,9 @@ export const DOMAIN_MANIFEST: DomainMapping[] = [
     symbol: "📣",
     keywords: [
       "marketing", "ads specialist", "seo", "sem", "social media manager", 
-      "digital marketing", "growth manager", "performance marketing"
+      "digital marketing", "growth manager", "performance marketing",
+      "email marketer", "funnel builder", "automation specialist", "googles ads",
+      "facebook ads", "media buyer", "content strategist", "pr specialist"
     ]
   },
   {
@@ -93,7 +97,8 @@ export const DOMAIN_MANIFEST: DomainMapping[] = [
     symbol: "💰",
     keywords: [
        "sales", "account executive", "business development", " bdm ", " sdr ",
-       "lead generation", "outreach", "closer"
+       "lead generation", "outreach", "closer", "cold calling", "telemarketer",
+       "inside sales", "prospecting", "partnerships", "account manager"
     ]
   },
   {
@@ -113,10 +118,12 @@ export const DOMAIN_MANIFEST: DomainMapping[] = [
 export function mapTitleToDomain(title: string, description: string = ""): JobDomain {
   const content = `${title} ${description}`.toLowerCase();
   
-  if (content.includes("product design") || content.includes("ux researcher")) return JobDomain.CREATIVE_MULTIMEDIA;
-  if (content.includes("customer service representative")) return JobDomain.BPO_SERVICES;
-  if (content.includes("software engineer") || content.includes("developer")) return JobDomain.TECH_ENGINEERING;
-  if (content.includes("accountant") || content.includes("accounting") || content.includes("bookkeeper")) return JobDomain.ADMIN_BACKOFFICE;
+  if (content.includes("product design") || content.includes("ux researcher") || content.includes("video editor")) return JobDomain.CREATIVE_MULTIMEDIA;
+  if (content.includes("customer service") || content.includes("support agent") || content.includes("call center")) return JobDomain.BPO_SERVICES;
+  if (content.includes("software engineer") || content.includes("developer") || content.includes("full stack")) return JobDomain.TECH_ENGINEERING;
+  if (content.includes("accountant") || content.includes("accounting") || content.includes("bookkeeper") || content.includes("finance")) return JobDomain.ADMIN_BACKOFFICE;
+  if (content.includes("social media") || content.includes("marketing") || content.includes("seo ")) return JobDomain.MARKETING;
+  if (content.includes("sales") || content.includes("business development") || content.includes("lead gen")) return JobDomain.SALES_GROWTH;
 
   for (const mapping of DOMAIN_MANIFEST) {
     if (mapping.keywords.some(k => content.includes(k))) {
