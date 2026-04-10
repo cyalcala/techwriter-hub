@@ -1,6 +1,6 @@
 import { supabase } from "../../packages/db/supabase";
-import { db } from "../../packages/db";
-import { vitals } from "../../packages/db/schema";
+import { db } from "@va-hub/db";
+import { vitals } from "@va-hub/db/schema";
 import { sql } from "drizzle-orm";
 
 async function titaniumReset() {
@@ -49,6 +49,7 @@ async function titaniumReset() {
        await db.insert(vitals).values({
          id: 'GLOBAL',
          lastIngestionHeartbeatMs: Date.now(),
+         lastProcessingHeartbeatMs: Date.now(),
          heartbeatSource: 'TITANIUM_SRE_RESET',
          sentinelState: JSON.stringify({ version: "3.0.0", mode: "TITANIUM" })
        });
@@ -56,6 +57,7 @@ async function titaniumReset() {
        await db.update(vitals)
          .set({ 
            lastIngestionHeartbeatMs: Date.now(),
+           lastProcessingHeartbeatMs: Date.now(),
            heartbeatSource: 'TITANIUM_SRE_RESET',
            sentinelState: JSON.stringify({ version: "3.0.0", mode: "TITANIUM" })
          })

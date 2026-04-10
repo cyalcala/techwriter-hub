@@ -67,7 +67,7 @@ export const defaultConfig: NicheConfig = {
 
   slo: {
     heartbeat_stale_minutes: Number(process.env.HEARTBEAT_STALE_MINUTES || 120),
-    heartbeat_delayed_minutes: Number(process.env.HEARTBEAT_DELAYED_MINUTES || 45),
+    heartbeat_delayed_minutes: Number(process.env.HEARTBEAT_DELAYED_MINUTES || 90),
     heartbeat_suspect_window_minutes: Number(process.env.HEARTBEAT_SUSPECT_WINDOW_MINUTES || 120),
     ingestion_staleness_threshold_hrs: Number(process.env.INGESTION_STALENESS_THRESHOLD || 24),
     db_staleness_threshold_hrs: Number(process.env.DB_STALENESS_THRESHOLD || 4),

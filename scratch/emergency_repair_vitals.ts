@@ -1,29 +1,29 @@
-import { db, schema } from "../packages/db";
+import { db } from "../packages/db/client";
 import { sql } from "drizzle-orm";
 
+async function addColumn(name: string, type: string) {
+  try {
+    const q = `ALTER TABLE vitals ADD COLUMN ${name} ${type};`;
+    await db.run(sql.raw(q));
+    console.log(`✅ Added: ${name}`);
+  } catch (e: any) {
+    console.warn(`⚠️  '${name}' already exists (OK)`);
+  }
+}
+
 async function main() {
-  console.log("🛠️ [SRE] Emergency Schema Repair Initiated...");
-  
-  try {
-    // 1. Add missing columns to 'vitals'
-    console.log("📡 Adding 'last_harvest_at'...");
-    await db.run(sql`ALTER TABLE vitals ADD COLUMN last_harvest_at INTEGER;`);
-  } catch (e: any) {
-    console.warn(`⚠️ Column 'last_harvest_at' might already exist: ${e.message}`);
-  }
+  console.log("🛠️ [SRE] Full Schema Repair — All Sentinel Columns...\n");
 
-  try {
-    console.log("📡 Adding 'last_harvest_engine'...");
-    await db.run(sql`ALTER TABLE vitals ADD COLUMN last_harvest_engine TEXT;`);
-  } catch (e: any) {
-    console.warn(`⚠️ Column 'last_harvest_engine' might already exist: ${e.message}`);
-  }
+  await addColumn("last_harvest_at", "INTEGER");
+  await addColumn("last_harvest_engine", "TEXT");
+  await addColumn("last_intervention_at", "INTEGER");
+  await addColumn("last_intervention_reason", "TEXT");
+  await addColumn("sentinel_state", "TEXT");
 
-  console.log("✅ [SRE] Emergency Repair Complete. Verification pulse...");
-  
+  console.log("\n🔍 Verification...");
   try {
-    const res = await db.select().from(schema.vitals).limit(1);
-    console.log("📊 Record verified:", JSON.stringify(res[0], null, 2));
+    const result = await db.run(sql`SELECT id, last_intervention_at, sentinel_state FROM vitals LIMIT 1`);
+    console.log("✅ Schema synced. Row count:", result.rows?.length ?? 0);
   } catch (e: any) {
     console.error("❌ Verification failed:", e.message);
   }
@@ -32,6 +32,6 @@ async function main() {
 }
 
 main().catch(err => {
-  console.error("❌ [SRE] Repair failed:", err);
+  console.error("❌ Repair failed:", err);
   process.exit(1);
 });
