@@ -1,8 +1,5 @@
-import * as crypto from 'node:crypto';
-if (typeof globalThis.crypto === 'undefined') {
-  globalThis.crypto = crypto.webcrypto as any;
-}
 import { Inngest } from "inngest";
+import "dotenv/config";
 
 // Verifying keys for V12 Handshake
 const eventKey = process.env.INNGEST_EVENT_KEY;

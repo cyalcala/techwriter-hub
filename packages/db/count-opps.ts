@@ -15,7 +15,7 @@ async function count() {
   const r2 = await c.execute("SELECT title, source_platform, scraped_at FROM opportunities ORDER BY scraped_at DESC LIMIT 10");
   console.log("\nMost Recent 10:");
   r2.rows.forEach((x, i) => {
-    const ts = x.scraped_at ? new Date(Number(x.scraped_at) * 1000).toISOString() : "N/A";
+    const ts = x.scraped_at ? new Date(Number(x.scraped_at)).toISOString() : "N/A";
     console.log(`  ${i + 1}. [${x.source_platform}] ${x.title} — ${ts}`);
   });
 

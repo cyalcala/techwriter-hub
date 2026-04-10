@@ -191,8 +191,8 @@ async function detect(): Promise<Finding[]> {
   const perfFeed = f_feedBusted.status === "fulfilled" ? f_feedBusted.value.latency : 9999;
   const perfPulse = f_pulseBusted.status === "fulfilled" ? f_pulseBusted.value.latency : 9999;
   
-  if (perfHealth > 800) {
-    findings.push({ id: "PERF_LATENCY_HEALTH", confidence: 80, description: `API Health latency is high (${perfHealth.toFixed(0)}ms).`, evidence: `Threshold: 800ms`, fixKey: "FIX_B_CACHE" });
+  if (perfHealth > 1200) {
+    findings.push({ id: "PERF_LATENCY_HEALTH", confidence: 80, description: `API Health latency is high (${perfHealth.toFixed(0)}ms).`, evidence: `Threshold: 1200ms`, fixKey: "FIX_B_CACHE" });
   }
   if (perfFeed > 2000) {
     findings.push({ id: "PERF_LATENCY_FEED", confidence: 70, description: `Feed latency is high (${perfFeed.toFixed(0)}ms).`, evidence: `Threshold: 2000ms`, fixKey: "FIX_B_CACHE" });

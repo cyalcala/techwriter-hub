@@ -95,28 +95,28 @@ export const GET: APIRoute = async () => {
       heartbeatState = "SUSPECT_HEARTBEAT";
     }
 
-    // 3. Throughput & Decisions Audit
-    const recentLogs = await db
+    // 3. Throughput & Decisions Audit (SQL-Optimized)
+    const [throughputStats] = await db
       .select({
-        level: schema.logs.level,
-        message: schema.logs.message,
-        timestamp: schema.logs.timestamp,
+        claimed: sql<number>`sum(case when message like '%Claimed%' then 1 else 0 end)`,
+        plated: sql<number>`sum(case when lower(message) like '%plated%' then 1 else 0 end)`,
+        rejected: sql<number>`sum(case when lower(message) like '%rejected%' then 1 else 0 end)`,
+        failed: sql<number>`sum(case when level = 'error' and (message like '%CHEF%' or message like '%SWEEP%') then 1 else 0 end)`,
+        errors: sql<number>`sum(case when level = 'error' then 1 else 0 end)`,
+        warnings: sql<number>`sum(case when level = 'warn' then 1 else 0 end)`,
       })
       .from(schema.logs)
-      .where(gte(schema.logs.timestamp, recentWindow))
-      .orderBy(desc(schema.logs.timestamp))
-      .limit(500);
+      .where(gte(schema.logs.timestamp, recentWindow));
 
-    // Filter throughput signals from logs
     const throughput = {
-      claimed: recentLogs.filter(l => l.message.includes('Claimed')).length,
-      plated: recentLogs.filter(l => l.message.includes('PLATED') || l.message.includes('plated')).length,
-      rejected: recentLogs.filter(l => l.message.includes('REJECTED') || l.message.includes('rejected')).length,
-      failed: recentLogs.filter(l => l.level === 'error' && (l.message.includes('CHEF') || l.message.includes('SWEEP'))).length,
+      claimed: Number(throughputStats.claimed || 0),
+      plated: Number(throughputStats.plated || 0),
+      rejected: Number(throughputStats.rejected || 0),
+      failed: Number(throughputStats.failed || 0),
     };
 
-    const errorCount24h = recentLogs.filter((row) => row.level === "error").length;
-    const warnCount24h = recentLogs.filter((row) => row.level === "warn").length;
+    const errorCount24h = Number(throughputStats.errors || 0);
+    const warnCount24h = Number(throughputStats.warnings || 0);
 
     // 4. Drift Assessment
     const latestNotes = await db

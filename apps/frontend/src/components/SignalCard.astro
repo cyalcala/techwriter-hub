@@ -43,7 +43,7 @@ const tierClass = signal.tier === 0
   <div class="flex items-center gap-2 shrink-0 mt-0.5">
     <span class="text-[11px] font-black text-blueberry-800/20 italic tabular-nums w-4 shrink-0">{index}.</span>
     {signal.companyLogo ? (
-      <img src={signal.companyLogo} class="w-5 h-5 rounded-md object-contain grayscale group-hover:grayscale-0 transition-all shrink-0" alt="" />
+      <img src={signal.companyLogo} width="20" height="20" class="w-5 h-5 rounded-md object-contain grayscale group-hover:grayscale-0 transition-all shrink-0" alt="" />
     ) : (
       <div class="w-5 h-5 rounded-md bg-oat-100 flex items-center justify-center shrink-0">
         <span class="text-[8px] font-black text-blueberry-800/30">{signal.company.charAt(0)}</span>

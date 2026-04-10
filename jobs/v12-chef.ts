@@ -122,40 +122,40 @@ export const v12Chef = schedules.task({
             continue;
           }
 
-          // 4. PLATING: Connect to Turso Gold Vault
+          // 4. PLATING: Connect to Turso Gold Vault (SRE Optimized Upsert)
           const md5_hash = createHash("md5")
             .update((finalExtraction.title || '') + (finalExtraction.company || ''))
             .digest("hex");
 
-          const existing = await db
-            .select()
-            .from(opportunities)
-            .where(eq(opportunities.md5_hash, md5_hash));
+          const nowMs = Date.now();
+          const plated = await db.insert(opportunities).values({
+            id: randomUUID(),
+            md5_hash,
+            title: finalExtraction.title,
+            company: finalExtraction.company || 'Confidential',
+            url: job.source_url,
+            description: finalExtraction.description,
+            salary: finalExtraction.salary || null,
+            niche: finalExtraction.niche,
+            type: finalExtraction.type || 'direct',
+            locationType: finalExtraction.locationType || 'remote',
+            sourcePlatform: `Trigger Sifter (${job.source_platform})`,
+            scrapedAt: new Date(),
+            isActive: true,
+            tier: finalExtraction.tier,
+            relevanceScore: finalExtraction.relevanceScore,
+            latestActivityMs: nowMs,
+            lastSeenAt: new Date(),
+            metadata: JSON.stringify(finalExtraction.metadata || {}),
+          }).onConflictDoUpdate({
+            target: opportunities.md5_hash,
+            set: {
+              lastSeenAt: new Date(),
+              latestActivityMs: nowMs
+            }
+          });
 
-          if (existing.length === 0) {
-            await db.insert(opportunities).values({
-              id: randomUUID(),
-              md5_hash,
-              title: finalExtraction.title,
-              company: finalExtraction.company || 'Confidential',
-              url: job.source_url,
-              description: finalExtraction.description,
-              salary: finalExtraction.salary || null,
-              niche: finalExtraction.niche,
-              type: finalExtraction.type || 'direct',
-              locationType: finalExtraction.locationType || 'remote',
-              sourcePlatform: `Trigger Sifter (${job.source_platform})`,
-              scrapedAt: new Date(),
-              isActive: true,
-              tier: finalExtraction.tier,
-              relevanceScore: finalExtraction.relevanceScore,
-              latestActivityMs: Date.now(),
-              metadata: JSON.stringify(finalExtraction.metadata || {}),
-            });
-            results.push({ id: job.id, status: "plated", title: finalExtraction.title });
-          } else {
-            results.push({ id: job.id, status: "duplicate" });
-          }
+          results.push({ id: job.id, status: "plated", title: finalExtraction.title });
 
           // 5. Cleanup Staging Buffer
           await supabase
