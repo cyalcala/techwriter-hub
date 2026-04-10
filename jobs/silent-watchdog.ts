@@ -129,7 +129,8 @@ export const silentWatchdogTask = schedules.task({
             logger.error(`[watchdog] Cache bust failed: ${hookErr.message}`);
             actionsTaken.push("VERCEL_CACHE_BUST_FAILED");
           }
-      }
+        } // end if deployHook
+      } // end if needsGlobalHealing
 
       // Pillar 4: Anomaly Detection (Zero-Signal Flatline)
       const { opportunities } = schema;

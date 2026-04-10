@@ -1,7 +1,7 @@
 import { schedules, logger } from "@trigger.dev/sdk/v3";
 import { createDb } from "@va-hub/db/client";
 import { opportunities, logs } from "@va-hub/db/schema";
-import { AIMesh } from "@va-hub/ai/ai-mesh";
+import { AIMesh } from "@va-hub/ai/mesh";
 import { sql, desc } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 
