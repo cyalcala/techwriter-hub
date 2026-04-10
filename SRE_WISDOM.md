@@ -58,4 +58,17 @@ Overlapping CI/CD runs caused Trigger.dev to fail on the `promote` step (exit co
 3. **Runtime Loyalty**: Keep the project on Node 20.x until LibSQL officially supports higher versions on Vercel Serverless.
 
 ---
+
+## 6. Project Aegis: The Eternal Sentinel (April 2026)
+
+### Continuity Invariants
+- **Phosphorus Shield**: Geographic and quality filtering is strictly enforced at the Kitchen layer (`isPhCompatible` and `tier < 4`). Signals that fail these boundaries are dropped immediately to prevent "Foreign Job Leakage."
+- **Chronos Heartbeat**: Vector 5 is integrated into the Inngest fleet. It performs active 404/expired triage every 30 minutes, ensuring the site remains free of stale "Position Filled" ghosts.
+- **50k-Year Perpetuity**: The system is anchored in $0-cost architectural loops. Budget thresholds in `ai-mesh.ts` autonomously rotate models to prioritize Free Tiers, ensuring financial sustainability for the extreme long-term.
+
+### Resilience Patterns
+- **Autonomous Repair**: The `ApexSentinel` verifies and repairs `vitals` table columns and schema indices at runtime. This "Live Migration" pattern prevents schema drift from breaking the platform.
+- **Fail-Loud Logging**: Replaced silent `.catch(() => null)` blocks with granular error tracing to prevent "Watermelon Data" (where healthy metrics hide underlying ingestion rot).
+
+---
 **SRE WISDOM STATUS: PERSISTED.**

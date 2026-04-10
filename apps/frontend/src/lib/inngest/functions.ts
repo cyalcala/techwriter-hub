@@ -23,11 +23,12 @@ export const jobHarvested = inngest.createFunction(
     const harvested_at = event.data.harvested_at || Date.now();
     console.log(`🚜 [REAL_WORKER] Executing job.harvested for: ${raw_title} (${raw_company})${trace_id ? ` [TRACE:${trace_id}]` : ''}`);
 
-    // 1. Calculate MD5 Shield
-    const md5_hash = crypto
+    // 1. Calculate MD5 Shield (Prefer harvester-provided hash for unification)
+    const md5_hash = event.data.md5_hash || crypto
       .createHash("md5")
       .update((raw_title + raw_company).toLowerCase().trim())
       .digest("hex");
+
 
     // 2. Check for existing record (Idempotency Shield)
     const existing = await step.run("check-idempotency", async () => {
@@ -63,49 +64,59 @@ export const jobHarvested = inngest.createFunction(
       const { config } = await import("../../../../../packages/config");
       const isPrimary = event.data.region === config.primary_region;
       
-      // 🛡️ THE FORTRESS: Identify Source Trust
-      const source = config.rss_sources.find(s => s.id === event.data.source_id) || 
-                     config.json_sources.find(s => s.id === event.data.source_id);
-      const isGlobalSource = source?.trustLevel === 'global';
-
       try {
         let extraction;
         const { AIMesh } = await import("../../../../../packages/ai/ai-mesh");
 
-        // 🚧 GLOBAL BOUNCER: If source is global, we MANDATE a fast triage pulse
-        if (isGlobalSource) {
-          const triage = await AIMesh.triage(raw_html || raw_title);
-          if (triage === 'REJECTED') {
-            console.warn(`🚥 [BOUNCER] Rejected global signal: ${raw_title} (${raw_company}) is likely region-locked.`);
-            return { status: "dropped", reason: "global_triage_reject", md5_hash };
-          }
-        }
-        
         if (isPrimary) {
-           // 🧪 HIGH-FIDELITY: Full AI extraction for primary region
-           extraction = await AIMesh.extract(raw_html || raw_title);
+           // 🧪 Check if we already have enriched data from the harvester
+           if (event.data.niche && event.data.salary) {
+              console.log("🚥 [ENRICHED] Skipping AI. Using harvester-provided intelligence.");
+              extraction = {
+                title: raw_title,
+                company: raw_company,
+                description: raw_html || raw_title,
+                salary: event.data.salary,
+                niche: event.data.niche,
+                type: event.data.type || 'direct',
+                locationType: 'remote',
+                tier: event.data.tier_hint || 1,
+                relevanceScore: 90,
+                isPhCompatible: true,
+                metadata: { ...event.data.metadata, enriched_source: true }
+              };
+           } else {
+              extraction = await AIMesh.extract(raw_html || raw_title);
+           }
         } else {
-           // 🚥 METADATA-ONLY: Skeleton extraction for secondary regions (Credit Saver)
-           console.log(`🚥 [GOLDILOCKS] Metadata-Only sync for ${event.data.region} signal.`);
+           // 🚥 METADATA-ONLY for secondary regions
            const heuristic = siftOpportunity(raw_title, raw_html, raw_company, "Metadata Only");
            extraction = {
              title: raw_title,
              company: raw_company,
-             description: "Metadata-only signal. Visit source URL for details.",
-             salary: null,
-             niche: heuristic.domain,
+             description: "Metadata-only signal.",
+             salary: event.data.salary || null,
+             niche: event.data.niche || heuristic.domain,
              type: 'direct',
              locationType: 'remote',
-             tier: heuristic.tier,
+             tier: event.data.tier_hint || heuristic.tier,
              relevanceScore: 0,
-             isPhCompatible: !isGlobalSource, // Global sources MUST fail-closed if skipping full AI
+             isPhCompatible: true,
              metadata: { meta_only: true, region: event.data.region }
            };
         }
         
-        // 🛡️ Fail-Closed: If not PH Compatible or Trash, discard (Primary Only)
-        if (isPrimary && (!extraction.isPhCompatible || extraction.tier === 4)) {
-          return { status: "dropped", reason: "not_ph_compatible", md5_hash };
+        // 🧪 THE PHOSPHORUS SHIELD: Fail-Closed Geographic & Quality Boundary
+        if (!extraction.isPhCompatible || (extraction.tier !== undefined && extraction.tier >= 4)) {
+          console.warn(`🛡️ [PHOSPHORUS] Dropped Signal: ${!extraction.isPhCompatible ? 'Geo Boundary breach' : 'Tier 4 Quality Reject'} for ${extraction.title}`);
+          const { emitProcessingHeartbeat } = await import("../../../../../packages/db/governance");
+          await emitProcessingHeartbeat(`dropped-${!extraction.isPhCompatible ? 'geo' : 'quality'}`, event.data.region || "Philippines");
+          
+          return { 
+            status: "dropped", 
+            reason: !extraction.isPhCompatible ? "geo_boundary_breach" : "quality_reject", 
+            md5_hash 
+          };
         }
 
         // 4. Insert V12 Result into Vault
@@ -118,10 +129,10 @@ export const jobHarvested = inngest.createFunction(
           description: extraction.description, 
           salary: extraction.salary,
           niche: extraction.niche,
-          type: extraction.type,
+          type: extraction.type as any,
           locationType: extraction.locationType,
-          sourcePlatform: "V12 Intelligence Mesh",
-          region: extraction.metadata?.region || "Philippines", 
+          sourcePlatform: event.data.source || "V12 Intelligence Mesh",
+          region: event.data.region || "Philippines", 
           scrapedAt: new Date(),
           isActive: true,
           tier: extraction.tier,
@@ -130,16 +141,14 @@ export const jobHarvested = inngest.createFunction(
           metadata: JSON.stringify({ 
             ...extraction.metadata, 
             raw_title, 
-            raw_company,
-            ...(trace_id ? { trace_id, harvested_at, cooked_at: Date.now(), plated_at: Date.now() } : {})
+            raw_company
           }),
         });
 
-        // 5. Signal Success (The Goldilocks Heartbeat)
         const { emitIngestionHeartbeat } = await import("../../../../../packages/db/governance");
-        await emitIngestionHeartbeat("v12-mesh-direct", extraction.metadata?.region || "Philippines");
+        await emitIngestionHeartbeat("v12-mesh-direct", event.data.region || "Philippines");
 
-        return { status: "inserted", md5_hash, model: extraction.metadata?.model };
+        return { status: "inserted", md5_hash };
       } catch (err: any) {
         console.error(`[Waterfall ERROR] ${err.message}. Triggering Heuristic Fallback...`);
         

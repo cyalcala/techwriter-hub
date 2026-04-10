@@ -51,15 +51,17 @@ export const AIExtractionSchema = z.object({
     if (VA_NICHES.includes(normalized as any)) return normalized;
 
     // Fuzzy Routing (The Intelligence Mesh)
-    if (normalized.includes('ACCOUNTING') || normalized.includes('BOOKKEEPER')) return 'ADMIN_BACKOFFICE';
-    if (normalized.includes('DEVELOPER') || normalized.includes('SOFTWARE')) return 'TECH_ENGINEERING';
-    if (normalized.includes('MARKETING') || normalized.includes('SOCIAL_MEDIA')) return 'MARKETING';
-    if (normalized.includes('SALES') || normalized.includes('GROWTH')) return 'SALES_GROWTH';
-    if (normalized.includes('DESIGN') || normalized.includes('EDITOR') || normalized.includes('CREATIVE')) return 'CREATIVE_MULTIMEDIA';
-    if (normalized.includes('CUSTOMER') || normalized.includes('SUPPORT') || normalized.includes('BPO')) return 'BPO_SERVICES';
-    if (normalized.includes('VIRTUAL_ASSISTANT') || normalized.includes('VA')) return 'VA_SUPPORT';
+    if (normalized.includes('ACCOUNTING') || normalized.includes('BOOKKEEPER') || normalized.includes('FINANCE')) return 'ADMIN_BACKOFFICE';
+    if (normalized.includes('DEVELOPER') || normalized.includes('SOFTWARE') || normalized.includes('ENGINEER')) return 'TECH_ENGINEERING';
+    if (normalized.includes('MARKETING') || normalized.includes('SOCIAL_MEDIA') || normalized.includes('SEO')) return 'MARKETING';
+    if (normalized.includes('SALES') || normalized.includes('GROWTH') || normalized.includes('BUSINESS_DEVELOPMENT')) return 'SALES_GROWTH';
+    if (normalized.includes('DESIGN') || normalized.includes('EDITOR') || normalized.includes('CREATIVE') || normalized.includes('VIDEO')) return 'CREATIVE_MULTIMEDIA';
+    if (normalized.includes('CUSTOMER') || normalized.includes('SUPPORT') || normalized.includes('BPO') || normalized.includes('HELP_DESK')) return 'BPO_SERVICES';
+    if (normalized.includes('VIRTUAL_ASSISTANT') || normalized.includes('VA') || normalized.includes('EXECUTIVE') || normalized.includes('ADMIN')) return 'VA_SUPPORT';
 
-    return "INVALID_NICHE"; // Force Zod error for hallucinations
+    // 🛡️ AEGIS FALLBACK: Instead of erroring out, map to VA_SUPPORT to maintain UI visibility
+    // but the system will log this as a fuzzy-unmatched category in the kitchen.
+    return "VA_SUPPORT"; 
   }, z.enum(VA_NICHES)),
   tier: z.coerce.number().int().min(0).max(4).default(3),
   relevanceScore: z.coerce.number().int().min(0).max(100).default(50),

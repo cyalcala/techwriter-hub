@@ -112,7 +112,7 @@ export class AIMesh {
       }
     }
 
-    return 'PASSED'; // Default to pass if triage fails to be safe
+    return 'REJECTED'; // 🛡️ FAIL-CLOSED: Drop the signal if triage cannot be verified.
   }
 
   /**
@@ -129,25 +129,33 @@ export class AIMesh {
         .map(s => String(s.provider_name || '').trim().toLowerCase())
     );
 
-    // 2. Prepare Balanced Queue (OpenRouter-First Strategy)
+    // 2. Prepare Balanced Queue (Budget-Aware Strategy)
     const rotatedORModels = [...OPENROUTER_FREE_MODELS]
-      .sort(() => Math.random() - 0.5) // Random rotation for load balancing
+      .sort(() => Math.random() - 0.5) 
       .map(m => ({ name: `or-${m}`, provider: 'openrouter' as const, modelId: m }));
+
+    // 💰 BUDGET OVERRIDE: If Sentinel has triggered TIGHT mode, purge expensive fallbacks
+    const isTightBudget = statuses.some(s => s.provider_name === 'Sentinel' && s.last_error?.includes('tight'));
 
     const candidates: ModelConfig[] = [
       ...rotatedORModels, // The Primary Workhorses (80%)
-      { name: 'groq-llama', provider: 'groq', modelId: 'llama-3.3-70b-versatile' }, // Moderate Chef (15%)
+      { name: 'groq-llama', provider: 'groq', modelId: 'llama-3.3-70b-versatile' }, // Moderate Chef
       { name: 'cerebras-llama', provider: 'cerebras', modelId: 'llama3.1-8b' }, // Recovery Expert
-      { name: 'gemini-flash', provider: 'gemini', modelId: 'gemini-1.5-flash' } // The Wall
     ];
+
+    if (!isTightBudget) {
+      candidates.push({ name: 'gemini-flash', provider: 'gemini', modelId: 'gemini-1.5-flash' }); // The Wall (Heavy Duty)
+    }
 
     const extractionQueue = candidates.filter((config: ModelConfig) => {
       const providerName = PROVIDER_DB_NAME[config.provider].toLowerCase();
-      return !blockedProviders.has(providerName);
+      if (blockedProviders.has(providerName)) return false;
+      return true;
     });
 
     if (extractionQueue.length === 0) {
-      throw new Error('[AI-MESH] CRITICAL: All $0-cost providers are currently in Cooldown.');
+      console.warn('⚠️ [AI-MESH] BUDGET EXHAUSTED: Falling back to Emergency Gemini Pulse.');
+      extractionQueue.push({ name: 'gemini-flash', provider: 'gemini', modelId: 'gemini-1.5-flash' });
     }
 
     const cleanContent = this.cleanPayload(html);

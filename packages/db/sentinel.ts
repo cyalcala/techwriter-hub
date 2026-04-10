@@ -36,6 +36,9 @@ export class ApexSentinel {
       // 3. Economic Guardrails (The Budget)
       await this.enforceEconomics();
 
+      // 4. Chronos Reaping (The Scythe)
+      await this.reapStaleOpportunities();
+
     } catch (err: any) {
       console.error(`🚫 [SENTINEL] Triage failure: ${err.message}`);
     }
@@ -53,7 +56,10 @@ export class ApexSentinel {
       { name: "last_intervention_reason", type: "TEXT" },
       { name: "sentinel_state", type: "TEXT" },
       { name: "last_harvest_at", type: "INTEGER" },
-      { name: "last_harvest_engine", type: "TEXT" }
+      { name: "last_harvest_engine", type: "TEXT" },
+      { name: "total_purged", type: "INTEGER" },
+      { name: "geo_kills", type: "INTEGER" },
+      { name: "quality_score", type: "INTEGER" }
     ];
 
     try {
@@ -64,7 +70,7 @@ export class ApexSentinel {
       for (const col of REQUIRED_COLUMNS) {
         if (!existingColumns.includes(col.name)) {
           console.warn(`🧨 [SENTINEL] Drift detected! Missing column: ${col.name}. Repairing...`);
-          await db.run(sql.raw(`ALTER TABLE vitals ADD COLUMN ${col.name} ${col.type};`));
+          await db.run(sql.raw(`ALTER TABLE vitals ADD COLUMN ${col.name} ${col.type} DEFAULT ${col.type === 'INTEGER' ? 0 : 'NULL'};`));
           
           await db.update(vitals).set({
             lastInterventionAt: new Date(),
@@ -74,6 +80,38 @@ export class ApexSentinel {
       }
     } catch (err: any) {
       console.error(`🧬 [SENTINEL] Schema evolution failure: ${err.message}`);
+    }
+  }
+
+  /**
+   * 🔪 CHRONOS REAPING
+   * Forcefully archives jobs that haven't been seen in 48 hours.
+   */
+  private async reapStaleOpportunities() {
+    console.log("🔪 [SENTINEL] Reaping stale opportunities (>48h)...");
+    const FORTY_EIGHT_HOURS_AGO = new Date(Date.now() - 48 * 60 * 60 * 1000);
+    const { opportunities } = await import('./schema');
+    const { and, lte } = await import('drizzle-orm');
+
+    try {
+      const result = await db.update(opportunities)
+        .set({ isActive: false })
+        .where(
+          and(
+            eq(opportunities.isActive, true),
+            lte(opportunities.lastSeenAt, FORTY_EIGHT_HOURS_AGO)
+          )
+        );
+      
+      if (result.rowsAffected > 0) {
+        console.log(`✅ [SENTINEL] Reaped ${result.rowsAffected} stale signals.`);
+        await db.update(vitals).set({
+            lastInterventionAt: new Date(),
+            lastInterventionReason: `Chronos Recall: Deactivated ${result.rowsAffected} stale jobs.`
+        }).where(eq(vitals.id, 'GLOBAL'));
+      }
+    } catch (err: any) {
+      console.error(`🚫 [SENTINEL] Reap failure: ${err.message}`);
     }
   }
 

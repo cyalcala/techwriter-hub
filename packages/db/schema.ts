@@ -115,6 +115,11 @@ export const vitals = sqliteTable('vitals', {
   lastInterventionAt: integer('last_intervention_at', { mode: 'timestamp' }),
   lastInterventionReason: text('last_intervention_reason'),
   sentinelState: text('sentinel_state'), // JSON: { drift_score, total_purged, ai_quota_override }
+  
+  // 🚥 AEGIS: Observability & Drift
+  totalPurged: integer('total_purged').default(0),
+  geoKills: integer('geo_kills').default(0),
+  qualityScore: integer('quality_score').default(100), // 0-100 system purity
 });
 
 export const logs = sqliteTable('logs', {

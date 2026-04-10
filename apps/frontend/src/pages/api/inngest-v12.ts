@@ -15,6 +15,9 @@ const GHOST_SENTINEL = "||V12_GHOST_LEAD||";
 const EDGE_PROXY_URL = process.env.EDGE_PROXY_URL || "https://va-edge-proxy.cyrusalcala-agency.workers.dev";
 const EDGE_PROXY_SECRET = process.env.VA_PROXY_SECRET;
 
+import { chronosHeartbeat } from "../../../lib/inngest/heartbeat";
+import { sentinelPulse, jobHarvested } from "../../../lib/inngest/functions";
+
 function htmlToText(html: string): string {
   return html
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
@@ -135,8 +138,9 @@ const pantryPoll = inngestClient.createFunction(
             };
           }
           
-          // B. Sifter Guard
-          if (isPrimary && (!finalExtraction.isPhCompatible || finalExtraction.tier === OpportunityTier.TRASH)) {
+          // B. Sifter Guard: THE PHOSPHORUS SHIELD
+          if (!finalExtraction.isPhCompatible || (finalExtraction.tier !== undefined && finalExtraction.tier >= OpportunityTier.TRASH)) {
+            console.warn(`🛡️ [PHOSPHORUS] Pantry Chef dropped signal: ${!finalExtraction.isPhCompatible ? 'Geo Boundary breach' : 'Tier 4 Quality Reject'}`);
             await supabase
               .from('raw_job_harvests')
               .update({
@@ -362,6 +366,6 @@ const scoutFailover = inngestClient.createFunction(
 // 4. Export endpoint serve handlers
 export const { GET, POST, PUT } = serve({ 
   client: inngestClient, 
-  functions: [pantryPoll, syncSweep, triggerReset, scoutFailover] 
+  functions: [pantryPoll, syncSweep, triggerReset, scoutFailover, chronosHeartbeat, sentinelPulse, jobHarvested] 
 });
 

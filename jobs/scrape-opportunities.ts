@@ -98,16 +98,23 @@ export async function harvest(options?: { unhealthySources?: string[], targetReg
       const events = items.map(item => {
         const rawContent = item.description || (item as any).__raw || "";
         const sanitizedHtml = stripJunk(rawContent);
+        
         return {
           name: "job.harvested" as const,
           data: {
             raw_title: item.title,
             raw_company: item.company || "Generic",
-            raw_url: item.sourceUrl,
+            raw_url: item.url || item.sourceUrl,
             raw_html: sanitizedHtml,
             source: source.name,
             region: (source as any).region || "Global",
-            harvested_at: Date.now()
+            harvested_at: Date.now(),
+            // 🛰️ V12 ENRICHMENT BRIDGE
+            md5_hash: (item as any).md5_hash,
+            niche: (item as any).niche,
+            salary: (item as any).salary,
+            tier_hint: (item as any).tier_hint || 3,
+            metadata: (item as any).metadata || {}
           }
         };
       });
