@@ -33,15 +33,20 @@ async function recordLog(message: string, level: 'info' | 'warn' | 'error' | 'sn
   }
 }
 
-export async function harvest(options?: { unhealthySources?: string[], targetRegion?: string, runnerId?: string }) {
-  const { getTriggerStatus, setTriggerExhausted } = await import("../packages/db/governance");
-  
   // 1. V12 CIRCUIT BREAKER: Check if Scout is Allowed to Fly
   const runnerId = options?.runnerId || 'trigger';
+  const { getTriggerStatus, acquireLease } = await import("../packages/db/governance");
+  
   const status = await getTriggerStatus(runnerId);
   if (!status.ok) {
     console.warn("🚫 [CIRCUIT BREAKER] Trigger.dev Scouting PAUSED until next Month.");
     return { status: "paused_by_governance", emitted: 0 };
+  }
+
+  // 🛡️ ATOMIC SEAT: Global Consensus Lock
+  const targetRegion = options?.targetRegion || 'Philippines';
+  if (!(await acquireLease(runnerId, targetRegion))) {
+    return { status: "skipped_by_consensus", emitted: 0 };
   }
 
   const targetSources = options?.unhealthySources || [];
@@ -148,10 +153,6 @@ export const scrapeOpportunitiesTask = schedules.task({
     const { getAdaptiveCadence } = await import("../packages/db/governance");
     const pulse = await getAdaptiveCadence(payload?.region || 'Philippines');
     logger.info(`[PULSE] Current Cadence: ${pulse.cadence} (Interval: ${pulse.intervalMin}m)`);
-
-    if (!(await acquireLease('trigger', payload?.region || 'Philippines', pulse.intervalMin))) {
-      return { status: "skipped_by_fleet_coordination", emitted: 0, pulse: pulse.cadence };
-    }
 
     try {
       const result = await harvest({ 

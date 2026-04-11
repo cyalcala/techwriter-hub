@@ -356,9 +356,17 @@ const scoutFailover = inngestClient.createFunction(
   { id: "v12-scout-failover", name: "V12 Scout: Harrier Failover", triggers: [{ cron: "*/30 * * * *" }] },
   async ({ step }) => {
     const { harvest } = await import("../../../../../jobs/scrape-opportunities");
+    const { recordHarvestSuccess } = await import("../../../../../packages/db/governance");
+
     const result = await step.run("execute-harvest", async () => {
       // Pass runnerId to bypass Trigger.dev circuit breaker
-      return await harvest({ runnerId: 'inngest' });
+      const harvestResult = await harvest({ runnerId: 'inngest' });
+      
+      if (harvestResult.emitted > 0) {
+        await recordHarvestSuccess('inngest', 'Philippines');
+      }
+
+      return harvestResult;
     });
     return { status: "harvest_cycle_complete", result };
   }
