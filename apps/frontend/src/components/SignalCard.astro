@@ -43,10 +43,25 @@ const tierClass = signal.tier === 0
   <div class="flex items-center gap-2 shrink-0 mt-0.5">
     <span class="text-[11px] font-black text-blueberry-800/20 italic tabular-nums w-4 shrink-0">{index}.</span>
     {signal.companyLogo ? (
-      <img src={signal.companyLogo} width="20" height="20" class="w-5 h-5 rounded-md object-contain grayscale group-hover:grayscale-0 transition-all shrink-0" alt="" />
+      <div class="w-5 h-5 rounded-md bg-white shadow-sm border border-black/5 flex items-center justify-center overflow-hidden shrink-0">
+        <img 
+          src={signal.companyLogo} 
+          width="20" 
+          height="20" 
+          class="w-full h-full object-contain transition-all" 
+          alt="" 
+          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+        />
+        <div class="hidden w-full h-full items-center justify-center text-[8px] font-black text-white" style={`background-color: ${['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'][Math.abs(signal.company.split('').reduce((a,b) => (((a << 5) - a) + b.charCodeAt(0)) | 0, 0)) % 7]}`}>
+          {signal.company.charAt(0)}
+        </div>
+      </div>
     ) : (
-      <div class="w-5 h-5 rounded-md bg-oat-100 flex items-center justify-center shrink-0">
-        <span class="text-[8px] font-black text-blueberry-800/30">{signal.company.charAt(0)}</span>
+      <div 
+        class="w-5 h-5 rounded-md flex items-center justify-center shrink-0 shadow-sm border border-black/5"
+        style={`background-color: ${['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'][Math.abs(signal.company.split('').reduce((a,b) => (((a << 5) - a) + b.charCodeAt(0)) | 0, 0)) % 7]}`}
+      >
+        <span class="text-[8px] font-black text-white">{signal.company.charAt(0)}</span>
       </div>
     )}
   </div>

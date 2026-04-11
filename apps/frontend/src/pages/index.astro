@@ -54,12 +54,12 @@ try {
 // ── DOMAIN ORCHESTRATION ──
 const topDomains = [
   JobDomain.VA_SUPPORT, 
-  JobDomain.CREATIVE_MULTIMEDIA, 
-  JobDomain.TECH_ENGINEERING, 
-  JobDomain.MARKETING,
-  JobDomain.SALES_GROWTH,
   JobDomain.BPO_SERVICES,
-  JobDomain.ADMIN_BACKOFFICE
+  JobDomain.SALES_GROWTH,
+  JobDomain.MARKETING,
+  JobDomain.CREATIVE_MULTIMEDIA,
+  JobDomain.ADMIN_BACKOFFICE,
+  JobDomain.TECH_ENGINEERING,
 ];
 
 const DOMAIN_META: Record<JobDomain, { description: string; symbol: string }> = {
@@ -95,19 +95,30 @@ const DOMAIN_META: Record<JobDomain, { description: string; symbol: string }> = 
 
 // ── ADAPTIVE BRIDGE: MAP LEGACY DATA TO V10 NICHE TAXONOMY ──
 // SRE: No fallback - if initialSignals is empty, we already threw above
-const processedSignals = initialSignals.map(sig => {
-  const niche = sig.niche || mapTitleToDomain(sig.title, (sig.description || ''));
-  
-  // SRE LOGGING: Identify drifting niches in production
-  if (!Object.values(JobDomain).includes(niche as any)) {
-    console.warn(`[SRE_CUSTODY] Invalid Niche detected: "${niche}" for job "${sig.title}". This job will be hidden from the UI.`);
-  }
+const processedSignals = initialSignals
+  .map(sig => {
+    const niche = sig.niche || mapTitleToDomain(sig.title, (sig.description || ''));
+    
+    // SRE LOGGING: Identify drifting niches in production
+    if (!Object.values(JobDomain).includes(niche as any)) {
+      console.warn(`[SRE_CUSTODY] Invalid Niche detected: "${niche}" for job "${sig.title}". This job will be hidden from the UI.`);
+    }
 
-  return {
-    ...sig,
-    niche
-  };
-});
+    return {
+      ...sig,
+      niche
+    };
+  })
+  .filter(sig => {
+    // SURGICAL BPO REMEDIATION: Strictly remove the requested noise
+    if (sig.niche === JobDomain.BPO_SERVICES) {
+      const company = sig.company.toUpperCase();
+      if (company.includes('REMOTE VENTURES')) return false;
+      if (company.includes('CONFIDENTIAL')) return false;
+      if (company.includes('TDCX (VIA REDDIT)')) return false;
+    }
+    return true;
+  });
 
 // SRE: No fallback - if mirrorSignals is empty, we already threw above
 const processedMirror = mirrorSignals;
@@ -224,9 +235,11 @@ const healthStats = {
                 </p>
              </div>
              
-             <div class="flex flex-col gap-2.5 p-2">
-                {visibleSignals.map((sig, idx) => (
-                  <SignalCard signal={sig} index={idx + 1} isCold={staleRegions.has(sig.region)} />
+              <div class="flex flex-col gap-2.5 p-2 domain-signals-container">
+                {domain.signals.map((sig, idx) => (
+                  <div class={`signal-wrapper ${idx >= 15 ? 'hidden' : ''}`} data-index={idx}>
+                    <SignalCard signal={sig} index={idx + 1} isCold={staleRegions.has(sig.region)} />
+                  </div>
                 ))}
 
                 {totalSignals === 0 && (
@@ -241,15 +254,24 @@ const healthStats = {
                 )}
                 
                 {totalSignals > 15 && (
-                  <a 
-                    href={`/domain/${slug}`}
-                    class="mt-2 flex items-center justify-center py-4 rounded-xl border-2 border-dashed border-oat-200 text-[10px] font-black text-blueberry-800/30 uppercase tracking-[0.2em] hover:border-blueberry-900/10 hover:text-blueberry-900 hover:bg-white transition-all group"
-                  >
-                    See all {totalSignals} sites
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" class="ml-2 group-hover:translate-x-1 transition-transform"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
-                  </a>
+                  <div class="flex flex-col gap-2 mt-2">
+                    <button 
+                      class="expand-btn flex items-center justify-center py-4 rounded-xl border-2 border-solid border-blueberry-900/10 bg-white text-[10px] font-black text-blueberry-900 uppercase tracking-[0.2em] hover:bg-blueberry-900 hover:text-white transition-all shadow-sm active:scale-95 group"
+                      data-count={totalSignals}
+                    >
+                      See All {totalSignals} Jobs
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" class="ml-2 group-hover:rotate-90 transition-transform"><path d="M12 5v14m-7-7h14"/></svg>
+                    </button>
+                    
+                    <a 
+                      href={`/domain/${slug}`}
+                      class="hidden detail-link items-center justify-center py-3 text-[9px] font-black text-blueberry-800/40 uppercase tracking-widest hover:text-blueberry-900 transition-colors"
+                    >
+                      View Detailed Directory & Search →
+                    </a>
+                  </div>
                 )}
-             </div>
+              </div>
           </section>
         );
       })}
@@ -340,6 +362,25 @@ const healthStats = {
         });
       });
     }
+
+    // --- Inline Expansion Engine ---
+    document.querySelectorAll('.expand-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const container = btn.closest('.domain-signals-container');
+        if (!container) return;
+
+        const wraps = container.querySelectorAll('.signal-wrapper.hidden');
+        wraps.forEach(w => {
+           w.classList.remove('hidden');
+           w.style.animation = 'slideUp 0.3s ease-out forwards';
+        });
+
+        // Toggle state
+        btn.classList.add('hidden');
+        const detailLink = container.querySelector('.detail-link');
+        if (detailLink) detailLink.classList.replace('hidden', 'flex');
+      });
+    });
 
     // System Sync Clock logic removed
   }

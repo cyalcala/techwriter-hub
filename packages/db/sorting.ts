@@ -43,7 +43,7 @@ export async function getSignalsByDomain(domain: string, limit = 20) {
       and(
         not(eq(schema.opportunities.tier, 4)),
         eq(schema.opportunities.isActive, true),
-        sql`${schema.opportunities.tags} LIKE ${'%' + domain + '%'}`
+        eq(schema.opportunities.niche, domain)
       )
     )
     .orderBy(
