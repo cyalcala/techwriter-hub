@@ -24,7 +24,9 @@ const REDDIT_FEEDS: ScoutFeed[] = [
   { name: "r/VAjobsPH", url: "https://www.reddit.com/r/VAjobsPH/new.json?limit=25", host: "reddit.com", type: "json" },
   { name: "r/phcareers", url: "https://www.reddit.com/r/phcareers/new.json?limit=25", host: "reddit.com", type: "json" },
   { name: "r/forhire", url: "https://www.reddit.com/r/forhire/new.json?limit=25", host: "reddit.com", type: "json" },
-  { name: "r/VirtualAssistant", url: "https://www.reddit.com/r/VirtualAssistant/new.json?limit=25", host: "reddit.com", type: "json" }
+  { name: "r/VirtualAssistant", url: "https://www.reddit.com/r/VirtualAssistant/new.json?limit=25", host: "reddit.com", type: "json" },
+  { name: "r/RemoteJobs", url: "https://www.reddit.com/r/RemoteJobs/new.json?limit=25", host: "reddit.com", type: "json" },
+  { name: "r/WorkOnline", url: "https://www.reddit.com/r/WorkOnline/new.json?limit=25", host: "reddit.com", type: "json" }
 ];
 
 function hostFromUrl(url: string): string {

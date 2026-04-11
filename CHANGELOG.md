@@ -1,3 +1,17 @@
+## [2026-04-11] — [Opportunities: 476 | Agencies: 65]
+**Status: AUTO-PROCESSED**
+
+### ✨ Major Features
+* feat: **Priority Alpha Expansion** — Doubled signal harvesting coverage and implemented hierarchical scoring.
+  - Added Jobicy, Himalayas Niche, and 5+ new high-intent subreddits.
+  - Implemented `DIRECT-BOOST` logic for founder-direct leads.
+  - Hardened PH-native platform weighting in sifter logic.
+
+### 🛡️ Reliability & Fixes
+* fix: **GitHub Action Resurrection** — Repaired syntax errors in `apex-sre` and standardized Bun runtime.
+
+---
+
 
 ## [2026-04-11] — [Opportunities: 476 | Agencies: 59]
 **Status: AUTO-PROCESSED**

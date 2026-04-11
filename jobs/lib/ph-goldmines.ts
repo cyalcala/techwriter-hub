@@ -51,6 +51,16 @@ export const goldmineSources = [
     type: "agency"
   },
   {
+    name: "Pineapple",
+    url: "https://www.pineapple.co/careers",
+    type: "agency"
+  },
+  {
+    name: "VirtualStaff.ph",
+    url: "https://www.virtualstaff.ph/jobs",
+    type: "agency"
+  },
+  {
     name: "Reddit: buhaydigital",
     url: "https://www.reddit.com/r/buhaydigital/new.json",
     type: "social"
@@ -63,6 +73,11 @@ export const goldmineSources = [
   {
     name: "Reddit: RemoteWorkPH",
     url: "https://www.reddit.com/r/RemoteWorkPH/new.json",
+    type: "social"
+  },
+  {
+    name: "Reddit: phcareers",
+    url: "https://www.reddit.com/r/phcareers/new.json",
     type: "social"
   }
 ];

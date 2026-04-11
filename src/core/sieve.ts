@@ -180,11 +180,24 @@ export function siftOpportunity(
   // 3. Display Tag Extraction
   const displayTags = extractDisplayTags(title, description);
   
-  // 4. Gravity Scoring
+  // 4. Gravity Scoring (Priority Alpha)
   let relevanceScore = (3 - tier) * 100; 
-  if (displayTags.includes("PH-DIRECT")) relevanceScore += 50;
-  if (displayTags.includes("PREMIUM")) relevanceScore += 30;
-  if (displayTags.includes("HIGH PAY")) relevanceScore += 20;
+  if (displayTags.includes("PH-DIRECT")) relevanceScore += 75; // Increased weight
+  if (displayTags.includes("PREMIUM")) relevanceScore += 40;   // Increased weight
+  if (displayTags.includes("HIGH PAY")) relevanceScore += 30;
+  
+  // 🛰️ DIRECT-CLIENT BOOST: Looking for the 'Founder' or 'Small Team' signal
+  const directKeywords = ["direct client", "hiring manager", "founder", "owner", "solo founder", "startup founder", "direct hire"];
+  if (directKeywords.some(k => body.includes(k))) {
+    relevanceScore += 50;
+    displayTags.push("DIRECT-BOOST");
+  }
+
+  // 📡 NATIVE-PLATFORM BOOST
+  const nativePlatforms = ["onlinejobs", "jobstreet", "phcareers", "vajobsph"];
+  if (nativePlatforms.some(p => sp.includes(p))) {
+    relevanceScore += 25;
+  }
 
   return {
     tier,

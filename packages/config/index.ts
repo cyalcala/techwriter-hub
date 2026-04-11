@@ -183,6 +183,28 @@ export const defaultConfig: NicheConfig = {
       ethical_note: "Public RSS feed provided by DailyRemote for job syndication.",
       region: "Global",
       trustLevel: "global"
+    },
+    {
+      id: "jobicy-support",
+      name: "Jobicy (Support)",
+      url: "https://jobicy.com/feed/remote-customer-support-jobs",
+      platform: "Jobicy",
+      defaultJobType: "VA",
+      tags: ["support", "va"],
+      ethical_note: "Public RSS feed from Jobicy.",
+      region: "Global",
+      trustLevel: "global"
+    },
+    {
+      id: "himalayas-marketing",
+      name: "Himalayas (Marketing)",
+      url: "https://himalayas.app/jobs/marketing/rss",
+      platform: "Himalayas",
+      defaultJobType: "Marketing",
+      tags: ["marketing", "va"],
+      ethical_note: "Public niche-focused RSS from Himalayas.",
+      region: "Global",
+      trustLevel: "global"
     }
   ],
 
