@@ -139,7 +139,7 @@ const domains = topDomains.map((domain) => ({
 
 // ── HEALTH INTELLIGENCE ──
 const healthStats = {
-  status: regionalHealth.every(r => r.state === 'FRESH') ? 'SYSTEM NOMINAL' : 'DEGRADED PERFORMANCE',
+  status: regionalHealth.every(r => r.state === 'FRESH') ? 'SYSTEM NOMINAL' : 'Working on live sync',
   isFallback: regionalHealth.some(r => r.state === 'STALE'),
   pulseAge: Math.min(...regionalHealth.map(r => r.pAge))
 };
@@ -203,9 +203,6 @@ const healthStats = {
              </button>
              <button class="w-14 h-14 rounded-full bg-white shadow-card border border-oat-200 flex items-center justify-center text-blueberry-800/40 hover:text-blue-600 hover:border-blue-600/30 transition-all group">
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-             </button>
-             <button class="px-8 h-14 rounded-full bg-blueberry-900 text-white font-bold tracking-[0.2em] uppercase text-[10px] shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all whitespace-nowrap">
-                Unlock VIP
              </button>
           </div>
         </div>
@@ -408,10 +405,10 @@ const healthStats = {
       const toast = document.createElement('div');
       toast.id = 'freshness-toast';
       toast.style.cssText = `
-        position: fixed; bottom: 24px; right: 24px; z-index: 9999;
-        padding: 14px 22px; border-radius: 16px; font-size: 12px;
+        position: fixed; bottom: 20px; right: 20px; z-index: 9999;
+        padding: 10px 16px; border-radius: 12px; font-size: 10px;
         font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.15); cursor: pointer;
+        box-shadow: 0 6px 24px rgba(0,0,0,0.12); cursor: pointer;
         transition: all 0.3s ease; animation: slideUp 0.4s ease-out;
         ${type === 'new' 
           ? 'background: linear-gradient(135deg, #10b981, #059669); color: white;'
@@ -461,7 +458,7 @@ const healthStats = {
       } catch (err) {
         consecutiveFailures++;
         if (consecutiveFailures >= MAX_FAILURES) {
-          showFreshnessBanner('⚠ Live feed unavailable — showing last known data', 'stale');
+          showFreshnessBanner('⚠ working on live sync — using cached pulses', 'stale');
           const toast = document.getElementById('freshness-toast');
           if (toast) toast.dataset.type = 'stale';
         }
