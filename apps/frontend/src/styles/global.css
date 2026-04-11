@@ -7,6 +7,9 @@
     @apply w-2 h-2 rounded-full;
     transform: translateZ(0); /* Force GPU layer */
   }
+  .shadow-card {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.02);
+  }
 }
 
 /* PERFORMANCE: Use standard hidden class for efficient display switching in the feed */
@@ -25,6 +28,8 @@
   body {
     @apply bg-oat-50 text-blueberry-900 antialiased overflow-x-hidden;
     font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.01em;
   }
   h1, h2, h3, h4, .font-heading {
     font-family: 'Outfit', sans-serif;

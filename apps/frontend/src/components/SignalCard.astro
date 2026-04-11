@@ -1,107 +1,73 @@
 ---
 import { normalizeDate } from '@va-hub/db';
-import { getDomainLabel } from '@va-hub/db/taxonomy';
-const { signal, index } = Astro.props;
+const { signal } = Astro.props;
 
 // Defensive Tags Parsing
 const rawTags = signal.tags || [];
 const tags = (typeof rawTags === 'string' ? JSON.parse(rawTags) : rawTags) as string[];
 
-const rawAge = signal.latestActivityMs ? (Date.now() - normalizeDate(signal.latestActivityMs).getTime()) / 3600000 : 0;
-const ageHrs = isNaN(rawAge) ? 0 : Math.max(0, rawAge);
-const isFresh = ageHrs < 4; 
+const getFavicon = (url: string) => {
+  try {
+    const u = new URL(url);
+    // Use DuckDuckGo favicon service for cleaner results or Google as fallback
+    return `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=32`;
+  } catch {
+    return '';
+  }
+};
 
-function getRelativeTime(hrs: number) {
-  if (hrs < 1/60) return 'just now';
-  if (hrs < 1) return `${Math.floor(hrs * 60)}m ago`;
-  if (hrs < 24) return `${Math.floor(hrs)}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
-}
-
-const relativeTime = getRelativeTime(ageHrs);
-
-const tierClass = signal.tier === 0 
-  ? 'border-amber-200/50 bg-amber-50/10' 
-  : signal.tier === 1 
-    ? 'border-emerald-200/30' 
-    : 'border-oat-100';
+const favicon = getFavicon(signal.url);
 ---
 
-<a 
-  href={signal.url} 
-  target="_blank" 
-  class={`opp-item flex items-start gap-3 p-3.5 rounded-xl border transition-all duration-300 group relative active:scale-[0.98] hover:bg-white hover:shadow-xl hover:border-blueberry-900/15 hover:-translate-y-1 ${tierClass}`}
-  data-search={`${signal.title} ${signal.company} ${signal.niche || ''} ${tags.join(' ')}`.toLowerCase()}
-  data-age={ageHrs}
-  data-job-id={signal.id}
->
-
-  <div class="flex items-center gap-2 shrink-0 mt-0.5">
-    <span class="text-[11px] font-black text-blueberry-800/20 italic tabular-nums w-4 shrink-0">{index}.</span>
-    {signal.companyLogo ? (
-      <div class="w-5 h-5 rounded-md bg-white shadow-sm border border-black/5 flex items-center justify-center overflow-hidden shrink-0">
-        <img 
-          src={signal.companyLogo} 
-          width="20" 
-          height="20" 
-          class="w-full h-full object-contain transition-all" 
-          alt="" 
-          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-        />
-        <div class="hidden w-full h-full items-center justify-center text-[8px] font-black text-white" style={`background-color: ${['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'][Math.abs(signal.company.split('').reduce((a,b) => (((a << 5) - a) + b.charCodeAt(0)) | 0, 0)) % 7]}`}>
+<li class="relative overflow-hidden group/item list-item ml-4">
+  <div class="inline-flex items-center gap-2 pl-2 flex-1 w-full align-middle pt-1 pb-1">
+    <!-- Favicon -->
+    <div class="w-4 h-4 rounded-sm bg-white flex items-center justify-center overflow-hidden shrink-0 border border-blueberry-900/5">
+      {favicon ? (
+        <img src={favicon} alt="" class="w-full h-full object-contain" loading="lazy" />
+      ) : (
+        <div class="w-full h-full bg-blueberry-100 flex items-center justify-center text-[6px] font-bold">
           {signal.company.charAt(0)}
         </div>
-      </div>
-    ) : (
-      <div 
-        class="w-5 h-5 rounded-md flex items-center justify-center shrink-0 shadow-sm border border-black/5"
-        style={`background-color: ${['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'][Math.abs(signal.company.split('').reduce((a,b) => (((a << 5) - a) + b.charCodeAt(0)) | 0, 0)) % 7]}`}
-      >
-        <span class="text-[8px] font-black text-white">{signal.company.charAt(0)}</span>
-      </div>
-    )}
-  </div>
-
-  <div class="min-w-0 flex-1">
-    <div class="flex items-start justify-between gap-2">
-      <h3 class="text-[13px] font-black text-blueberry-900 leading-tight group-hover:text-blueberry-600 transition-colors truncate">
-        {signal.title}
-      </h3>
-      {isFresh && <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 mt-1 shadow-[0_0_8px_rgba(16,185,129,0.4)]"></span>}
+      )}
     </div>
-
-    <div class="flex items-center gap-1.5 flex-wrap mt-1">
-      <span class="text-[9px] text-blueberry-800/50 font-bold uppercase tracking-tight truncate max-w-[100px]">
-        {signal.company || 'Direct'}
-      </span>
-
-      <span class="text-[8px] text-blueberry-800/30 font-black uppercase tracking-widest tabular-nums shrink-0">
-        • {relativeTime}
-      </span>
+    
+    <!-- Title Area -->
+    <a 
+      href={signal.url} 
+      target="_blank" 
+      class="text-blueberry-900 hover:text-blue-600 font-bold flex items-center gap-2 flex-1 min-w-0 text-[13px] tracking-tight relative"
+    >
+      <!-- Stretched link for full-row clickability within the LI content area -->
+      <span class="absolute inset-0 z-10"></span>
       
-      {signal.niche && (
-        <span class="px-1.5 py-0.5 text-[7px] font-black uppercase rounded shadow-sm border border-black/5 bg-blueberry-50 text-blueberry-600">
-          {getDomainLabel(signal.niche)}
-        </span>
-      )}
+      <span class="truncate block max-w-[60%] shrink-0 transition-colors">
+        {signal.title}
+      </span>
 
-      {signal.salary && (
-        <span class="px-1.5 py-0.5 text-[7px] font-black uppercase rounded shadow-sm border border-black/5 bg-emerald-50 text-emerald-700">
-          💰 {signal.salary}
-        </span>
-      )}
-    </div>
+      <!-- Inline Tags -->
+      <div class="flex gap-1 overflow-hidden pointer-events-none relative z-20">
+        {tags.slice(0, 2).map((tag) => (
+          <span class="inline-flex whitespace-nowrap px-1.5 py-0.5 rounded text-[8px] font-extrabold tracking-wider border border-blueberry-900/10 uppercase bg-oat-100/50 text-blueberry-800/60 transition-all group-hover/item:border-blueberry-900/20">
+            {tag}
+          </span>
+        ))}
+        {signal.salary && (
+           <span class="inline-flex whitespace-nowrap px-1.5 py-0.5 rounded text-[8px] font-extrabold tracking-wider border border-emerald-200 uppercase bg-emerald-50 text-emerald-700">
+             💰 {signal.salary}
+           </span>
+        )}
+      </div>
+    </a>
   </div>
-
-  <div class="shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
-    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" class="text-blueberry-300"><path d="M7 17l9.2-9.2M17 17V7H7"/></svg>
-  </div>
-</a>
+</li>
 
 <style>
-  .opp-item {
+  li::marker {
+    @apply text-blueberry-900/30 font-bold text-[12px];
+  }
+  .list-item {
     content-visibility: auto;
-    contain-intrinsic-size: 60px;
-    will-change: transform, opacity;
+    contain-intrinsic-size: 32px;
   }
 </style>
