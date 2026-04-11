@@ -11,17 +11,19 @@ import { desc, not, eq, sql, and } from 'drizzle-orm';
 export async function getSortedSignals(limit = 100) {
   const staleBoundary = Date.now() - (48 * 60 * 60 * 1000); // 48 Hours
 
-  // RANKING LOGIC: 
-  // 1. Freshness Decay (Penalize > 48h)
-  // 2. Tier (0=Platinum)
-  // 3. Relevance Score
-  // 4. Date
+  // GRAVITY RANKING LOGIC (V12): 
+  // Score = (Tier * 24) + (Age in Hours)
+  // Ensures fresh Gold signals flow above stale Platinum ones.
   const query = db.select()
   .from(schema.opportunities)
-  .where(not(eq(schema.opportunities.tier, 4)))
+  .where(
+    and(
+      not(eq(schema.opportunities.tier, 4)),
+      eq(schema.opportunities.isActive, true)
+    )
+  )
   .orderBy(
-    schema.opportunities.tier, 
-    desc(schema.opportunities.latestActivityMs),
+    sql`(tier * 24) + ((unixepoch('now') - (latest_activity_ms / 1000)) / 3600.0) ASC`,
     desc(schema.opportunities.relevanceScore)
   )
   .limit(limit);

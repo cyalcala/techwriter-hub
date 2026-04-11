@@ -146,14 +146,14 @@ export const v12Chef = schedules.task({
             niche: finalExtraction.niche,
             type: finalExtraction.type || 'direct',
             locationType: finalExtraction.locationType || 'remote',
-            sourcePlatform: `Trigger Sifter (${job.source_platform})`,
+            sourcePlatform: `V12 Chef (${job.source_platform})`,
             region: job.region || finalExtraction.region || 'Global',
             metadata: JSON.stringify(finalExtraction.metadata || {}),
           }).onConflictDoUpdate({
             target: opportunities.md5_hash,
             set: {
               lastSeenAt: new Date(),
-              latestActivityMs: nowMs
+              // V12 PERPETUITY FIX: Only update pulse, do not refresh sorting priority for old signals
             }
           });
 

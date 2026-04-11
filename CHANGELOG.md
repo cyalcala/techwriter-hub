@@ -1,4 +1,37 @@
 
+## [2026-04-11] — [V12 SOVEREIGN | PH-FIRST HARDENING]
+**Status: QUALITY SOVEREIGNTY SECURED**
+
+### 🛡️ Hypervisor Hardening
+*   fix: **Artificial Pulse Suppression** — Resolved the "Sticky Staleness" bug where signal refreshes were erroneously updating sorting priority.
+*   fix: **Idempotency Shield 2.0** — Standardized MD5 hashing across all harvesters (Title + Company normalization) to prevent signal drift.
+*   fix: **Source Uniformity** — Standardized naming for `V12 Chef` and `Intelligence Mesh` platforms.
+
+### 🧪 Phosphorus Shield (The Elite Gate)
+*   feat: **The Elite Gabriel Gate** — Implemented strict geographic and quality boundaries for all incoming signals. 
+*   feat: **Sovereign Sweep** — Executed a surgical purge of **425 low-quality signals** (Non-PH-friendly, high-friction, and language-restricted roles).
+*   feat: **Taxonomy Calibration** — Map Recruiters to Admin; implemented negative guards for Creative niche purity.
+
+### 🛰️ Discovery Expansion
+*   feat: **The Great Harvest** — Expanded Greenhouse and Lever discovery coverage with **30+ new verified tokens** (Canva, Maya, GCash, Wise, etc.).
+
+### 🚀 Anti-Staleness & UX
+*   feat: **Gravity Ranking** — Implemented dynamic `(Tier * 24) + Age` sorting to ensure fresh Gold signals outrank stale Platinum ones.
+*   feat: **Cache Detox** — Reduced Vercel CDN TTL from 60m to 5m for near-instant signal agility on the homepage.
+
+---
+
+## [2026-04-11] — [Opportunities: 477 | Agencies: 59]
+**Status: AUTO-PROCESSED**
+
+### ✨ Major Features
+* feat: Project AEON (Operational Immortality Layer) - Phase 1 Complete (b387d67)
+* feat: VA.INDEX Ultimate Resilience (Sovereign Harvester + Fidelity Gate v2 + SRE Escalation) (14d924e)
+* feat: reorder domains and remove freshness toast (d801c0d)
+
+---
+
+
 ## [2026-04-11] — [Opportunities: 477 | Agencies: 59]
 **Status: AUTO-PROCESSED**
 

@@ -47,7 +47,8 @@ export const jobHarvested = inngest.createFunction(
         return await db.update(opportunities)
           .set({ 
             lastSeenAt: new Date(), 
-            latestActivityMs: Date.now() 
+            // V12 PERPETUITY FIX: latestActivityMs must only be updated for TRUE new signals, 
+            // not for artificial pulses. Removing: latestActivityMs: Date.now() 
           })
           .where(eq(opportunities.md5_hash, md5_hash));
       });
@@ -101,7 +102,7 @@ export const jobHarvested = inngest.createFunction(
              locationType: 'remote',
              tier: event.data.tier_hint || heuristic.tier,
              relevanceScore: 0,
-             isPhCompatible: true,
+             isPhCompatible: heuristic.isPhCompatible, // V12 FIX: No more free pass
              metadata: { meta_only: true, region: event.data.region }
            };
         }

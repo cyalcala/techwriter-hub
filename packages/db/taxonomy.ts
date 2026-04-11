@@ -118,12 +118,18 @@ export const DOMAIN_MANIFEST: DomainMapping[] = [
 export function mapTitleToDomain(title: string, description: string = ""): JobDomain {
   const content = `${title} ${description}`.toLowerCase();
   
-  if (content.includes("product design") || content.includes("ux researcher") || content.includes("video editor")) return JobDomain.CREATIVE_MULTIMEDIA;
-  if (content.includes("customer service") || content.includes("support agent") || content.includes("call center")) return JobDomain.BPO_SERVICES;
-  if (content.includes("software engineer") || content.includes("developer") || content.includes("full stack")) return JobDomain.TECH_ENGINEERING;
-  if (content.includes("accountant") || content.includes("accounting") || content.includes("bookkeeper") || content.includes("finance")) return JobDomain.ADMIN_BACKOFFICE;
-  if (content.includes("social media") || content.includes("marketing") || content.includes("seo ")) return JobDomain.MARKETING;
-  if (content.includes("sales") || content.includes("business development") || content.includes("lead gen")) return JobDomain.SALES_GROWTH;
+  // 🛡️ POSITIVE GUARDS: High-intent direct matches
+  if (content.includes("video editor") || content.includes("graphic design")) return JobDomain.CREATIVE_MULTIMEDIA;
+  if (content.includes("customer service") || content.includes("support agent")) return JobDomain.BPO_SERVICES;
+  if (content.includes("software engineer") || content.includes("developer")) return JobDomain.TECH_ENGINEERING;
+  if (content.includes("accountant") || content.includes("bookkeeper") || content.includes("recruiter") || content.includes("hr assistant")) return JobDomain.ADMIN_BACKOFFICE;
+  if (content.includes("marketing") || content.includes("seo ")) return JobDomain.MARKETING;
+  if (content.includes("sales") || content.includes("business development")) return JobDomain.SALES_GROWTH;
+
+  // 🛡️ NEGATIVE GUARDS: Preserve niche purity
+  if (JobDomain.CREATIVE_MULTIMEDIA) {
+    if (content.includes("recruiter") || content.includes("accountant")) return JobDomain.ADMIN_BACKOFFICE;
+  }
 
   for (const mapping of DOMAIN_MANIFEST) {
     if (mapping.keywords.some(k => content.includes(k))) {

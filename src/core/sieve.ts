@@ -1,5 +1,5 @@
 /**
- * VA.INDEX Codified Core: The Sieve v11.0
+ * VA.INDEX Codified Core: The Sieve v12.0 (PH-FIRST)
  * Philippine-First Five-Tier Classification
  * Autonomous Filtering Engine
  */
@@ -17,8 +17,8 @@ import crypto from "node:crypto";
  * 🧬 THE IDEMPOTENCY SHIELD: MD5(JobTitle + Company)
  */
 export function generateIdempotencyHash(title: string, company: string): string {
-  const normalized = `${title.toLowerCase().trim()}${company.toLowerCase().trim()}`;
-  return crypto.createHash("md5").update(normalized).digest("hex");
+  const norm = (title + company).toLowerCase().replace(/[^a-z0-t]/g, '').trim();
+  return crypto.createHash("md5").update(norm).digest("hex");
 }
 
 export interface SiftResult {
@@ -27,6 +27,7 @@ export interface SiftResult {
   displayTags: string[];
   relevanceScore: number;
   md5_hash: string;
+  isPhCompatible: boolean;
 }
 
 const GEO_EXCLUSION_KILLS = [
@@ -171,8 +172,32 @@ export function siftOpportunity(
   const sp = (sourcePlatform || "").toLowerCase();
   const body = `${t} ${d} ${c}`;
 
-  // 1. Core Tiering Logic
-  const tier = calculateTier(t, d, c, co, sp, body, priorityAgencies);
+  // 1. Core Tiering Logic (The Bouncer)
+  let tier = calculateTier(t, d, c, co, sp, body, priorityAgencies);
+  
+  // 🧪 THE PHOSPHORUS SHIELD: Geographic Boundary Breach (Heuristic Edition)
+  const isGlobal = !sp.includes("philippines") && !sp.includes("onlinejobs") && !sp.includes("jobstreet");
+  let isPhCompatible = true;
+
+  if (isGlobal) {
+    const phKeywords = ["philippines", "filipino", "pinoy", "tagalog", "manila", "cebu", "ph", "sea", "apac", "southeast asia", "worldwide", "anywhere"];
+    const hasPHSignal = phKeywords.some(k => body.includes(k));
+    const restrictivePatterns = ["us only", "usa only", "uk only", "north america only", "canada only", "eea only", "eu only", "german speaker", "french speaker"];
+    const hasRestriction = restrictivePatterns.some(p => body.includes(p));
+
+    if (hasRestriction && !body.includes("philippines")) {
+       tier = OpportunityTier.TRASH;
+       isPhCompatible = false;
+    }
+
+    if (!hasPHSignal && tier !== OpportunityTier.PLATINUM) {
+       // Suspect global signal - demote or trash if already weak
+       if (tier >= 3) tier = OpportunityTier.TRASH;
+    }
+  }
+
+  // Final confirmation
+  if (tier === OpportunityTier.TRASH) isPhCompatible = false;
   
   // 2. Taxonomy Mapping
   const domain = mapTitleToDomain(title, description);
@@ -181,29 +206,18 @@ export function siftOpportunity(
   const displayTags = extractDisplayTags(title, description);
   
   // 4. Gravity Scoring (Priority Alpha)
-  let relevanceScore = (3 - tier) * 100; 
-  if (displayTags.includes("PH-DIRECT")) relevanceScore += 75; // Increased weight
-  if (displayTags.includes("PREMIUM")) relevanceScore += 40;   // Increased weight
+  // Base score: (3 - (tier if not TRASH, else 3)) * 100
+  let relevanceScore = (3 - (tier === OpportunityTier.TRASH ? 3 : tier)) * 100; 
+  if (displayTags.includes("PH-DIRECT")) relevanceScore += 75; 
+  if (displayTags.includes("PREMIUM")) relevanceScore += 40;   
   if (displayTags.includes("HIGH PAY")) relevanceScore += 30;
-  
-  // 🛰️ DIRECT-CLIENT BOOST: Looking for the 'Founder' or 'Small Team' signal
-  const directKeywords = ["direct client", "hiring manager", "founder", "owner", "solo founder", "startup founder", "direct hire"];
-  if (directKeywords.some(k => body.includes(k))) {
-    relevanceScore += 50;
-    displayTags.push("DIRECT-BOOST");
-  }
-
-  // 📡 NATIVE-PLATFORM BOOST
-  const nativePlatforms = ["onlinejobs", "jobstreet", "phcareers", "vajobsph"];
-  if (nativePlatforms.some(p => sp.includes(p))) {
-    relevanceScore += 25;
-  }
 
   return {
     tier,
     domain,
     displayTags,
     relevanceScore,
+    isPhCompatible,
     md5_hash: generateIdempotencyHash(title, company || "Generic")
   };
 }
@@ -233,7 +247,6 @@ export async function siftWithDualLLM(rawText: string, metadata: any = {}): Prom
   }
 
   // PHASE 2.2: THE ELITE GABRIEL GATE (Global-to-PH Check)
-  // If not a native PH source, we must be extra certain about "Worldwide" or "APAC/SEA" availability.
   if (!isNativePH) {
     const text = (payload.description || rawText).toLowerCase();
     const isExplicitlyWorldwide = text.includes("worldwide") || text.includes("work from anywhere") || text.includes("location independent");
@@ -246,12 +259,6 @@ export async function siftWithDualLLM(rawText: string, metadata: any = {}): Prom
     if (hasRestriction && !isExplicitlyAPAC) {
       console.warn(`[Elite Gate] Rejected Global Signal: Restrictive pattern detected without APAC/PH bypass.`);
       return null;
-    }
-
-    if (!isExplicitlyWorldwide && !isExplicitlyAPAC) {
-       // Suspect: Mark for lower tier or reject if relevance is low
-       console.log(`[Elite Gate] Suspect Global Signal: No explicit PH/APAC/Worldwide affinity.`);
-       // We'll allow it through but it will likely get BRONZE/TRASH in the next phase
     }
   }
 
@@ -290,7 +297,6 @@ function calculateTier(
   for (const k of GEO_EXCLUSION_KILLS) if (body.includes(k)) return OpportunityTier.TRASH;
   for (const k of LANGUAGE_KILLS) if (t.includes(k)) return OpportunityTier.TRASH;
   
-  // 🔞 NSFW & MALICIOUS SHIELDS
   for (const k of NSFW_KILLS) if (body.includes(k)) return OpportunityTier.TRASH;
   for (const k of MALICIOUS_KILLS) if (body.includes(k)) return OpportunityTier.TRASH;
   
@@ -327,14 +333,14 @@ function calculateTier(
   }
 
   const hasStrongPHSignal = hasDirectPHInTitle || 
-                            PLATINUM_PLATFORMS.some(p => sp.includes(p)) ||
-                            (t.includes("philippines") && (t.includes("only") || t.includes("based")));
+                             PLATINUM_PLATFORMS.some(p => sp.includes(p)) ||
+                             (t.includes("philippines") && (t.includes("only") || t.includes("based")));
 
   if (hasStrongPHSignal) return OpportunityTier.PLATINUM;
   
   const hasWeakPHSignal = PLATINUM_DIRECT.some(s => body.includes(s)) || 
-                          PLATINUM_CITIES.some(ci => body.includes(ci));
-                          
+                           PLATINUM_CITIES.some(ci => body.includes(ci));
+                           
   if (hasWeakPHSignal) return OpportunityTier.GOLD; 
 
   if (GOLD_SIGNALS.some(s => body.includes(s))) return OpportunityTier.GOLD;

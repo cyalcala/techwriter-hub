@@ -30,14 +30,27 @@ const LeverResponseSchema = z.array(LeverJobSchema).default([]);
 const GREENHOUSE_BOARDS = [
   "remotecom", "doist", "automattic", "outsourceaccess", 
   "supportshepherd", "athenaexecutiveassistants",
+  "canva", "wise", "maya", "gcash", "lalamove", "coinsph",
+  "kumu", "tokentainment", "immutable", "kraken", "chainlink",
+  "circle", "uniswap", "paradigm", "consensys", "openzeppelin",
+  "tenderly", "phantom", "magic", "venmo", "squareup"
 ];
 
 const LEVER_BOARDS = [
-  "seamless", "artemis", "remote"
+  "seamless", "artemis", "remote", "hotjar", "postman",
+  "netflix", "reddit", "discord", "figma", "notion",
+  "loom", "linear", "gumroad", "patreon", "substack",
+  "mercury", "brex", "ramp", "modern-treasury"
 ];
 
-function toHash(title: string, url: string) {
-  return createHash("sha256").update(`${title}::${url}`).digest("hex").slice(0, 16);
+/**
+ * Standard V12 Idempotency Hash
+ * Focus: Title + Company (Normalized)
+ * This avoids duplicates if the URL or description changes slightly.
+ */
+function toHash(title: string, company: string) {
+  const norm = (title + company).toLowerCase().replace(/[^a-z0-t]/g, '').trim();
+  return createHash("md5").update(norm).digest("hex");
 }
 
 /**
@@ -71,7 +84,7 @@ export async function fetchATSJobs(): Promise<any[]> {
       const data = parsed.data;
       return data.jobs.map((job) => ({
         id: crypto.randomUUID(),
-        contentHash: toHash(job.title, job.absolute_url),
+        contentHash: toHash(job.title, data.name || board),
         title: job.title,
         company: data.name || board,
         payRange: null, 
@@ -114,7 +127,7 @@ export async function fetchATSJobs(): Promise<any[]> {
       const jobs = parsed.data;
       return jobs.map((job) => ({
         id: crypto.randomUUID(),
-        contentHash: toHash(job.text, job.hostedUrl),
+        contentHash: toHash(job.text, board),
         title: job.text,
         company: board,
         payRange: null,
