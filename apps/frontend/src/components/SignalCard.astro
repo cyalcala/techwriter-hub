@@ -31,7 +31,7 @@ const favicon = getFavicon(signal.url);
     <!-- Favicon -->
     <div class="w-4 h-4 rounded-sm flex items-center justify-center overflow-hidden shrink-0 border border-blueberry-900/8 bg-white">
       {favicon ? (
-        <img src={favicon} alt="" class="w-full h-full object-contain" loading="lazy" />
+        <img src={favicon} alt="" width="16" height="16" class="w-full h-full object-contain" loading="lazy" />
       ) : (
         <div class="w-full h-full bg-blueberry-100 flex items-center justify-center text-[7px] font-semibold text-blueberry-900/50">
           {signal.company.charAt(0)}

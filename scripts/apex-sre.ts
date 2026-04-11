@@ -152,6 +152,65 @@ async function runStrategicHunt() {
   }
 }
 
+async function handleCertificationFailure(certOutput: string) {
+  const c = getDb();
+  const SRE_STATE_ID = "sre_escalation_state";
+  
+  try {
+    const result = await c.execute({
+      sql: "SELECT successive_failure_count FROM vitals WHERE id = ?",
+      args: [SRE_STATE_ID]
+    });
+
+    let count = 0;
+    if (result.rows.length === 0) {
+      await c.execute({
+        sql: "INSERT INTO vitals (id, successive_failure_count, lock_updated_at) VALUES (?, 1, ?)",
+        args: [SRE_STATE_ID, Date.now()]
+      });
+      count = 1;
+    } else {
+      count = Number(result.rows[0].successive_failure_count) + 1;
+      await c.execute({
+        sql: "UPDATE vitals SET successive_failure_count = ?, lock_updated_at = ? WHERE id = ?",
+        args: [count, Date.now(), SRE_STATE_ID]
+      });
+    }
+
+    console.log(`⚠️  Certification Failure Count: ${count}/3`);
+
+    if (count >= 3) {
+      console.error("🚨 PERSISTENT CERTIFICATION FAILURE DETECTED (3+ cycles). TRIGGERING NUCLEAR ESCALATION...");
+      if (process.env.VERCEL_DEPLOY_WEBHOOK) {
+        const res = await fetch(process.env.VERCEL_DEPLOY_WEBHOOK, { method: "POST" });
+        console.log(`✅ Autonomous Vercel Redeploy triggered. Status: ${res.status}`);
+      }
+      // Reset counter after escalation to avoid spamming
+      await c.execute({
+        sql: "UPDATE vitals SET successive_failure_count = 0 WHERE id = ?",
+        args: [SRE_STATE_ID]
+      });
+    }
+  } catch (err) {
+    console.warn(`⚠️ Escalation tracker failed: ${err}`);
+  } finally {
+    c.close();
+  }
+}
+
+async function handleCertificationSuccess() {
+  const c = getDb();
+  const SRE_STATE_ID = "sre_escalation_state";
+  try {
+    await c.execute({
+      sql: "UPDATE vitals SET successive_failure_count = 0 WHERE id = ?",
+      args: [SRE_STATE_ID]
+    });
+  } catch {} finally {
+    c.close();
+  }
+}
+
 async function runSreSuite() {
   console.log("\n🚀 Starting Apex SRE Interrogator Suite [AGENTIC MODE]...");
   const startTime = Date.now();
@@ -220,6 +279,7 @@ async function runSreSuite() {
 
     if (certOutput.includes("ALL GATES PASSED")) {
       console.log(`\n🎉 System is HEALTHY. Suite completed in ${((Date.now() - startTime) / 1000).toFixed(2)}s.`);
+      await handleCertificationSuccess();
       
       // 4. PHASE 4: CHRONOS HEARTBEAT (Vector 5: Active Triage)
       // New: Maintenance Ship Triage for stale signals
@@ -297,7 +357,7 @@ async function runSreSuite() {
           if (pushed) {
             await budgetShield.reportSuccess(); // RESET STABILITY TRACKER
             console.log(`\n🚀 System SELF-HEALED and committed in ${((Date.now() - startTime) / 1000).toFixed(2)}s.`);
-            process.exit(2); // 2 = Fixed (Stop Burst)
+            process.exit(0); // 0 = Fixed & Published
           } else {
             console.error("❌ Failed to push AI fix despite certification pass.");
             process.exit(3);
@@ -305,15 +365,12 @@ async function runSreSuite() {
         } else {
           console.error("❌ AI Fix failed simulation. Rolling back.");
           await $`git checkout .`.quiet();
+          await handleCertificationFailure(simOutput);
           process.exit(3); // 3 = Problematic (Keep Bursting)
         }
       } else {
-        console.log(`⚠️ AI Protocol: ${protocol.action} is not yet automated. Routing to emergency redeploy...`);
-        // Fallback to Vercel redeploy
-        if (process.env.VERCEL_DEPLOY_WEBHOOK) {
-          await fetch(process.env.VERCEL_DEPLOY_WEBHOOK, { method: "POST" });
-          console.log("✅ Emergency redeploy triggered.");
-        }
+        console.log(`⚠️ AI Protocol: ${protocol.action} is not yet automated. Routing to emergency escalation...`);
+        await handleCertificationFailure(certOutput);
       }
     } finally {
       await gitAgent.releaseLock();

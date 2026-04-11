@@ -17,7 +17,7 @@
     "db:migrate": "bun run --cwd packages/db migrate",
     "db:migrate:supabase": "bun run packages/db/migrate-supabase-v12.ts",
     "trigger:dev": "bunx trigger.dev@4.4.3 dev --config jobs/trigger.config.ts",
-    "trigger:deploy": "bunx trigger.dev@4.4.3 deploy --config jobs/trigger.config.ts",
+    "trigger:deploy": "node -e \"if(process.platform==='win32'){console.error('🛑 NEVER deploy from Windows (Platform Instability Risk). Use GHA or Linux.');process.exit(1)}\" && bunx trigger.dev@4.4.3 deploy --config jobs/trigger.config.ts",
     "save": "bun run scripts/save.ts",
     "restore": "bun run scripts/restore.ts",
     "resurrect": "bun run scripts/resurrect.ts",

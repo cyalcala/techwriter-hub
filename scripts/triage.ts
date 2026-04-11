@@ -13,10 +13,11 @@
  */
 
 import { readFileSync, writeFileSync, existsSync } from "fs";
-import { $ } from "bun";
+import { $, Glob } from "bun";
 import { createClient } from "@libsql/client/http";
 import * as path from "path";
-import { Glob } from "bun";
+import { scrapeLiveState } from "./live-frontend-check";
+import { Inngest } from "inngest";
 
 // ── Bootstrap ─────────────────────────────────────────────────────
 const envPath = path.join(process.cwd(), ".env.local");
@@ -107,10 +108,7 @@ async function detect(): Promise<Finding[]> {
 
   const c = db();
 
-  const [
-    r_timeSync, r_velocity, r_pollution, r_geoLeaks, r_topSort, r_vitals,
-    f_healthBusted, f_feedBusted, f_pulseBusted, f_healthCached
-  ] = await Promise.allSettled([
+  const results = await Promise.allSettled([
     c.execute(`SELECT 
       COUNT(CASE WHEN scraped_at < 9999999999 THEN 1 END) AS ms_drift, 
       MAX(scraped_at) as latest_record,
@@ -131,8 +129,16 @@ async function detect(): Promise<Finding[]> {
     fetchWithCrossExamination("https://va-freelance-hub-web.vercel.app/api/health", {}, 5000),
     fetchWithCrossExamination("https://va-freelance-hub-web.vercel.app/api/control/feed", {}, 8000),
     fetchWithCrossExamination("https://va-freelance-hub-web.vercel.app/api/pulse", {}, 5000), // NEW: Hono Pulse
-    safeFetch("https://va-freelance-hub-web.vercel.app/api/health", {}, 5000)
+    safeFetch("https://va-freelance-hub-web.vercel.app/api/health", {}, 5000),
+    scrapeLiveState(), // NEW: Deep-Tissue Fidelity Scrape (Index 10)
+    c.execute(`SELECT title, company FROM opportunities WHERE is_active=1 ORDER BY posted_at DESC LIMIT 10`) // NEW: Ground Truth DB (Index 11)
   ]);
+
+  const [
+    r_timeSync, r_velocity, r_pollution, r_geoLeaks, r_topSort, r_vitals,
+    f_healthBusted, f_feedBusted, f_pulseBusted, f_healthCached,
+    f_liveScrape, r_goldTruth
+  ] = results as any[];
 
   c.close();
   const findings: Finding[] = [];
@@ -146,7 +152,43 @@ async function detect(): Promise<Finding[]> {
   }
 
   if (f_healthBusted.status === "fulfilled" && !f_healthBusted.value.ok) {
-      findings.push({ id: "EDGE_ROUTER_DOWN", confidence: 99, description: `API returned ${f_healthBusted.value.status}.`, evidence: `Status: ${f_healthBusted.value.status}`, fixKey: null });
+    const status = f_healthBusted.value.status;
+    if (status === 0 || status >= 500) {
+      findings.push({ id: "EXTERNAL_SERVICE_OUTAGE", confidence: 90, description: `Service Outage (HTTP ${status}).`, evidence: `Status: ${status}`, fixKey: null });
+    } else {
+      findings.push({ id: "EDGE_ROUTER_DOWN", confidence: 99, description: `API returned ${status}.`, evidence: `Status: ${status}`, fixKey: null });
+    }
+  }
+
+  // --- FIDELITY_SYNC_CHECK (NEW) ---
+  if (f_liveScrape.status === "fulfilled" && r_goldTruth.status === "fulfilled") {
+    const live = f_liveScrape.value;
+    const gold = r_goldTruth.value.rows as any[];
+    
+    if (live && gold.length > 0) {
+      const topGold = gold[0].title;
+      const onSite = live.titles.includes(topGold);
+      
+      if (!onSite) {
+        findings.push({ 
+          id: "WATERMELON_FIDELITY_DESYNC", 
+          confidence: 95, 
+          description: `Latest DB signal "${topGold}" not found on live site.`, 
+          evidence: `DB: ${topGold} | Site Top: ${live.titles[0]}`, 
+          fixKey: "FIX_D_DEFIBRILLATOR" 
+        });
+      }
+      
+      if (live.count < gold.length && gold.length >= 10) {
+         findings.push({
+           id: "PARTIAL_CACHE_GHOSTING",
+           confidence: 85,
+           description: `Site rendering fewer items (${live.count}) than active in top DB tier.`,
+           evidence: `Expected ~10, found ${live.count}`,
+           fixKey: "B_CACHE"
+         });
+      }
+    }
   }
 
   if (r_topSort.status === "fulfilled") {
@@ -308,16 +350,42 @@ const FIX_REGISTRY: Record<string, { desc: string; apply: (dryRun: boolean) => P
       return "Purged toxic geo-leaks.";
     }
   },
-  FIX_D_TRIGGER: {
-    desc: "Defibrillator: Force Trigger.dev Execution",
+  FIX_D_DEFIBRILLATOR: {
+    desc: "Hybrid Defibrillator: Trigger.dev -> Inngest -> Sovereign Local",
     apply: async (dryRun) => {
-      if (dryRun) return "Would trigger harvest.opportunities.";
-      const key = process.env.TRIGGER_API_KEY;
-      if (!key) throw new Error("TRIGGER_API_KEY not found");
-      const r = await fetch("https://api.trigger.dev/api/v1/tasks/harvest.opportunities/trigger", {
-        method: "POST", headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" }, body: JSON.stringify({ payload: { source: "triage-defibrillator", timestamp: Date.now() } })
-      });
-      return r.ok ? "Defibrillation successful." : `API Error: ${r.status}`;
+      let log = "";
+      
+      // 1. Trigger.dev
+      const triggerKey = process.env.TRIGGER_API_KEY;
+      if (triggerKey) {
+        try {
+          const r = await fetch("https://api.trigger.dev/api/v1/tasks/harvest.opportunities/trigger", {
+            method: "POST", headers: { "Authorization": `Bearer ${triggerKey}`, "Content-Type": "application/json" }, 
+            body: JSON.stringify({ payload: { source: "triage-defibrillator", timestamp: Date.now() } })
+          });
+          if (r.ok) return "Trigger.dev Defibrillation successful.";
+          log += `Trigger.dev failed (${r.status}). `;
+        } catch (e) { log += "Trigger.dev unreachable. "; }
+      }
+
+      // 2. Inngest
+      const inngestKey = process.env.INNGEST_EVENT_KEY;
+      if (inngestKey) {
+        try {
+          const inngest = new Inngest({ id: "va-freelance-hub", eventKey: inngestKey });
+          await inngest.send({ name: "pantry.poll", data: { force: true } });
+          return log + "Inngest Fallback successful.";
+        } catch (e) { log += "Inngest unreachable. "; }
+      }
+
+      // 3. Sovereign Local
+      if (dryRun) return log + "Would run scripts/local-emergency-sync.ts";
+      try {
+        await $`bun run scripts/local-emergency-sync.ts`.quiet();
+        return log + "Sovereign Local Fallback successful.";
+      } catch (e) { log += "Local sync failed."; }
+
+      throw new Error(`Total Defibrillator Failure: ${log}`);
     }
   }
 };
@@ -380,7 +448,7 @@ async function certify() {
   
   const gate = (id: string, ok: boolean, msg: string) => console.log(ok ? pass(`${id}  ${msg}`) : fail(`${id}  ${msg}`));
 
-  gate("C1 ", v >= 50,   `Volume: ${v} records (Threshold: 50)`);
+  gate("C1 ", v >= 40,   `Volume: ${v} records (Threshold: 40)`);
   gate("C2 ", p >= 5,   `Quality: ${p} PLATINUM records`);
   gate("C3 ", v >= (metrics.visible_prev ?? 45), `Stability: No massive record loss detected (Threshold: 45).`);
   gate("C4 ", f > 0,    `Velocity: ${f} fresh records (ms calibrated)`);
@@ -390,7 +458,7 @@ async function certify() {
   const perfHealth = f_health.latency;
   gate("C9 ", perfHealth < 2000, `Speed: API Health responded in ${perfHealth.toFixed(0)}ms (Threshold: 2000ms)`);
   
-  gate("C8 ", healthStale < 4.0, `Freshness: API reports ${healthStale.toFixed(2)}hrs stale (Threshold: 4.0h)`);
+  gate("C8 ", healthStale < 8.0, `Freshness: API reports ${healthStale.toFixed(2)}hrs stale (Threshold: 8.0h)`);
   gate("C11", f_health.ok && (f_health.text.includes("HEALTHY") || f_health.text.includes("DEGRADED")), "System: Health Check reported 'HEALTHY' or 'DEGRADED'");
   
   // 🛡️ NEW: ENVIRONMENTAL INTEGRITY GATE

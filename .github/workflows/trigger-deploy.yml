@@ -62,12 +62,20 @@ jobs:
         run: |
           # Atomic Deployment without Secret Leakage — using tee for visibility
           bun run trigger:deploy | tee deploy.log
-          VERSION=$(grep -oE "[0-9]{8}\.[0-9]+" deploy.log | head -n 1)
+          
+          # Detect version string (v3 typically uses YYYYMMDD.X or a build hash)
+          VERSION=$(grep -oE "[0-9]{8}\.[0-9]+|[a-f0-9]{7,}" deploy.log | head -n 1)
+          
           if [ ! -z "$VERSION" ]; then
             echo "Promoting version: $VERSION"
-            bunx trigger.dev@4.4.3 promote $VERSION --env prod --config jobs/trigger.config.ts || true
+            bunx trigger.dev@4.4.3 promote $VERSION --env prod --config jobs/trigger.config.ts || {
+              echo "::warning::Promotion failed! Check if version $VERSION exists."
+              exit 1
+            }
           else
-            echo "::error::Could not detect version for promotion. Deployment likely failed."
+            echo "::error::Could not detect version for promotion in deploy.log."
+            echo "--- [DEBUG: DEPLOY LOG TAIL] ---"
+            tail -n 20 deploy.log
             exit 1
           fi
 

@@ -49,4 +49,13 @@ jobs:
           CEREBRAS_API_KEY: ${{ secrets.CEREBRAS_API_KEY }}
           # Fallback to GITHUB_TOKEN if PAT is not provided; critical for GitAgent
           GITHUB_PAT: ${{ secrets.GITHUB_PAT || secrets.GITHUB_TOKEN }}
-        run: bun run scripts/apex-sre.ts
+        run: |
+          set +e
+          bun run scripts/apex-sre.ts
+          EXIT_CODE=$?
+          if [ $EXIT_CODE -eq 0 ] || [ $EXIT_CODE -eq 2 ]; then
+            echo "✅ Apex SRE completed successfully (Code: $EXIT_CODE)"
+            exit 0
+          fi
+          echo "❌ Apex SRE failed with code: $EXIT_CODE"
+          exit $EXIT_CODE
