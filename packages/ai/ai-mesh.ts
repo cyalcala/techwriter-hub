@@ -143,7 +143,7 @@ export class AIMesh {
     ];
 
     if (!isTightBudget) {
-      candidates.push({ name: 'gemini-flash', provider: 'gemini', modelId: 'gemini-1.5-flash' }); // The Wall (Heavy Duty)
+      candidates.push({ name: 'flash-shield', provider: 'gemini' as const, modelId: 'gemini-1.5-flash' }); // Primary Goal (Free Tier)
     }
 
     const extractionQueue = candidates.filter((config: ModelConfig) => {
@@ -154,7 +154,7 @@ export class AIMesh {
 
     if (extractionQueue.length === 0) {
       console.warn('⚠️ [AI-MESH] BUDGET EXHAUSTED: Falling back to Emergency Gemini Pulse.');
-      extractionQueue.push({ name: 'gemini-flash', provider: 'gemini', modelId: 'gemini-1.5-flash' });
+      extractionQueue.push({ name: 'flash-shield', provider: 'gemini', modelId: 'gemini-1.5-flash' });
     }
 
     const cleanContent = this.cleanPayload(html);

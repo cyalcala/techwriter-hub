@@ -55,7 +55,7 @@ ${codebaseContext}
 
     // 🛡️ BudgetShield: Strictly using $0 Free models for reasoning
     const models = [
-      { name: 'gemini-pro', provider: 'gemini' as const, modelId: 'gemini-1.5-pro' }, // Primary Goal (Free Tier)
+      { name: 'flash-shield', provider: 'gemini' as const, modelId: 'gemini-1.5-flash' }, // Primary Goal (Free Tier)
       { name: 'llama-3.1-405b-free', provider: 'openrouter' as const, modelId: 'meta-llama/llama-3.1-405b-instruct:free' },
       { name: 'deepseek-chat-free', provider: 'openrouter' as const, modelId: 'deepseek/deepseek-chat:free' },
       { name: 'qwen-72b-free', provider: 'openrouter' as const, modelId: 'qwen/qwen-2-72b-instruct:free' }

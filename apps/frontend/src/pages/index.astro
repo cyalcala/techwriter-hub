@@ -127,11 +127,7 @@ const processedMirror = mirrorSignals;
 import { getRegionalHealth } from '@va-hub/db/health-utils';
 
 const regionalHealth = await getRegionalHealth();
-const staleRegions = new Set(
-  regionalHealth
-    .filter(r => r.state === 'STALE' || r.state === 'SUSPECT_HEARTBEAT')
-    .map(r => r.name)
-);
+
 
 const domains = topDomains.map((domain) => ({
   domain,
@@ -238,7 +234,7 @@ const healthStats = {
               <div class="flex flex-col gap-2.5 p-2 domain-signals-container">
                 {domain.signals.map((sig, idx) => (
                   <div class={`signal-wrapper ${idx >= 15 ? 'hidden' : ''}`} data-index={idx}>
-                    <SignalCard signal={sig} index={idx + 1} isCold={staleRegions.has(sig.region)} />
+                    <SignalCard signal={sig} index={idx + 1} />
                   </div>
                 ))}
 

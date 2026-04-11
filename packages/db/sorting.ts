@@ -20,10 +20,9 @@ export async function getSortedSignals(limit = 100) {
   .from(schema.opportunities)
   .where(not(eq(schema.opportunities.tier, 4)))
   .orderBy(
-    sql`CASE WHEN ${schema.opportunities.latestActivityMs} < ${staleBoundary} THEN 1 ELSE 0 END`, // Decay Penalty
     schema.opportunities.tier, 
-    desc(schema.opportunities.relevanceScore), 
-    desc(schema.opportunities.latestActivityMs)
+    desc(schema.opportunities.latestActivityMs),
+    desc(schema.opportunities.relevanceScore)
   )
   .limit(limit);
 
@@ -47,10 +46,9 @@ export async function getSignalsByDomain(domain: string, limit = 20) {
       )
     )
     .orderBy(
-      sql`CASE WHEN ${schema.opportunities.latestActivityMs} < ${staleBoundary} THEN 1 ELSE 0 END`, // Decay Penalty
       schema.opportunities.tier, 
-      desc(schema.opportunities.relevanceScore), 
-      desc(schema.opportunities.latestActivityMs)
+      desc(schema.opportunities.latestActivityMs),
+      desc(schema.opportunities.relevanceScore)
     )
     .limit(limit);
 }

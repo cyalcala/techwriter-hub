@@ -8,7 +8,7 @@ import type { NewOpportunity } from "../../packages/db/schema";
  */
 
 const API_KEY = process.env.GEMINI_API_KEY;
-const MODEL = "gemini-2.5-flash-lite";
+const MODEL = "gemini-1.5-flash";
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1/models/${MODEL}:generateContent?key=${API_KEY}`;
 
 export interface FixProtocol {
