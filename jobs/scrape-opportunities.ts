@@ -33,6 +33,7 @@ async function recordLog(message: string, level: 'info' | 'warn' | 'error' | 'sn
   }
 }
 
+export async function harvest(options?: { unhealthySources?: string[], targetRegion?: string, runnerId?: string }) {
   // 1. V12 CIRCUIT BREAKER: Check if Scout is Allowed to Fly
   const runnerId = options?.runnerId || 'trigger';
   const { getTriggerStatus, acquireLease } = await import("../packages/db/governance");
@@ -50,7 +51,6 @@ async function recordLog(message: string, level: 'info' | 'warn' | 'error' | 'sn
   }
 
   const targetSources = options?.unhealthySources || [];
-  const targetRegion = options?.targetRegion;
   const startTime = Date.now();
   
   await recordLog(`══ Starting V12 Signal Harvesting Sequence ${targetRegion ? `(${targetRegion})` : '(ALL)'} ══`, "info");

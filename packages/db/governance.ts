@@ -143,26 +143,25 @@ export async function emitIngestionHeartbeat(source: string, region: string = 'G
  * @returns true if lease was ACQUIRED, false if already held.
  */
 export async function acquireLease(engineId: string, region: string = 'GLOBAL', windowMinutes: number = 25) {
-  const now = Date.now();
-  const windowMs = windowMinutes * 60 * 1000;
-  const cutoff = new Date(now - windowMs);
+  const now = Math.floor(Date.now() / 1000); // SQLite-compatible SECONDS
+  const windowSec = windowMinutes * 60;
+  const cutoff = now - windowSec;
 
   try {
      // ATOMIC OPERATION: Update ONLY if last_harvest_at is old or NULL
+     // We use integer comparison on seconds
      const result = await db.run(sql`
         UPDATE vitals 
         SET 
           last_harvest_at = ${now}, 
           last_harvest_engine = ${engineId},
           lock_status = 'BUSY',
-          lock_updated_at = ${now}
+          lock_updated_at = ${new Date()}
         WHERE 
           id = ${`HEARTBEAT_${region}`} 
-          AND (last_harvest_at < ${cutoff.getTime()} OR last_harvest_at IS NULL)
+          AND (last_harvest_at < ${cutoff} OR last_harvest_at IS NULL)
      `);
 
-     // In LibSQL result.rowsAffected or similar indicates if the update happened
-     // Since result format varies by driver, we check record count
      if (result.rowsAffected === 1) {
         console.log(`📡 [APEX] Lease ACQUIRED by '${engineId}' for ${region}.`);
         return true;

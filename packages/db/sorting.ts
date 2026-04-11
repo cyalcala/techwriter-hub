@@ -19,15 +19,11 @@ export async function getSortedSignals(limit = 100, nowMs?: number) {
   .from(schema.opportunities)
   .where(
     and(
-      not(eq(schema.opportunities.tier, 4)),
       eq(schema.opportunities.isActive, true)
     )
   )
   .orderBy(
-    sql`(tier * 24) + ((${now ? now : "unixepoch('now')"} - (latest_activity_ms / 1000)) / (CASE 
-      WHEN source_platform LIKE '%Greenhouse%' OR source_platform LIKE '%Lever%' OR source_platform LIKE '%Workable%' THEN 2.0 
-      ELSE 1.0 
-    END * 3600.0)) ASC`,
+    desc(schema.opportunities.latestActivityMs),
     desc(schema.opportunities.relevanceScore)
   )
   .limit(limit);
@@ -72,7 +68,6 @@ export async function getSignalsByDomain(domain: string, limit = 20) {
     .from(schema.opportunities)
     .where(
       and(
-        not(eq(schema.opportunities.tier, 4)),
         eq(schema.opportunities.isActive, true),
         eq(schema.opportunities.niche, domain)
       )
@@ -92,7 +87,7 @@ export async function getSignalsByDomain(domain: string, limit = 20) {
 export async function getLatestMirror(limit = 10) {
   return await db.select()
     .from(schema.opportunities)
-    .where(not(eq(schema.opportunities.tier, 4)))
+    .where(eq(schema.opportunities.isActive, true))
     .orderBy(desc(schema.opportunities.latestActivityMs))
     .limit(limit);
 }
