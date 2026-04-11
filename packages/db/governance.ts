@@ -115,6 +115,7 @@ export async function emitIngestionHeartbeat(source: string, region: string = 'G
     }).onConflictDoUpdate({
       target: [vitals.id],
       set: {
+        region,
         lastIngestionHeartbeatMs: now,
         lastProcessingHeartbeatMs: now,
         heartbeatSource: source,
