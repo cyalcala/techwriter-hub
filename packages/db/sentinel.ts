@@ -33,17 +33,54 @@ export class ApexSentinel {
       // 2. Deadlock Purge (The Heart)
       await this.purgeGhostLocks();
 
-      // 3. Economic Guardrails (The Budget)
+      // 3. Surgical Defrost (The SRE)
+      await this.defrostAIProviders();
+
+      // 4. Economic Guardrails (The Budget)
       await this.enforceEconomics();
 
-      // 4. Chronos Reaping (The Scythe)
+      // 5. Chronos Reaping (The Scythe)
       await this.reapStaleOpportunities();
       
-      // 5. Hard Pruning (The Insurance)
+      // 6. Hard Pruning (The Insurance)
       await this.pruneLegacyData();
+
+      // 7. Shadow Vault Synchronization (The Recovery)
+      await this.synchronizeShadowVault();
 
     } catch (err: any) {
       console.error(`🚫 [SENTINEL] Triage failure: ${err.message}`);
+    }
+  }
+
+  /**
+   * ❄️ SURGICAL DEFROST
+   * Automatically clears AI provider blocks if they have been silent for > 15 minutes.
+   */
+  private async defrostAIProviders() {
+    console.log("❄️ [SENTINEL] Auditing AI Cooldowns for potential defrosting...");
+    const DEFROST_THRESHOLD_MS = 15 * 60 * 1000; // 15 minutes
+    const now = Date.now();
+
+    try {
+      const { aiCooldowns } = await import('./schema');
+      const { and, lte, eq } = await import('drizzle-orm');
+
+      // Identify providers that have been blocked for more than 15 minutes
+      const result = await db.delete(aiCooldowns)
+        .where(
+          lte(aiCooldowns.blockedAt, new Date(now - DEFROST_THRESHOLD_MS))
+        );
+
+      if (result.rowsAffected > 0) {
+        console.log(`🔥 [SENTINEL] Defrosted ${result.rowsAffected} AI providers. Mesh diversity restored.`);
+        await db.update(vitals).set({
+            lastInterventionAt: new Date(),
+            lastInterventionReason: `Surgical Defrost: Cleared ${result.rowsAffected} stale AI cooldowns.`
+        }).where(eq(vitals.id, 'GLOBAL'));
+      }
+    } catch (err: any) {
+      console.error(`❄️ [SENTINEL] Defrost failure: ${err.message}`);
     }
   }
 
@@ -212,6 +249,76 @@ export class ApexSentinel {
       }
     } catch (err: any) {
       console.error(`💰 [SENTINEL] Economic guardrail failure: ${err.message}`);
+    }
+  /**
+   * 🏮 SHADOW VAULT SYNCHRONIZATION
+   * Recover processed leads that were "staged" in Supabase due to Turso downtime.
+   */
+  private async synchronizeShadowVault() {
+    console.log("🏮 [SENTINEL] Checking Shadow Vault for staged signals...");
+    
+    try {
+      const { supabase } = await import('./supabase');
+      const { data: stagedJobs } = await supabase
+        .from('raw_job_harvests')
+        .select('*')
+        .eq('status', 'PLATED_STAGED')
+        .limit(25);
+
+      if (!stagedJobs || stagedJobs.length === 0) return;
+
+      console.log(`🏮 [SENTINEL] Found ${stagedJobs.length} shadow-plated signals. Attempting translocation...`);
+      const { withRetry } = await import('./client');
+      const { opportunities } = await import('./schema');
+
+      let recovered = 0;
+      for (const job of stagedJobs) {
+        try {
+          const mapped = job.mapped_payload;
+          if (!mapped) continue;
+
+          await withRetry(async () => {
+            return await db.insert(opportunities).values({
+              id: (await import("crypto")).randomUUID(),
+              md5_hash: (await import('../../apps/frontend/src/lib/inngest/chef-logic')).generateMd5Hash(mapped.title, mapped.company || 'Generic'),
+              title: mapped.title,
+              company: mapped.company || 'Confidential',
+              url: job.source_url,
+              description: mapped.description,
+              salary: mapped.salary || null,
+              niche: mapped.niche,
+              type: mapped.type || 'direct',
+              locationType: mapped.locationType || 'remote',
+              sourcePlatform: `V12 Sentinel Recovery (${job.source_platform})`,
+              region: job.region || "Philippines",
+              scrapedAt: new Date(job.created_at),
+              isActive: true,
+              tier: mapped.tier,
+              relevanceScore: mapped.relevanceScore,
+              latestActivityMs: Date.now(),
+              metadata: JSON.stringify({ ...mapped.metadata, recovered_by: 'sentinel' }),
+            }).onConflictDoUpdate({
+              target: opportunities.md5_hash,
+              set: {
+                lastSeenAt: sql`CURRENT_TIMESTAMP`,
+                latestActivityMs: Date.now()
+              }
+            });
+          });
+
+          // Atomic Purge
+          await supabase.from('raw_job_harvests').delete().eq('id', job.id);
+          recovered++;
+        } catch (e: any) {
+          console.error(`🏮 [SENTINEL] Recovery failed for ${job.id}: ${e.message}`);
+        }
+      }
+
+      if (recovered > 0) {
+        console.log(`✅ [SENTINEL] Successfully recovered ${recovered} signals from shadow vault.`);
+      }
+    } catch (err: any) {
+      console.error(`🏮 [SENTINEL] Vault synchronization failure: ${err.message}`);
     }
   }
 }

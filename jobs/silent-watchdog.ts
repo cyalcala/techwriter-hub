@@ -14,7 +14,7 @@ import { eq, desc, gte, sql } from "drizzle-orm";
  */
 export const silentWatchdogTask = schedules.task({
   id: "silent-watchdog",
-  cron: "*/15 * * * *", 
+  // cron: "*/15 * * * *", 
   maxDuration: 300,
   run: async () => {
     const { db, client } = createDb();

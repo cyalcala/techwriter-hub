@@ -6,7 +6,6 @@
 
 import { Inngest } from "inngest";
 import { serve } from "inngest/astro";
-import { createHash, randomUUID } from "crypto";
 import { siftOpportunity, OpportunityTier } from "../../../../../src/core/sieve";
 
 // 1. Initialize Inngest client
@@ -18,39 +17,8 @@ const EDGE_PROXY_SECRET = process.env.VA_PROXY_SECRET;
 import { chronosHeartbeat } from "../../lib/inngest/heartbeat";
 import { sentinelPulse, jobHarvested } from "../../lib/inngest/functions";
 import { heuristicLearner } from "../../lib/inngest/learning";
-
-function htmlToText(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-async function getCookablePayload(job: { raw_payload?: string; source_url?: string | null }): Promise<string> {
-  if (job.raw_payload && job.raw_payload !== GHOST_SENTINEL && job.raw_payload.length >= 120) {
-    return job.raw_payload;
-  }
-  if (!job.source_url) throw new Error("Missing source_url for ghost hydration");
-
-  const proxiedUrl = new URL(EDGE_PROXY_URL);
-  proxiedUrl.searchParams.set("url", job.source_url);
-  const useEdgeProxy = Boolean(EDGE_PROXY_URL && EDGE_PROXY_SECRET);
-
-  const res = await fetch(useEdgeProxy ? proxiedUrl.toString() : job.source_url, {
-    signal: AbortSignal.timeout(15000),
-    headers: useEdgeProxy
-      ? { "X-VA-Proxy-Secret": EDGE_PROXY_SECRET as string, "user-agent": "VAHubKitchen/1.0 (+ingest-hydration)" }
-      : { "user-agent": "VAHubKitchen/1.0 (+ingest-hydration)" },
-  });
-  if (!res.ok) throw new Error(`Hydration fetch failed: ${res.status}`);
-
-  const html = await res.text();
-  const text = htmlToText(html);
-  if (!text || text.length < 120) throw new Error("Hydration yielded insufficient content");
-  return text.slice(0, 20000);
-}
+import { getCookablePayload, generateMd5Hash, cookAndStrategize } from "../../lib/inngest/chef-logic";
+import { sql } from "drizzle-orm";
 
 /**
  * Chef Function: Poll the Supabase Pantry → Extract → Plate to Turso
@@ -77,66 +45,42 @@ const pantryPoll = inngestClient.createFunction(
       return { status: "empty_pantry" };
     }
 
-    // 3. Process + Prep (Plate to Supabase Staging)
-    const processingResults = await step.run("extract-and-prep", async () => {
-      const { AIMesh } = await import("../../../../../packages/ai/ai-mesh");
+    // 3. Process + Prep (Action: Cook & Strategize)
+    const processingResults = await step.run("executive-cook", async () => {
       const results = [];
+      const { config } = await import("../../../../../packages/config");
+      
       for (const job of jobs) {
         try {
-
-          // A. PH-Compatibility Gate & Regional Isolation
-          const { config } = await import("../../../../../packages/config");
           const jobRegion = (job as any).region || "Global";
           const isPrimary = jobRegion === config.primary_region;
 
-          let finalExtraction;
+          // PREP: Get cookable payload
+          const cookablePayload = await getCookablePayload(job);
           
+          let finalExtraction;
           if (isPrimary) {
-            const cookablePayload = await getCookablePayload(job);
-            if (cookablePayload !== job.raw_payload) {
-              await supabase
-                .from("raw_job_harvests")
-                .update({ raw_payload: cookablePayload, updated_at: new Date().toISOString() })
-                .eq("id", job.id);
-            }
-
-            // High-Fidelity AI Extraction
-            const extraction = await AIMesh.extract(cookablePayload);
-            const heuristic = siftOpportunity(
-              extraction.title,
-              extraction.description,
-              extraction.company || "Generic",
-              job.source_platform || "V12 Mesh"
-            );
-            finalExtraction = {
-              ...extraction,
-              niche: heuristic.domain,
-              tier: heuristic.tier,
-              relevanceScore: Math.max(extraction.relevanceScore ?? 0, heuristic.relevanceScore),
-              metadata: {
-                ...(extraction.metadata || {}),
-                sieveTier: heuristic.tier,
-                sieveDomain: heuristic.domain,
-                region: jobRegion
-              },
-            };
+             // COOK & STRATEGIZE (Dual LLM)
+             finalExtraction = await cookAndStrategize(cookablePayload, {
+               source: job.source_platform || "V12 Pantry Chef",
+               region: jobRegion
+             });
           } else {
-            // Metadata-Only Skeleton
-            console.log(`🚥 [GOLDILOCKS] Metadata-Only sifting in Pantry for ${jobRegion}`);
-            const heuristic = siftOpportunity(job.title || "Unknown", job.raw_payload || "", job.source_platform || "V12", "Metadata Only");
-            finalExtraction = {
-               title: job.title || "Job Opportunity",
-               company: "Confidential",
-               description: "Metadata-only signal sync.",
-               salary: null,
-               niche: heuristic.domain,
-               type: 'direct',
-               locationType: 'remote',
-               tier: heuristic.tier,
-               relevanceScore: 0,
-               isPhCompatible: true,
-               metadata: { meta_only: true, region: jobRegion }
-            };
+             // Metadata-Only Fallback
+             const heuristic = siftOpportunity(job.title || "Unknown", cookablePayload, job.source_platform || "V12", "Metadata Only");
+             finalExtraction = {
+                title: job.title || "Job Opportunity",
+                company: "Confidential",
+                description: "Metadata-only signal sync.",
+                salary: null,
+                niche: heuristic.domain,
+                type: 'direct',
+                locationType: 'remote',
+                tier: heuristic.tier,
+                relevanceScore: 0,
+                isPhCompatible: heuristic.isPhCompatible,
+                metadata: { meta_only: true, region: jobRegion }
+             };
           }
           
           // B. Sifter Guard: THE PHOSPHORUS SHIELD
@@ -245,12 +189,10 @@ const syncSweep = inngestClient.createFunction(
           relevanceScore: typeof mapped.relevanceScore === "number" ? mapped.relevanceScore : fallbackHeuristic.relevanceScore,
         };
         
-        const md5_hash = createHash("md5")
-            .update((finalMapped.title || '') + (finalMapped.company || ''))
-            .digest("hex");
+        const md5_hash = generateMd5Hash(finalMapped.title || "", finalMapped.company || "Generic");
 
         valuesToInsert.push({
-          id: randomUUID(),
+          id: (await import("crypto")).randomUUID(),
           md5_hash,
           title: finalMapped.title,
           company: finalMapped.company || 'Confidential',
@@ -352,29 +294,11 @@ const triggerReset = inngestClient.createFunction(
  * A 30-minute cron that runs the harvest sequence.
  * This is our "Zero-Credit" bridge that ensures we keep finding jobs if Trigger.dev is paused.
  */
-const scoutFailover = inngestClient.createFunction(
-  { id: "v12-scout-failover", name: "V12 Scout: Harrier Failover", triggers: [{ cron: "*/30 * * * *" }] },
-  async ({ step }) => {
-    const { harvest } = await import("../../../../../jobs/scrape-opportunities");
-    const { recordHarvestSuccess } = await import("../../../../../packages/db/governance");
 
-    const result = await step.run("execute-harvest", async () => {
-      // Pass runnerId to bypass Trigger.dev circuit breaker
-      const harvestResult = await harvest({ runnerId: 'inngest' });
-      
-      if (harvestResult.emitted > 0) {
-        await recordHarvestSuccess('inngest', 'Philippines');
-      }
-
-      return harvestResult;
-    });
-    return { status: "harvest_cycle_complete", result };
-  }
-);
-
-// 4. Export endpoint serve handlers
+// 4. Export endpoint serve handlers with Signature Security
 export const { GET, POST, PUT } = serve({ 
   client: inngestClient, 
-  functions: [pantryPoll, syncSweep, triggerReset, scoutFailover, chronosHeartbeat, sentinelPulse, jobHarvested, heuristicLearner] 
+  signingKey: process.env.INNGEST_SIGNING_KEY,
+  functions: [pantryPoll, syncSweep, triggerReset, chronosHeartbeat, sentinelPulse, jobHarvested, heuristicLearner] 
 });
 

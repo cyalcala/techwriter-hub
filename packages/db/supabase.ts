@@ -8,7 +8,7 @@ import { createClient } from '@supabase/supabase-js';
  * High-speed ingestion (Cloudflare) -> Supabase -> AI Processing (Inngest/Trigger).
  */
 
-export type HarvestStatus = 'LEAD' | 'RAW' | 'PROCESSING' | 'PROCESSED' | 'FAILED' | 'PLATED';
+export type HarvestStatus = 'LEAD' | 'RAW' | 'PROCESSING' | 'PROCESSED' | 'FAILED' | 'PLATED' | 'PLATED_STAGED';
 export type TriageStatus = 'PENDING' | 'PASSED' | 'REJECTED';
 
 export interface RawJobHarvest {

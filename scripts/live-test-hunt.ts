@@ -1,5 +1,12 @@
 import { supabase } from "../packages/db/supabase";
-import { INNGEST_EVENT_KEY } from "../packages/db/supabase"; // Mocking the env for script
+import 'dotenv/config';
+import path from "path";
+import { fileURLToPath } from "url";
+import dotenv from "dotenv";
+
+// V12 Path Resolution for scripts
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 async function simulateHunt() {
   console.log("🚜 [LIVE_TEST] Hunter V12.3 searching for Ghost Leads...");
@@ -46,7 +53,11 @@ async function simulateHunt() {
   }
 
   // 4. RING THE BELL 🔔
-  const eventKey = "eUhXwrLoBK6__htkbP1pbz-iGd0qw2w0ohUQbWHMf6vijVRcdU3SqlKF_YcUE4nomyF-jWAuLHJ38mNvnZBqqA";
+  const eventKey = process.env.INNGEST_EVENT_KEY;
+  if (!eventKey) {
+    console.error("❌ [LIVE_TEST] Missing INNGEST_EVENT_KEY in environment.");
+    return;
+  }
   await fetch(`https://innge.st/e/${eventKey}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

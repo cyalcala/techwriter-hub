@@ -52,7 +52,7 @@ async function getCookablePayload(job: { raw_payload?: string; source_url?: stri
  */
 export const v12Chef = schedules.task({
   id: "v12-pantry-sous-chef",
-  cron: "0,30 * * * *", // Every 30 minutes
+  // cron: "0,30 * * * *", // Every 30 minutes
   run: async (payload) => {
     const { getTriggerStatus, setTriggerExhausted } = await import("../packages/db/governance");
     

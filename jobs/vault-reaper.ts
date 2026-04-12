@@ -13,7 +13,7 @@ import { lte, and, eq } from "drizzle-orm";
  */
 export const vaultReaperTask = schedules.task({
   id: "vault-reaper",
-  cron: "0 3 * * *", 
+  // cron: "0 3 * * *", 
   run: async () => {
     const { db, client } = createDb();
     const SIXTY_DAYS_AGO = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);

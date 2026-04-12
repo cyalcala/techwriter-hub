@@ -1,6 +1,7 @@
 import { createClient, type Client } from "@libsql/client";
 import { drizzle, type LibSQLDatabase } from "drizzle-orm/libsql";
 import * as dbSchema from "./schema";
+import { sql } from "drizzle-orm";
 
 /**
  * VA.INDEX Titanium Database Client
@@ -41,4 +42,43 @@ export function createDb(): DbInstance {
 // Global Singletons (Preferred for all tasks)
 export const { db, client, schema } = createDb();
 export const closeDb = () => client.close();
+
+/**
+ * 🛰️ TITANIUM HEALTH CHECK
+ */
+export async function dbAlive(): Promise<boolean> {
+  try {
+    await db.run(sql`SELECT 1`);
+    return true;
+  } catch (e) {
+    console.error(`[va-hub/db] 💔 Turso disconnected:`, e);
+    return false;
+  }
+}
+
+/**
+ * 🛡️ TITANIUM RETRY WRAPPER
+ * Sophisticated exponential backoff for S1 operations.
+ */
+export async function withRetry<T>(
+  operation: () => Promise<T>,
+  maxAttempts: number = 3,
+  delayMs: number = 1000
+): Promise<T> {
+  let lastError: any;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await operation();
+    } catch (err: any) {
+      lastError = err;
+      const isRetryable = err.message?.includes('busy') || err.message?.includes('timeout') || err.message?.includes('connection');
+      if (!isRetryable || attempt === maxAttempts) break;
+      
+      const wait = delayMs * Math.pow(2, attempt - 1);
+      console.warn(`[va-hub/db] 🔄 Retry attempt ${attempt}/${maxAttempts} (Wait ${wait}ms) for error: ${err.message}`);
+      await new Promise(r => setTimeout(r, wait));
+    }
+  }
+  throw lastError;
+}
 

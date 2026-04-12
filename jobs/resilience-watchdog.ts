@@ -23,7 +23,7 @@ const auditModel = genAI.getGenerativeModel({
 
 export const resilienceWatchdogTask = schedules.task({
   id: "resilience-watchdog",
-  cron: "0 */2 * * *", // Checked every 2 hours
+  // cron: "0 */2 * * *", // Checked every 2 hours
   maxDuration: 300,
   run: async () => {
     try {

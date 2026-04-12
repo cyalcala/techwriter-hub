@@ -142,7 +142,7 @@ export async function harvest(options?: { unhealthySources?: string[], targetReg
 
 export const scrapeOpportunitiesTask = schedules.task({
   id: "harvest-opportunities",
-  cron: "*/20 * * * *", // Staggered: 20-min cadence (The Goldilocks Rule)
+  // cron: "*/20 * * * *", // Staggered: 20-min cadence (The Goldilocks Rule)
   queue: { concurrencyLimit: 1 },
   run: async (payload: any, { ctx }: any) => {
     const { getTriggerStatus, setTriggerExhausted, acquireLease, recordHarvestSuccess } = await import("../packages/db/governance");
