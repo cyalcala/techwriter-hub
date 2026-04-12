@@ -1,13 +1,11 @@
 import { sqliteTable, text, integer, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
 
 export const VA_NICHES = [
-  'TECH_ENGINEERING',
-  'MARKETING',
-  'SALES_GROWTH',
-  'VA_SUPPORT',
-  'ADMIN_BACKOFFICE',
-  'CREATIVE_MULTIMEDIA',
-  'BPO_SERVICES'
+  'TECHNICAL_WRITING',
+  'API_DOCUMENTATION',
+  'UX_WRITING',
+  'CONTENT_DESIGN',
+  'DEVELOPER_ADVOCACY'
 ] as const;
 
 export type VaNiche = typeof VA_NICHES[number];

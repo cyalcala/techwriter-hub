@@ -1,5 +1,5 @@
 import { defineConfig } from 'astro/config';
-import vercel from '@astrojs/vercel/serverless';
+import cloudflare from '@astrojs/cloudflare';
 import tailwind from '@astrojs/tailwind';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,8 +8,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   output: 'server',
-  adapter: vercel({
-    maxDuration: 60,
+  adapter: cloudflare({
+    platformProxy: {
+      enabled: true,
+    },
   }),
   integrations: [tailwind()],
 

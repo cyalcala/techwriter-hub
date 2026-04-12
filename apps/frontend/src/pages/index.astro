@@ -2,457 +2,81 @@
 export const prerender = false;
 import Layout from '../layouts/Layout.astro';
 import SignalCard from '../components/SignalCard.astro';
-import MirrorStage from '../components/MirrorStage.astro';
-import RegionalHealth from '../components/RegionalHealth.astro';
+import { createDb } from '@va-hub/db/client';
+import { opportunities } from '@va-hub/db/schema';
+import { desc, eq } from 'drizzle-orm';
 
-import { getSortedSignals, getLatestMirror } from '@va-hub/db/sorting';
-import { db, schema, normalizeDate } from '@va-hub/db/client';
-import { sql, eq } from 'drizzle-orm';
-import { JobDomain, getDomainSlug, getDomainLabel, mapTitleToDomain } from '@va-hub/db/taxonomy';
-import { config } from '@va-hub/config';
+// 📡 SOVEREIGN DATA FETCH
+const { env } = Astro.locals.runtime;
+const { db } = createDb(env.DB);
 
-// BUST THE CACHE: Ultra-Fresh Delivery Protocol
-Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, max-age=0, must-revalidate');
-Astro.response.headers.set('CDN-Cache-Control', 'no-store'); // Force Vercel Edge bypass
-Astro.response.headers.set('Pragma', 'no-cache');
-Astro.response.headers.set('Expires', '0');
-
-const RENDER_TIME_MS = Date.now();
-
-let initialSignals = [];
-let mirrorSignals = [];
-let dbError = null;
-const CACHE_BUST = Date.now();
+let signals = [];
+let pulseStatus = "SYSTEM NOMINAL";
+let lastPulse = "Just now";
 
 try {
-  if (process.env.TURSO_DATABASE_URL) {
-    const dataPromise = Promise.all([
-      getSortedSignals(400, RENDER_TIME_MS), // Pass render time for dynamic aging
-      getLatestMirror(10),
-      // Pulse verified via RENDER_TIME_MS
-    ]);
+  // 🍽️ PLATE: Fetch all active TechWriter jobs
+  signals = await db.select()
+    .from(opportunities)
+    .where(eq(opportunities.isActive, true))
+    .orderBy(desc(opportunities.latestActivityMs))
+    .limit(100);
 
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error("Edge Latency Threshold Exceeded (5s)")), 5000)
-    );
-    
-    const [signals, mirror] = await Promise.race([dataPromise, timeoutPromise]) as any;
-    
-    initialSignals = signals || [];
-    mirrorSignals = mirror || [];
-    
-    if (initialSignals.length === 0) {
-      console.warn('[SRE_CUSTODY] Turso vault is currently empty. Serving domain shell.');
-    }
-  } else {
-    throw new Error("Edge Configuration Missing (TURSO_URL)");
+  // 🏺 BODEGA: Check heartbeat
+  const lastHarvest = await env.BODEGA.get("pulse:last_harvest");
+  if (lastHarvest) {
+    const diff = Date.now() - parseInt(lastHarvest);
+    if (diff > 3600000) pulseStatus = "PULSE STALE";
+    lastPulse = new Intl.RelativeTimeFormat('en', { style: 'short' }).format(-Math.round(diff / 60000), 'minutes');
   }
-} catch (err: any) {
-  console.error(`[SRE_CUSTODY] CRITICAL: Frontend Data Fetch Failure: ${err.message}`);
-  throw new Error(`[SRE_CUSTODY] DATABASE_CUSTODY_LOST: ${err.message}.`);
+} catch (err) {
+  console.error("Failed to load TechWriter signals:", err);
 }
-
-// ── DOMAIN ORCHESTRATION ──
-const topDomains = [
-  JobDomain.VA_SUPPORT, 
-  JobDomain.BPO_SERVICES,
-  JobDomain.SALES_GROWTH,
-  JobDomain.MARKETING,
-  JobDomain.CREATIVE_MULTIMEDIA,
-  JobDomain.ADMIN_BACKOFFICE,
-  JobDomain.TECH_ENGINEERING,
-];
-
-const DOMAIN_META: Record<JobDomain, { description: string; symbol: string }> = {
-  [JobDomain.VA_SUPPORT]: {
-    description: "Multi-functional Virtual Assistants and general support roles.",
-    symbol: "🤝",
-  },
-  [JobDomain.CREATIVE_MULTIMEDIA]: {
-    description: "Creative content, video editing, design, and multimedia.",
-    symbol: "🎨",
-  },
-  [JobDomain.TECH_ENGINEERING]: {
-    description: "Software engineering, DevOps, and technical infrastructure.",
-    symbol: "⚙️",
-  },
-  [JobDomain.MARKETING]: {
-    description: "Growth, advertising, and digital marketing strategies.",
-    symbol: "📣",
-  },
-  [JobDomain.SALES_GROWTH]: {
-    description: "Revenue generation and business development.",
-    symbol: "💰",
-  },
-  [JobDomain.BPO_SERVICES]: {
-    description: "Customer support, community management, and BPO operations.",
-    symbol: "🎧",
-  },
-  [JobDomain.ADMIN_BACKOFFICE]: {
-    description: "Backoffice, accounting, CRM management, and invoicing.",
-    symbol: "🏢",
-  },
-};
-
-// ── ADAPTIVE BRIDGE: MAP LEGACY DATA TO V10 NICHE TAXONOMY ──
-// SRE: No fallback - if initialSignals is empty, we already threw above
-const processedSignals = initialSignals
-  .map(sig => {
-    const niche = sig.niche || mapTitleToDomain(sig.title, (sig.description || ''));
-    
-    // SRE LOGGING: Identify drifting niches in production
-    if (!Object.values(JobDomain).includes(niche as any)) {
-      console.warn(`[SRE_CUSTODY] Invalid Niche detected: "${niche}" for job "${sig.title}". This job will be hidden from the UI.`);
-    }
-
-    return {
-      ...sig,
-      niche
-    };
-  })
-  .filter(sig => {
-    // SURGICAL BPO REMEDIATION: Strictly remove the requested noise
-    if (sig.niche === JobDomain.BPO_SERVICES) {
-      const company = sig.company.toUpperCase();
-      if (company.includes('REMOTE VENTURES')) return false;
-      if (company.includes('CONFIDENTIAL')) return false;
-      if (company.includes('TDCX (VIA REDDIT)')) return false;
-    }
-    return true;
-  });
-
-// SRE: No fallback - if mirrorSignals is empty, we already threw above
-const processedMirror = mirrorSignals;
-
-
-import { getRegionalHealth } from '@va-hub/db/health-utils';
-
-const regionalHealth = await getRegionalHealth();
-
-
-const domains = topDomains.map((domain) => ({
-  domain,
-  description: DOMAIN_META[domain].description,
-  symbol: DOMAIN_META[domain].symbol,
-  signals: processedSignals.filter((sig) => sig.niche === domain),
-}));
-
-
-// ── HEALTH INTELLIGENCE ──
-const healthStats = {
-  status: regionalHealth.every(r => r.state === 'FRESH') ? 'SYSTEM NOMINAL' : 'Working on live sync',
-  isFallback: regionalHealth.some(r => r.state === 'STALE'),
-  pulseAge: Math.min(...regionalHealth.map(r => r.pAge))
-};
 
 ---
 
-<Layout title="Master Directory | VA.INDEX">
-  <div id="titanium-pulse-sync" data-snapshot-ms={RENDER_TIME_MS} class="hidden"></div>
-  <main class="max-w-[1400px] mx-auto px-4 sm:px-8 py-10">
-    <header class="mb-16 text-center lg:text-left">
-      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-12">
-        <div class="flex items-center gap-3 justify-center lg:justify-start">
-          <div class="flex items-center gap-2 px-3 py-1.5 bg-white border border-oat-200 rounded-2xl shadow-sm">
-            <div class={`w-2 h-2 rounded-full ${healthStats.isFallback ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.4)]'}`}></div>
-            <span class="text-[10px] font-black text-blueberry-900/60 uppercase tracking-widest leading-none">
-              {healthStats.status}
-            </span>
-          </div>
-          
-          <div class="hidden md:flex items-center gap-2 px-3 py-1.5 bg-blueberry-900 border border-blueberry-800 rounded-2xl shadow-lg">
-            <span class="text-[9px] font-black text-amber-400 uppercase tracking-[0.2em] leading-none">
-              v12 Sifter Protocol
-            </span>
-          </div>
-        </div>
-
-        <RegionalHealth />
+<Layout title="TechWriter Hub | Global Technical Writing Jobs for Filipinos">
+  <main class="max-w-[1000px] mx-auto px-4 py-16">
+    <header class="text-center mb-16">
+      <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-full shadow-sm mb-6">
+        <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none">
+          {pulseStatus} • {lastPulse}
+        </span>
       </div>
-
-      <div class="flex flex-col items-center justify-center gap-10">
-        <div class="max-w-4xl mx-auto text-center">
-          <h1 class="text-4xl md:text-6xl font-black text-blueberry-900 mb-6 leading-[1.05] tracking-tight uppercase font-heading">
-            The master directory <br class="hidden md:block"/>
-            <span class="text-blue-600">of global remote work.</span>
-          </h1>
-          <p class="text-xl text-blueberry-800/50 font-medium max-w-2xl mx-auto">
-            Meticulously curated opportunities for the borderless workforce. <br class="hidden sm:block"/>
-            Ranked by intent. Organized by function.
-          </p>
-        </div>
-
-        <div class="flex flex-col lg:flex-row items-center gap-6 w-full max-w-5xl mx-auto">
-          <!-- Primary Search Bar -->
-          <div class="relative group w-full lg:flex-1">
-            <div class="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-blueberry-900/20 group-focus-within:text-blue-600 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-            <input 
-              type="text" 
-              id="oppSearch" 
-              placeholder="Search 100+ sites..." 
-              class="block w-full pl-16 pr-8 py-5 rounded-2xl border-2 border-transparent bg-white shadow-card text-blueberry-900 placeholder-blueberry-900/30 focus:outline-none focus:border-blue-600/20 focus:ring-4 focus:ring-blue-600/5 transition-all duration-300 text-xl font-semibold tracking-tight"
-            />
-          </div>
-
-          <!-- Quick Actions -->
-          <div class="flex items-center gap-3 shrink-0">
-             <button class="w-14 h-14 rounded-full bg-white shadow-card border border-oat-200 flex items-center justify-center text-blueberry-800/40 hover:text-blue-600 hover:border-blue-600/30 transition-all group">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14m-7-7h14"/></svg>
-             </button>
-             <button class="w-14 h-14 rounded-full bg-white shadow-card border border-oat-200 flex items-center justify-center text-blueberry-800/40 hover:text-blue-600 hover:border-blue-600/30 transition-all group">
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-             </button>
-          </div>
-        </div>
-      </div>
+      
+      <h1 class="text-5xl md:text-7xl font-black text-slate-900 mb-4 tracking-tighter uppercase italic">
+        TechWriter <span class="text-blue-600">Hub</span>
+      </h1>
+      <p class="text-xl text-slate-500 font-medium max-w-2xl mx-auto">
+        Only high-fidelity Technical Writing jobs worldwide for Filipinos. <br/>
+        Zero noise. Zero staleness.
+      </p>
     </header>
 
-    <MirrorStage signals={processedMirror} />
+    <div class="bg-white rounded-[2.5rem] p-4 md:p-8 shadow-2xl border border-slate-100">
+      <div class="flex items-center justify-between mb-8 px-4">
+        <h2 class="text-sm font-black text-slate-400 uppercase tracking-widest">
+          Live Opportunity Feed
+        </h2>
+        <span class="text-[11px] font-bold text-slate-300">
+          Showing {signals.length} Active Signals
+        </span>
+      </div>
 
-    <!-- ── DIRECTORY GRID (Grid Flow for Horizontal Sequence) ── -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-12 w-full" id="directoryGrid">
-      {domains.map((domain) => {
-        const slug = getDomainSlug(domain.domain);
-        const totalSignals = domain.signals.length;
-        const visibleSignals = domain.signals.slice(0, 15);
+      <div class="space-y-2">
+        {signals.map((sig) => (
+          <SignalCard signal={sig} />
+        ))}
         
-        return (
-          <article class="domain-column bg-white rounded-3xl p-6 shadow-sm border border-blueberry-900/10 hover:shadow-md transition-all duration-300 flex flex-col h-full">
-             <div class="text-center mb-3">
-                <a href={`/domain/${slug}`} class="group/header block">
-                  <h2 class="text-sm font-bold text-blueberry-900 uppercase tracking-widest group-hover/header:text-blue-600 transition-colors">
-                    {getDomainLabel(domain.domain)}
-                  </h2>
-                  <p class="text-[11px] font-normal text-blueberry-900/40 leading-relaxed mt-1.5 px-2">
-                    {domain.description}
-                  </p>
-                </a>
-             </div>
-             
-             <hr class="border-blueberry-900/5 my-4" />
-
-             
-              <div class="domain-signals-container">
-                <ol class="list-decimal list-outside ml-4 space-y-0.5">
-                  {domain.signals.map((sig, idx) => (
-                    <div class={`signal-wrapper ${idx >= 15 ? 'hidden' : ''}`} data-index={idx}>
-                      <SignalCard signal={sig} />
-                    </div>
-                  ))}
-                </ol>
-
-                {totalSignals === 0 && (
-                  <div class="mt-2 flex items-center justify-center py-10 rounded-2xl border-2 border-dashed border-oat-200/50 bg-oat-50/30">
-                    <div class="flex flex-col items-center gap-2 text-center px-4">
-                       <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                       <span class="text-[9px] font-black text-blueberry-800/20 uppercase tracking-[0.25em]">
-                         Establishing Pulse...
-                       </span>
-                    </div>
-                  </div>
-                )}
-                
-                {totalSignals > 15 && (
-                  <div class="flex flex-col gap-2 mt-6">
-                    <button 
-                      class="expand-btn w-full py-3.5 rounded-2xl bg-gradient-to-b from-oat-50/30 to-blueberry-900/5 border border-blueberry-900/10 text-[10px] font-black text-blueberry-900/40 uppercase tracking-[0.2em] hover:text-blueberry-900 hover:border-blueberry-900/20 transition-all flex items-center justify-center gap-2"
-                      data-count={totalSignals}
-                    >
-                      <span class="btn-label">SEE ALL {totalSignals} SITES</span>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
-                    </button>
-                    
-                    <a 
-                      href={`/domain/${slug}`}
-                      class="detail-link w-full py-3 rounded-xl border border-blueberry-900/10 bg-white text-[9px] font-black text-blueberry-800/40 uppercase tracking-[0.18em] hover:text-blue-600 hover:border-blue-600/30 transition-all flex items-center justify-center gap-1.5"
-                    >
-                      Open Full Directory + Search
-                      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17l9.2-9.2M17 17V7H7"/></svg>
-                    </a>
-                  </div>
-                )}
-                {totalSignals <= 15 && totalSignals > 0 && (
-                  <div class="mt-6">
-                    <a 
-                      href={`/domain/${slug}`}
-                      class="w-full py-3 rounded-xl border border-blueberry-900/10 bg-white text-[9px] font-black text-blueberry-800/40 uppercase tracking-[0.18em] hover:text-blue-600 hover:border-blue-600/30 transition-all flex items-center justify-center gap-1.5"
-                    >
-                      Open Full Directory + Search
-                      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17l9.2-9.2M17 17V7H7"/></svg>
-                    </a>
-                  </div>
-                )}
-              </div>
-          </article>
-        );
-      })}
-    </div>
-
-    <div id="emptyState" class="hidden py-40 text-center">
-       <span class="text-blueberry-800/20 font-black uppercase tracking-[0.3em] text-xs italic">No matching signals in current view.</span>
+        {signals.length === 0 && (
+          <div class="py-20 text-center border-2 border-dashed border-slate-100 rounded-3xl">
+             <p class="text-slate-300 font-bold uppercase tracking-widest text-sm">
+               Establishing Pulse... No signals detected yet.
+             </p>
+          </div>
+        )}
+      </div>
     </div>
   </main>
 </Layout>
-
-<script is:inline>
-  function initDirectory() {
-    const search = document.getElementById('oppSearch');
-    const grid = document.getElementById('directoryGrid');
-    const empty = document.getElementById('emptyState');
-    if (!grid) return;
-
-    const columns = Array.from(grid.querySelectorAll('.domain-column'));
-    const items = Array.from(grid.querySelectorAll('ol a[href]')).map(el => ({
-      el: el.closest('.signal-wrapper') || el,
-      parent: el.closest('.domain-column'),
-      text: (el.textContent || '').toLowerCase()
-    }));
-
-    let q = '';
-    let debounceTimer;
-
-    function run() {
-      let totalVisible = 0;
-      const columnVisibility = new Map();
-
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        const isVisible = !q || item.text.includes(q);
-        
-        if (isVisible) {
-          item.el.classList.remove('hidden');
-          columnVisibility.set(item.parent, true);
-          totalVisible++;
-        } else {
-          item.el.classList.add('hidden');
-        }
-      }
-      
-      const shouldPruneColumns = q.length > 0;
-      for (let i = 0; i < columns.length; i++) {
-        const col = columns[i];
-        if (!shouldPruneColumns || columnVisibility.get(col)) {
-          col.classList.remove('hidden');
-        } else {
-          col.classList.add('hidden');
-        }
-      }
-
-      if (empty) {
-        if (totalVisible === 0) empty.classList.remove('hidden');
-        else empty.classList.add('hidden');
-      }
-    }
-
-    if (search) {
-      search.addEventListener('input', (e) => {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-          q = e.target.value.toLowerCase().trim();
-          run();
-        }, 30); 
-      });
-    }
-
-    document.querySelectorAll('.expand-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const container = btn.closest('.domain-signals-container');
-        if (!container) return;
-
-        const wraps = container.querySelectorAll('.signal-wrapper.hidden');
-        wraps.forEach(w => {
-           w.classList.remove('hidden');
-           w.style.animation = 'slideUp 0.3s ease-out forwards';
-        });
-
-        btn.classList.add('hidden');
-        const detailLink = container.querySelector('.detail-link');
-        if (detailLink) detailLink.classList.replace('hidden', 'flex');
-      });
-    });
-  }
-
-  // --- Phase 2: Titanium Freshness Guard ---
-  function initFreshnessGuard() {
-    const syncDot = document.getElementById('titanium-pulse-sync');
-    if (!syncDot) return;
-    const snapshotMs = parseInt(syncDot.getAttribute('data-snapshot-ms') || '0');
-    
-    let isChecking = false;
-    
-    async function checkPulse() {
-      if (isChecking) return;
-      isChecking = true;
-      try {
-        const res = await fetch('/api/v12-status');
-        const data = await res.json();
-        
-        if (data.latestHeartbeat > snapshotMs) {
-          console.log("🚥 [TITANIUM] New jobs detected in database. Triggering UI Sync.");
-          showSyncToast();
-        }
-      } catch (err) {
-        // Silently retry next cycle
-      } finally {
-        isChecking = false;
-      }
-    }
-
-    function showSyncToast() {
-      const existing = document.getElementById('sync-toast');
-      if (existing) return;
-
-      const toast = document.createElement('div');
-      toast.id = 'sync-toast';
-      toast.className = 'fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] bg-blue-600 text-white px-6 py-4 rounded-3xl shadow-2xl flex items-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-500 cursor-pointer hover:bg-blue-700 active:scale-95 transition-all w-[90%] max-w-sm border border-white/20';
-      toast.innerHTML = `
-        <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">
-          <div class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></div>
-        </div>
-        <div class="flex-1">
-          <div class="text-xs font-black uppercase tracking-widest leading-none mb-1">Live Signals Detected</div>
-          <div class="text-[10px] font-medium opacity-80 leading-tight">Fresh opportunities have just arrived. Tap to see them now.</div>
-        </div>
-      `;
-      
-      toast.onclick = () => window.location.reload();
-      document.body.appendChild(toast);
-    }
-
-    // Initial check after 30s
-    setTimeout(() => {
-      checkPulse();
-      // Then check every 60s
-      setInterval(checkPulse, 60000);
-    }, 30000);
-  }
-
-  document.addEventListener('DOMContentLoaded', () => {
-    initDirectory();
-    initFreshnessGuard();
-  });
-  document.addEventListener('astro:after-swap', () => {
-    initDirectory();
-    initFreshnessGuard();
-  });
-
-  // Freshness poller removed per user request
-</script>
-
-<style>
-  .domain-column {
-    content-visibility: auto;
-    contain-intrinsic-size: 400px;
-  }
-  @keyframes slideUp {
-    from { transform: translateY(20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-  }
-</style>
-
-<!-- SRE_PULSE: {Date.now()} -->
-
