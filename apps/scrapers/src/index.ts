@@ -7,7 +7,8 @@ const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "@_",
   processEntities: {
-    maxTotalExpansions: 1000000, // Massive headroom
+    enabled: true,
+    maxTotalExpansions: 1000000, 
   }
 });
 
