@@ -1,5 +1,3 @@
-import { createClient, type Client as LibSQLClient } from "@libsql/client";
-import { drizzle as drizzleLibSQL, type LibSQLDatabase } from "drizzle-orm/libsql";
 import { drizzle as drizzleD1, type D1Database } from "drizzle-orm/d1";
 import * as dbSchema from "./schema";
 import { sql } from "drizzle-orm";
@@ -11,7 +9,7 @@ import { sql } from "drizzle-orm";
 
 export interface DbInstance {
   db: any;
-  client?: LibSQLClient | D1Database;
+  client?: any;
   schema: typeof dbSchema;
   type: 'd1' | 'libsql';
 }
@@ -23,37 +21,42 @@ let instance: DbInstance | null = null;
  * @param d1Binding Optional Cloudflare D1 binding (from Astro.locals.runtime.env.DB)
  */
 export function createDb(d1Binding?: D1Database): DbInstance {
-  // Return existing instance if it matches the requested type
-  if (instance) {
-    if (d1Binding && instance.type === 'd1') return instance;
-    if (!d1Binding && instance.type === 'libsql') return instance;
-  }
-
   // Case 1: Cloudflare D1 (Production / Edge)
   if (d1Binding) {
-    const db = drizzleD1(d1Binding, { schema: dbSchema });
-    instance = { db, client: d1Binding, schema: dbSchema, type: 'd1' };
-    return instance;
+    try {
+      const db = drizzleD1(d1Binding, { schema: dbSchema });
+      return { db, client: d1Binding, schema: dbSchema, type: 'd1' };
+    } catch (err) {
+      console.error("Drizzle D1 local init failed, retrying plain init...");
+      const db = drizzleD1(d1Binding);
+      return { db, client: d1Binding, schema: dbSchema, type: 'd1' };
+    }
   }
 
-  // Case 2: LibSQL (Local / Scripts / Turso)
+  // Case 2: LibSQL
+  throw new Error("Edge Environment detected: Missing D1 Binding.");
+}
+
+/**
+ * Node-only initializer for local scripts
+ */
+export async function createLocalDb(): Promise<DbInstance> {
+  const { createClient } = await import("@libsql/client");
+  const { drizzle } = await import("drizzle-orm/libsql");
+  
   const url = process.env.TURSO_DATABASE_URL || "file::memory:";
   const authToken = process.env.TURSO_AUTH_TOKEN || "";
 
   const client = createClient({ url, authToken });
-  const db = drizzleLibSQL(client, { schema: dbSchema });
+  const db = drizzle(client, { schema: dbSchema });
   instance = { db, client, schema: dbSchema, type: 'libsql' };
   return instance;
 }
 
-// Global default instance (for local scripts)
-export const { db, schema } = createDb();
-
-/**
- * 🛰️ PULSE CHECK
- */
+// 🛰️ PULSE CHECK
 export async function dbAlive(database?: any): Promise<boolean> {
-  const targetDb = database || db;
+  const targetDb = database;
+  if (!targetDb) return false;
   try {
     await targetDb.run(sql`SELECT 1`);
     return true;

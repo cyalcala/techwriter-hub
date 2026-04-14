@@ -1,4 +1,5 @@
-export { db, schema } from "./client";
+export * from "./client";
 export * from "./schema";
-export * from "./logger";
 export * from "./utils";
+// Logger is currently incompatible with Edge, so we export it as a shell if needed
+// export * from "./logger";

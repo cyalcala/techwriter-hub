@@ -1,4 +1,4 @@
-import { defineConfig } from 'astro/config';
+import { defineConfig, passthroughImageService } from 'astro/config';
 import cloudflare from '@astrojs/cloudflare';
 import tailwind from '@astrojs/tailwind';
 import path from 'node:path';
@@ -12,9 +12,12 @@ export default defineConfig({
     platformProxy: {
       enabled: true,
     },
+    runtime: { mode: 'compatibility' }
   }),
   integrations: [tailwind()],
-
+  image: {
+    service: passthroughImageService()
+  },
 
   vite: {
     resolve: {

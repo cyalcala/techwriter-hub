@@ -7,9 +7,9 @@
     "wrangler": "^3.47.0"
   },
   "dependencies": {
-    "fast-xml-parser": "^4.3.4",
-    "zod": "^3.22.4",
+    "@va-hub/db": "workspace:*",
     "drizzle-orm": "^0.30.7",
-    "@va-hub/db": "workspace:*"
+    "fast-xml-parser": "^5.5.11",
+    "zod": "^3.22.4"
   }
 }

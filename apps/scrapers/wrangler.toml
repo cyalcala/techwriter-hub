@@ -1,0 +1,15 @@
+name = "techwriter-scrapers"
+main = "src/index.ts"
+compatibility_date = "2024-04-03"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "techwriter-db"
+database_id = "afebb444-7621-4661-b3b3-d50b293e445e"
+
+[[kv_namespaces]]
+binding = "BODEGA"
+id = "3b3f442b95d644a8ad5dd03fb1fdaf39"
+
+[triggers]
+crons = ["*/20 * * * *"] # 20-minute pulse

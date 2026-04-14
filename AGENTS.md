@@ -28,6 +28,9 @@ The agent should automatically map user intent to skills:
 - Refactoring / simplification → `code-simplification`
 - API or interface design → `api-and-interface-design`
 - UI work → `frontend-ui-engineering`
+- Cloudflare Platform (Wrangler, Workers, D1, R2, AI) → `cloudflare-core`, `cloudflare-wrangler`, `cloudflare-workers-best-practices`
+- AI Agents & MCP on Cloudflare → `cloudflare-agents-sdk`, `cloudflare-ai-agents`, `cloudflare-mcp`
+- Cloudflare Performance & State → `cloudflare-web-perf`, `cloudflare-durable-objects`, `cloudflare-sandbox-sdk`
 
 ### Lifecycle Mapping (Implicit Commands)
 

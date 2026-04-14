@@ -4,7 +4,7 @@ const { signal } = Astro.props;
 
 // Defensive Tags Parsing
 const rawTags = signal.tags || [];
-const tags = (typeof rawTags === 'string' ? JSON.parse(rawTags) : rawTags)
+const tags = (Array.isArray(rawTags) ? rawTags : (typeof rawTags === 'string' ? JSON.parse(rawTags) : []))
   .filter((tag: string) => tag !== 'SRE_BACKFILL' && tag !== 'PH_GOLDMINE') as string[];
 
 const getFavicon = (url: string) => {

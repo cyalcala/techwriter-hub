@@ -20,20 +20,14 @@ export const normalizeDate = (val: any): Date => {
   return num < 10000000000 ? new Date(num * 1000) : new Date(num);
 };
 
-/**
- * 🔒 THE IDEMPOTENCY SHIELD: Discovery Hash
- * Unifies signal identification across GHA, Cloudflare, and Inngest.
- * Prevents signal overlap by creating a deterministic 16-char identifier.
- */
-import { createHash } from "crypto";
-
+// 🔒 THE IDEMPOTENCY SHIELD: Discovery Hash (Edge-Compatible)
 export function generateDiscoveryHash(title: string, url: string, company: string = "Generic"): string {
-  const normalizedTitle = title.toLowerCase().trim();
-  const normalizedUrl = url.split('?')[0].toLowerCase().trim(); // Strip UTMs/Query params
-  const normalizedCompany = company.toLowerCase().trim();
-  
-  return createHash("sha256")
-    .update(`${normalizedTitle}::${normalizedCompany}::${normalizedUrl}`)
-    .digest("hex")
-    .slice(0, 16);
+  const str = `${title.toLowerCase()}::${company.toLowerCase()}::${url.split('?')[0].toLowerCase()}`;
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash |= 0; // Convert to 32bit integer
+  }
+  return Math.abs(hash).toString(16).padStart(16, '0');
 }
