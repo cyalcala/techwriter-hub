@@ -2,7 +2,7 @@ import { defineConfig, passthroughImageService } from 'astro/config';
 import tailwind from '@astrojs/tailwind';
 
 export default defineConfig({
-  output: 'static', // 🚀 NUCLEAR OPTION: Static sites never return 500.
+  output: 'static', // 🚀 PURE STATIC: NO WORKER, NO SSR, NO 500s.
   integrations: [tailwind()],
   image: {
     service: passthroughImageService()
