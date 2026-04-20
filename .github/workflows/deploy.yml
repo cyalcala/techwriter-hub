@@ -20,12 +20,10 @@ jobs:
           bun-version: latest
 
       - name: Install Dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
 
-      - name: Build Frontend
-        run: |
-          cd apps/frontend
-          bun run build
+      - name: Build TechWriter Hub
+        run: bun run build
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
