@@ -23,7 +23,16 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build TechWriter Hub
-        run: bun run build
+        run: |
+          # 🏗️ Force build from root to resolve workspace dependencies
+          bun run build
+
+      - name: Verify Build Output
+        run: |
+          if [ ! -d "apps/frontend/dist" ]; then
+            echo "❌ ERROR: apps/frontend/dist directory not found. Build may have failed silently."
+            exit 1
+          fi
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
