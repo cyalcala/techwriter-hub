@@ -6,32 +6,32 @@ const dbStatus = env.DB ? "CONNECTED" : "MISSING";
 const kvStatus = env.BODEGA ? "CONNECTED" : "MISSING";
 ---
 
-<Layout title="TechWriter Hub | Diagnostics">
-  <div class="max-w-[800px] mx-auto px-4 py-20 text-center">
-    <div class="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest mb-8">
-      Sovereign Health Check
-    </div>
-    
-    <h1 class="text-4xl font-black text-slate-900 mb-4 uppercase italic">TechWriter <span class="text-blue-600">Hub</span></h1>
-    <p class="text-slate-500 font-medium mb-12">Diagnostic Mode: Checking Edge Bindings...</p>
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width" />
+		<title>TechWriter Hub | Diagnostics</title>
+	</head>
+	<body style="font-family: sans-serif; padding: 40px; text-align: center;">
+    <h1 style="text-transform: uppercase;">TechWriter Hub</h1>
+    <p>Diagnostic Mode: Zero-Import Isolation</p>
 
-    <div class="grid grid-cols-2 gap-4 text-left">
-      <div class="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm">
-        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">D1 Database</div>
-        <div class={`text-xl font-black ${dbStatus === 'CONNECTED' ? 'text-emerald-500' : 'text-red-500'}`}>{dbStatus}</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 40px;">
+      <div style="padding: 20px; border: 1px solid #eee; border-radius: 20px;">
+        <div style="font-size: 10px; color: #999;">D1 Database</div>
+        <div style="font-weight: bold;">{dbStatus}</div>
       </div>
-      <div class="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm">
-        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Bodega KV</div>
-        <div class={`text-xl font-black ${kvStatus === 'CONNECTED' ? 'text-emerald-500' : 'text-red-500'}`}>{kvStatus}</div>
+      <div style="padding: 20px; border: 1px solid #eee; border-radius: 20px;">
+        <div style="font-size: 10px; color: #999;">Bodega KV</div>
+        <div style="font-weight: bold;">{kvStatus}</div>
       </div>
     </div>
 
-    <div class="mt-8 p-6 bg-slate-900 rounded-3xl text-left font-mono text-[10px] text-emerald-400">
+    <div style="margin-top: 40px; padding: 20px; background: #000; color: #0f0; border-radius: 20px; text-align: left; font-family: monospace; font-size: 12px;">
       SSR ADAPTER: NOMINAL<br/>
       RUNTIME: CLOUDFLARE_PAGES<br/>
       TIMESTAMP: {new Date().toISOString()}
     </div>
-  </div>
-</Layout>
-
-import Layout from '../layouts/LayoutNaked.astro';
+	</body>
+</html>
