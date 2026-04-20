@@ -1,0 +1,61 @@
+name: Apex SRE Interrogator
+
+on:
+  schedule:
+    # Runs every 15 minutes to ensure "snap-fast" performance and zero-downtime
+    - cron: '*/15 * * * *'
+  workflow_dispatch: 
+
+# Prevent multiple instances of the SRE from conflicting on the same repo state
+concurrency:
+  group: apex-sre-lock
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  interrogate:
+    name: Run SLO Validation + Autonomous Remediation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: 🛑 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🥟 Setup Bun Runtime
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: 📦 Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: ⚡ Execute Apex Interrogator
+        env:
+          # Mapping GitHub Secrets to the environment variables the script expects
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+          VERCEL_ACCESS_TOKEN: ${{ secrets.VERCEL_ACCESS_TOKEN }}
+          TRIGGER_API_KEY: ${{ secrets.TRIGGER_API_KEY }}
+          VERCEL_DEPLOY_WEBHOOK: ${{ secrets.VERCEL_DEPLOY_WEBHOOK }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          CEREBRAS_API_KEY: ${{ secrets.CEREBRAS_API_KEY }}
+          # Fallback to GITHUB_TOKEN if PAT is not provided; critical for GitAgent
+          GITHUB_PAT: ${{ secrets.GITHUB_PAT || secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          bun run scripts/apex-sre.ts
+          EXIT_CODE=$?
+          if [ $EXIT_CODE -eq 0 ] || [ $EXIT_CODE -eq 2 ]; then
+            echo "✅ Apex SRE completed successfully (Code: $EXIT_CODE)"
+            exit 0
+          fi
+          echo "❌ Apex SRE failed with code: $EXIT_CODE"
+          exit $EXIT_CODE
