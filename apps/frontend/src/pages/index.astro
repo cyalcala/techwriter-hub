@@ -2,8 +2,8 @@
 export const prerender = false;
 import Layout from '../layouts/Layout.astro';
 import SignalCard from '../components/SignalCard.astro';
-import { createDb } from '../../../../packages/db/client';
-import { opportunities } from '../../../../packages/db/schema';
+import { createDb } from '../lib/db/client';
+import { opportunities } from '../lib/db/schema';
 import { desc, eq } from 'drizzle-orm';
 
 // 📡 SOVEREIGN DATA FETCH
