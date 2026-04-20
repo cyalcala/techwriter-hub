@@ -28,7 +28,7 @@ jobs:
       - name: Build TechWriter Hub
         run: |
           cd apps/frontend
-          bun run build
+          bun run build --verbose
 
       - name: Deploy to Cloudflare Pages
         run: |
