@@ -38,9 +38,9 @@ jobs:
 
       - name: Deploy to Cloudflare Pages
         run: |
+          # 🚀 Direct deployment via Wrangler CLI to bypass Git/Action conflicts
           cd apps/frontend
-          # 🚀 Direct deployment with explicit branch and dirty-flag to bypass CI restrictions
-          bunx wrangler pages deploy dist --project-name=techwriter-hub --branch=main --commit-dirty=true
+          bunx wrangler pages deploy dist --project-name=techwriter-hub --branch=main
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
