@@ -25,15 +25,17 @@ export function createDb(d1Binding?: D1Database): DbInstance {
   if (d1Binding) {
     try {
       const db = drizzleD1(d1Binding, { schema: dbSchema });
+      if (!db) throw new Error("Drizzle initialization returned null");
       return { db, client: d1Binding, schema: dbSchema, type: 'd1' };
     } catch (err) {
-      console.error("Drizzle D1 local init failed, retrying plain init...");
-      const db = drizzleD1(d1Binding);
-      return { db, client: d1Binding, schema: dbSchema, type: 'd1' };
+      console.error("❌ [DB] D1 Initialization Critical Failure:", err);
+      // Fallback to a plain object to prevent crash
+      return { db: null, client: d1Binding, schema: dbSchema, type: 'd1' };
     }
   }
 
   // Case 2: LibSQL
+  console.warn("⚠️ [DB] No D1 Binding found. Checking for local environment...");
   throw new Error("Edge Environment detected: Missing D1 Binding.");
 }
 

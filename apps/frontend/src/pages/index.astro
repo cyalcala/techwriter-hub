@@ -1,36 +1,49 @@
-﻿---
+---
 export const prerender = false;
 import Layout from '../layouts/Layout.astro';
 import SignalCard from '../components/SignalCard.astro';
-import { createDb } from '@va-hub/db/client';
-import { opportunities } from '@va-hub/db/schema';
+import { createDb } from '../../../../packages/db/client';
+import { opportunities } from '../../../../packages/db/schema';
 import { desc, eq } from 'drizzle-orm';
 
 // 📡 SOVEREIGN DATA FETCH
-const { env } = Astro.locals.runtime;
-const { db } = createDb(env.DB);
-
+const { env } = Astro.locals.runtime || { env: {} };
 let signals = [];
 let pulseStatus = "SYSTEM NOMINAL";
 let lastPulse = "Just now";
 
-try {
-  // 🍽️ PLATE: Fetch all active TechWriter jobs
-  signals = await db.select()
-    .from(opportunities)
-    .where(eq(opportunities.isActive, true))
-    .orderBy(desc(opportunities.latestActivityMs))
-    .limit(100);
+if (!env.DB || !env.BODEGA) {
+  console.error("❌ CRITICAL: Cloudflare Bindings (DB/BODEGA) are missing from the environment.");
+  pulseStatus = "BONDING ERROR";
+} else {
+  const { db } = createDb(env.DB);
+  
+  if (!db) {
+    pulseStatus = "DB INIT ERROR";
+  } else {
+    try {
+      // 🍽️ PLATE: Fetch minimal active TechWriter jobs
+      signals = await db.select({
+        id: opportunities.id,
+        title: opportunities.title,
+        company: opportunities.company
+      })
+        .from(opportunities)
+        .where(eq(opportunities.isActive, true))
+        .limit(10);
 
-  // 🏺 BODEGA: Check heartbeat
-  const lastHarvest = await env.BODEGA.get("pulse:last_harvest");
-  if (lastHarvest) {
-    const diff = Date.now() - parseInt(lastHarvest);
-    if (diff > 3600000) pulseStatus = "PULSE STALE";
-    lastPulse = new Intl.RelativeTimeFormat('en', { style: 'short' }).format(-Math.round(diff / 60000), 'minutes');
+      // 🏺 BODEGA: Check heartbeat
+      const lastHarvest = await env.BODEGA.get("pulse:last_harvest");
+      if (lastHarvest) {
+        const diff = Date.now() - parseInt(lastHarvest);
+        if (diff > 3600000) pulseStatus = "PULSE STALE";
+        lastPulse = new Intl.RelativeTimeFormat('en', { style: 'short' }).format(-Math.round(diff / 60000), 'minutes');
+      }
+    } catch (err) {
+      console.error("Failed to load TechWriter signals:", err);
+      pulseStatus = "FETCH ERROR";
+    }
   }
-} catch (err) {
-  console.error("Failed to load TechWriter signals:", err);
 }
 
 ---
@@ -46,7 +59,7 @@ try {
       </div>
       
       <h1 class="text-5xl md:text-7xl font-black text-slate-900 mb-4 tracking-tighter uppercase italic">
-        TechWriter <span class="text-blue-600">Hub</span>
+        TechWriter <span class="text-[var(--color-primary)]">Hub</span>
       </h1>
       <p class="text-xl text-slate-500 font-medium max-w-2xl mx-auto">
         Only high-fidelity Technical Writing jobs worldwide for Filipinos. <br/>
@@ -54,7 +67,7 @@ try {
       </p>
     </header>
 
-    <div class="bg-white rounded-[2.5rem] p-4 md:p-8 shadow-2xl border border-slate-100">
+    <div class="bg-white/70 backdrop-blur-xl rounded-[2.5rem] p-4 md:p-8 shadow-2xl border border-white/20">
       <div class="flex items-center justify-between mb-8 px-4">
         <h2 class="text-sm font-black text-slate-400 uppercase tracking-widest">
           Live Opportunity Feed
@@ -65,9 +78,14 @@ try {
       </div>
 
       <div class="space-y-2">
-        {signals.map((sig) => (
+        <!-- DEBUG: RAW SIGNAL FEED -->
+        <pre class="text-[10px] text-slate-400 overflow-auto max-h-[400px] p-4 bg-slate-50 rounded-xl">
+          {JSON.stringify(signals, null, 2)}
+        </pre>
+
+        {/* signals.map((sig) => (
           <SignalCard signal={sig} />
-        ))}
+        )) */}
         
         {signals.length === 0 && (
           <div class="py-20 text-center border-2 border-dashed border-slate-100 rounded-3xl">

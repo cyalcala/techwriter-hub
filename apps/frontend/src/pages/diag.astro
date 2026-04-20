@@ -1,0 +1,20 @@
+---
+export const prerender = false;
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="TechWriter Hub | Diagnostics">
+  <main class="max-w-[1000px] mx-auto px-4 py-16 text-center">
+    <h1 class="text-5xl font-black text-slate-900 mb-4 tracking-tighter uppercase italic">
+      TechWriter <span class="text-blue-600">Hub</span>
+    </h1>
+    <p class="text-xl text-slate-500 font-medium">
+      Diagnostic Mode: The UI is online. If you see this, the server is healthy.
+    </p>
+    <div class="mt-8 p-8 border-2 border-dashed border-slate-100 rounded-3xl inline-block">
+       <p class="text-emerald-500 font-bold uppercase tracking-widest text-sm">
+         SSR ADAPTER: NOMINAL
+       </p>
+    </div>
+  </main>
+</Layout>

@@ -58,40 +58,52 @@ export interface NicheConfig {
   proxy_secret?: string;
 }
 
-export const defaultConfig: NicheConfig = {
-  name: "VA Freelance Hub (Philippines)",
-  regions: ["Philippines", "LATAM", "Global"],
-  primary_region: "Philippines",
-  primary_niche: "Virtual Assistant",
-  budget_mode: (process.env.BUDGET_MODE as any) || "normal",
+export function getConfig(env?: any): NicheConfig {
+  const isNode = typeof process !== 'undefined' && process.env;
+  
+  return {
+    name: "TechWriter Hub",
+    regions: ["Global"],
+    primary_region: "Global",
+    primary_niche: "TECHNICAL_WRITING",
+    budget_mode: (env?.BUDGET_MODE || (isNode ? process.env.BUDGET_MODE : null) || "normal") as any,
 
-  slo: {
-    heartbeat_stale_minutes: Number(process.env.HEARTBEAT_STALE_MINUTES || 120),
-    heartbeat_delayed_minutes: Number(process.env.HEARTBEAT_DELAYED_MINUTES || 90),
-    heartbeat_suspect_window_minutes: Number(process.env.HEARTBEAT_SUSPECT_WINDOW_MINUTES || 120),
-    ingestion_staleness_threshold_hrs: Number(process.env.INGESTION_STALENESS_THRESHOLD || 24),
-    db_staleness_threshold_hrs: Number(process.env.DB_STALENESS_THRESHOLD || 4),
-    remediation_cooldown_minutes: Number(process.env.WATCHDOG_REMEDIATION_COOLDOWN_MIN || 90),
-  },
+    slo: {
+      heartbeat_stale_minutes: Number(env?.HEARTBEAT_STALE_MINUTES || (isNode ? process.env.HEARTBEAT_STALE_MINUTES : null) || 120),
+      heartbeat_delayed_minutes: Number(env?.HEARTBEAT_DELAYED_MINUTES || (isNode ? process.env.HEARTBEAT_DELAYED_MINUTES : null) || 90),
+      heartbeat_suspect_window_minutes: Number(env?.HEARTBEAT_SUSPECT_WINDOW_MINUTES || (isNode ? process.env.HEARTBEAT_SUSPECT_WINDOW_MINUTES : null) || 120),
+      ingestion_staleness_threshold_hrs: Number(env?.INGESTION_STALENESS_THRESHOLD || (isNode ? process.env.INGESTION_STALENESS_THRESHOLD : null) || 24),
+      db_staleness_threshold_hrs: Number(env?.DB_STALENESS_THRESHOLD || (isNode ? process.env.DB_STALENESS_THRESHOLD : null) || 4),
+      remediation_cooldown_minutes: Number(env?.WATCHDOG_REMEDIATION_COOLDOWN_MIN || (isNode ? process.env.WATCHDOG_REMEDIATION_COOLDOWN_MIN : null) || 90),
+    },
 
   target_signals: {
-    region: ["philippines", "filipino", "pinoy", "tagalog", "manila", "cebu", "ph", "sea", "southeast asia"],
-    role: ["virtual assistant", "va", "data entry", "bookkeeping", "executive assistant", "admin assistant", "customer service", "customer support", "sales", "bdr", "sdr", "marketing", "seo", "social media", "copywriter", "video editor", "graphic designer", "moderator", "transcription", "translator", "operations", "clerk", "office", "administrative", "operations specialist", "hr assistant", "recruiter"],
+    region: ["global", "remote", "worldwide", "anywhere", "usa", "uk", "canada", "europe", "philippines", "ph", "remote ph"],
+    role: [
+      "technical writer", "technical writing", "documentation specialist", "api documentation", 
+      "technical author", "content designer", "ux writer", "documentation engineer",
+      "developer documentation", "knowledge base manager", "instructional designer",
+      "technical editor", "information developer", "technical content"
+    ],
     remote: ["remote", "global", "worldwide", "anywhere", "work from home", "wfh"]
   },
-
+ 
   kill_lists: {
     titles: [
-      "ceo", "cto", "cfo", "cio", "coo", "vp", "vice president", "director", "president", "head of", "principal", "leadership", "executive", "staff", "researcher",
-      "enterprise", "product manager", "project manager", "program manager", "division manager", "manager,", "manager -", "regional manager", "country manager",
-      "engineer", "developer", "software", "devops", "sre", "data scientist", "programmer", "architect", "fullstack", "backend", "frontend", "coder", "systems", "tech", "technical", "coding", "javascript", "typescript", "python", "java", "react", "vue", "angular", "node", "aws", "cloud", "infrastructure", "cybersecurity", "security", "ai", "machine learning", "ml", "data science"
+      "virtual assistant", "va", "data entry", "bookkeeping", "admin assistant", "customer service",
+      "sales", "bdr", "sdr", "marketing manager", "seo specialist", "social media", "video editor", 
+      "graphic designer", "moderator", "transcription", "translator", "clerk", "hr", "recruiter",
+      "ceo", "cto", "cfo", "vp", "director", "president", "head of", "principal", "leadership", 
+      "software engineer", "fullstack", "backend", "frontend", "devops", "sre", "data scientist",
+      "analyst", "product manager", "project manager", "intern", "business intelligence", "bi analyst",
+      "accountant", "lawyer", "nurse", "doctor", "chemist", "biologist", "scientist", 
+      "medical", "pharmacist", "researcher", "physicist", "geologist",
+      "engineer", "designer", "architect", "coordinator", "lead", "head"
     ],
-    companies: ["canonical", "gitlab", "google", "meta", "apple", "microsoft", "amazon"],
+    companies: ["google", "meta", "apple", "microsoft", "amazon"], // High-noise generic searches
     content: [
-      "beijing", "shanghai", "tokyo", "london", "paris", "berlin", "moscow", "riyadh", "dubai", "new york", "san francisco", "chicago", "hong kong", "singapore",
-      "china", "europe", "emea", "latam", "portuguese", "spanish", "german", "french", "uk-only", "us-only", "emea-only",
-      "dach", "nordics", "benelux", "japanese speaker", "french speaker", "german speaker", "spanish speaker",
-      "success story", "how to", "reading this", "join us", "blog", "article", "news"
+      "beijing", "shanghai", "tokyo", "riyadh", "dubai",
+      "success story", "how to build", "reading this", "join us", "blog post", "article", "news"
     ]
   },
 
@@ -114,7 +126,7 @@ export const defaultConfig: NicheConfig = {
       platform: "WeWorkRemotely",
       defaultJobType: "full-time",
       tags: ["remote", "global"],
-      ethical_note: "Public RSS feed offered by WWR since 2013. Companies pay to post.",
+      ethical_note: "Public RSS feed offered by WWR.",
       region: "Global",
       trustLevel: "global"
     },
@@ -135,74 +147,8 @@ export const defaultConfig: NicheConfig = {
       url: "https://problogger.com/jobs/feed/",
       platform: "ProBlogger",
       defaultJobType: "freelance",
-      tags: ["writing", "creative", "content"],
-      ethical_note: "Public RSS job board feed. Companies pay to list writing/creative roles.",
-      region: "Global",
-      trustLevel: "global"
-    },
-    {
-      id: "jobspresso-support",
-      name: "Jobspresso - Support",
-      url: "https://jobspresso.co/category/marketing-customer-support/feed/",
-      platform: "Jobspresso",
-      defaultJobType: "VA",
-      tags: ["customer support", "marketing", "va"],
-      ethical_note: "Public RSS feed provided by Jobspresso for remote job syndication.",
-      region: "Global",
-      trustLevel: "global"
-    },
-    {
-      id: "remotive",
-      name: "Remotive",
-      url: "https://remotive.com/api/remote-jobs/feed",
-      platform: "Remotive",
-      defaultJobType: "full-time",
-      tags: ["remote", "global"],
-      ethical_note: "Public RSS feed provided by Remotive for job syndication.",
-      region: "Global",
-      trustLevel: "global"
-    },
-    {
-      id: "working-nomads",
-      name: "Working Nomads",
-      url: "https://www.workingnomads.com/jobs/rss",
-      platform: "WorkingNomads",
-      defaultJobType: "full-time",
-      tags: ["remote", "global"],
-      ethical_note: "Public RSS feed provided by Working Nomads for job syndication.",
-      region: "Global",
-      trustLevel: "global"
-    },
-    {
-      id: "daily-remote",
-      name: "DailyRemote",
-      url: "https://dailyremote.com/remote-jobs/feed/",
-      platform: "DailyRemote",
-      defaultJobType: "full-time",
-      tags: ["remote", "global"],
-      ethical_note: "Public RSS feed provided by DailyRemote for job syndication.",
-      region: "Global",
-      trustLevel: "global"
-    },
-    {
-      id: "jobicy-support",
-      name: "Jobicy (Support)",
-      url: "https://jobicy.com/feed/remote-customer-support-jobs",
-      platform: "Jobicy",
-      defaultJobType: "VA",
-      tags: ["support", "va"],
-      ethical_note: "Public RSS feed from Jobicy.",
-      region: "Global",
-      trustLevel: "global"
-    },
-    {
-      id: "himalayas-marketing",
-      name: "Himalayas (Marketing)",
-      url: "https://himalayas.app/jobs/marketing/rss",
-      platform: "Himalayas",
-      defaultJobType: "Marketing",
-      tags: ["marketing", "va"],
-      ethical_note: "Public niche-focused RSS from Himalayas.",
+      tags: ["writing", "freelance"],
+      ethical_note: "Public RSS job board feed. Companies pay to list writing roles.",
       region: "Global",
       trustLevel: "global"
     }
@@ -210,39 +156,13 @@ export const defaultConfig: NicheConfig = {
 
   json_sources: [
     {
-      id: "jobstreet-ph-va",
-      name: "JobStreet PH (Virtual Assistant)",
-      url: "https://www.jobstreet.com.ph/api/chalice-search/v4/search?siteKey=PH-Main&where=Philippines&keywords=virtual+assistant",
+      id: "jobstreet-ph-techwriter",
+      name: "JobStreet PH (Technical Writer)",
+      url: "https://ph.jobstreet.com/api/chalice-search/v4/search?siteKey=PH-Main&where=Philippines&keywords=technical+writer",
       platform: "JobStreet",
-      defaultJobType: "VA",
-      tags: ["philippines", "va"],
-      ethical_note: "Public JSON search endpoint used by the JobStreet/SEEK frontend.",
-      is_json: true,
-      json_type: "JobStreet",
-      region: "Philippines",
-      trustLevel: "native"
-    },
-    {
-      id: "jobstreet-ph-admin",
-      name: "JobStreet PH (Admin)",
-      url: "https://www.jobstreet.com.ph/api/chalice-search/v4/search?siteKey=PH-Main&where=Philippines&keywords=administrative",
-      platform: "JobStreet",
-      defaultJobType: "VA",
-      tags: ["philippines", "admin"],
-      ethical_note: "Public JSON search endpoint used by the JobStreet/SEEK frontend.",
-      is_json: true,
-      json_type: "JobStreet",
-      region: "Philippines",
-      trustLevel: "native"
-    },
-    {
-      id: "jobstreet-ph-customer-service",
-      name: "JobStreet PH (Customer Service)",
-      url: "https://www.jobstreet.com.ph/api/chalice-search/v4/search?siteKey=PH-Main&where=Philippines&keywords=customer+service",
-      platform: "JobStreet",
-      defaultJobType: "BPO",
-      tags: ["philippines", "bpo", "customer service"],
-      ethical_note: "Public JSON search endpoint used by the JobStreet/SEEK frontend.",
+      defaultJobType: "full-time",
+      tags: ["philippines", "technical-writing"],
+      ethical_note: "Public JSON search endpoint.",
       is_json: true,
       json_type: "JobStreet",
       region: "Philippines",
@@ -250,8 +170,9 @@ export const defaultConfig: NicheConfig = {
     }
   ],
 
-  edge_proxy_url: process.env.EDGE_PROXY_URL || "https://va-edge-proxy.cyrusalcala-agency.workers.dev",
-  proxy_secret: process.env.VA_PROXY_SECRET
-};
+  edge_proxy_url: (env?.EDGE_PROXY_URL || (isNode ? process.env.EDGE_PROXY_URL : null) || "https://va-edge-proxy.cyrusalcala-agency.workers.dev"),
+  proxy_secret: (env?.VA_PROXY_SECRET || (isNode ? process.env.VA_PROXY_SECRET : null))
+  };
+}
 
-export const config = defaultConfig; // In production, we can use a dynamic loader here
+export const config = getConfig();
