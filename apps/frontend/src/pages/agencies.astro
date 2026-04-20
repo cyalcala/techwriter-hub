@@ -1,0 +1,48 @@
+---
+export const prerender = false;
+import Layout from '../layouts/Layout.astro';
+
+const agencies = [
+  { name: "ContentJet", focus: "AI & Documentation", site: "https://contentjet.io" },
+  { name: "Draft.dev", focus: "Technical Blog Posts", site: "https://draft.dev" },
+  { name: "Instruct", focus: "API Documentation", site: "https://instruct.com" },
+  { name: "KnowledgeOwl", focus: "Knowledge Base Software", site: "https://knowledgeowl.com" },
+];
+---
+
+<Layout title="Agencies List | TechWriter Hub">
+  <main class="max-w-[1000px] mx-auto px-4 py-16">
+    <header class="text-center mb-16">
+      <h1 class="text-5xl md:text-7xl font-black text-slate-900 mb-4 tracking-tighter uppercase italic">
+        Agencies <span class="text-blue-600">List</span>
+      </h1>
+      <p class="text-xl text-slate-500 font-medium max-w-2xl mx-auto">
+        Leading technical writing and content agencies for Filipino talent.
+      </p>
+    </header>
+
+    <div class="grid gap-6 sm:grid-cols-2">
+      {agencies.map((agency) => (
+        <a 
+          href={agency.site} 
+          target="_blank" 
+          class="bg-white p-8 rounded-[2rem] shadow-xl border border-slate-100 hover:border-blue-500/30 hover:shadow-2xl transition-all group"
+        >
+          <h3 class="text-2xl font-black text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">
+            {agency.name}
+          </h3>
+          <p class="text-slate-500 font-medium mb-4">{agency.focus}</p>
+          <span class="text-[10px] font-black text-blue-600 uppercase tracking-widest">
+            Visit Website →
+          </span>
+        </a>
+      ))}
+    </div>
+    
+    <div class="mt-12 text-center">
+      <a href="/" class="text-slate-400 font-bold uppercase tracking-widest text-xs hover:text-slate-600 transition-colors">
+        &larr; Back to Feed
+      </a>
+    </div>
+  </main>
+</Layout>

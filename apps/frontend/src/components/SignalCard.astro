@@ -19,43 +19,51 @@ const getFavicon = (url: string) => {
 const favicon = getFavicon(signal.url);
 ---
 
-<li class="relative group/item py-1.5 px-1 rounded-lg hover:bg-blueberry-900/[0.03] transition-colors">
+<li class="relative py-2 px-2 rounded-2xl border border-transparent hover:border-white/30 hover:bg-white/10 backdrop-blur-sm transition-all group/item shadow-sm hover:shadow-md">
   <a
     href={signal.url}
     target="_blank"
-    class="flex items-center gap-2.5 min-w-0 relative"
+    class="flex items-center gap-4 min-w-0"
   >
-    <!-- Stretched link overlay -->
-    <span class="absolute inset-0 z-10"></span>
-
     <!-- Favicon -->
-    <div class="w-4 h-4 rounded-sm flex items-center justify-center overflow-hidden shrink-0 border border-blueberry-900/8 bg-white">
+    <div class="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden shrink-0 border border-slate-200 bg-white shadow-sm group-hover/item:scale-110 transition-transform">
       {favicon ? (
-        <img src={favicon} alt="" width="16" height="16" class="w-full h-full object-contain" loading="lazy" />
+        <img src={favicon} alt="" width="32" height="32" class="w-full h-full object-contain p-1" loading="lazy" />
       ) : (
-        <div class="w-full h-full bg-blueberry-100 flex items-center justify-center text-[7px] font-semibold text-blueberry-900/50">
+        <div class="w-full h-full bg-slate-100 flex items-center justify-center text-xs font-black text-slate-400">
           {signal.company.charAt(0)}
         </div>
       )}
     </div>
 
-    <!-- Job Title -->
-    <span class="flex-1 min-w-0 text-[13px] font-semibold text-blueberry-900 leading-snug truncate group-hover/item:text-blue-600 transition-colors">
-      {signal.title}
-    </span>
+    <!-- Job Info -->
+    <div class="flex-1 min-w-0">
+      <h3 class="text-sm font-black text-slate-900 leading-tight truncate group-hover/item:text-[var(--color-primary)] transition-colors">
+        {signal.title}
+      </h3>
+      <div class="flex items-center gap-2 mt-0.5">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">
+          {signal.company}
+        </span>
+        <span class="w-1 h-1 rounded-full bg-slate-200 shrink-0"></span>
+        <span class="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">
+          {signal.region || 'Global'}
+        </span>
+      </div>
+    </div>
 
-    <!-- Tags (right side) -->
-    <div class="flex gap-1 shrink-0 pointer-events-none relative z-20">
-      {tags.slice(0, 2).map((tag) => (
-        <span class="whitespace-nowrap px-2 py-0.5 rounded-md text-[10px] font-medium border border-blueberry-900/10 bg-oat-50 text-blueberry-900/50 leading-none">
-          {tag}
-        </span>
-      ))}
-      {signal.salary && (
-        <span class="whitespace-nowrap px-2 py-0.5 rounded-md text-[10px] font-medium border border-emerald-200 bg-emerald-50 text-emerald-700 leading-none">
-          {signal.salary}
-        </span>
-      )}
+    <!-- Tags & Action -->
+    <div class="flex items-center gap-3 shrink-0">
+      <div class="hidden sm:flex gap-1">
+        {tags.slice(0, 1).map((tag) => (
+          <span class="whitespace-nowrap px-2 py-1 rounded-md text-[9px] font-black border border-slate-200 bg-white text-slate-400 uppercase tracking-widest">
+            {tag}
+          </span>
+        ))}
+      </div>
+      <div class="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 group-hover/item:text-[var(--color-primary)] group-hover/item:bg-blue-50 transition-all">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
+      </div>
     </div>
   </a>
 </li>
