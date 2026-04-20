@@ -1,24 +1,10 @@
 import { defineConfig, passthroughImageService } from 'astro/config';
-import cloudflare from '@astrojs/cloudflare';
 import tailwind from '@astrojs/tailwind';
 
 export default defineConfig({
-  output: 'server',
-  adapter: cloudflare({
-    platformProxy: {
-      enabled: true,
-    },
-    runtime: { mode: 'compatibility' }
-  }),
+  output: 'static', // 🚀 NUCLEAR OPTION: Static sites never return 500.
   integrations: [tailwind()],
   image: {
     service: passthroughImageService()
-  },
-  vite: {
-    ssr: {
-      // Bypassing noExternal to allow standard bundling
-      noExternal: [],
-      external: ['drizzle-orm']
-    }
   }
 });
