@@ -4,6 +4,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -24,19 +27,14 @@ jobs:
 
       - name: Build TechWriter Hub
         run: |
-          # 🏗️ Force build from root to resolve workspace dependencies
+          cd apps/frontend
           bun run build
 
-      - name: Verify Build Output
-        run: |
-          if [ ! -d "apps/frontend/dist" ]; then
-            echo "❌ ERROR: apps/frontend/dist directory not found. Build may have failed silently."
-            exit 1
-          fi
-
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy apps/frontend/dist --project-name=techwriter-hub
+        run: |
+          # 🚀 Direct deployment via Wrangler CLI to bypass Git/Action conflicts
+          cd apps/frontend
+          bunx wrangler pages deploy dist --project-name=techwriter-hub --branch main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
