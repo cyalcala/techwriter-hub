@@ -2,6 +2,8 @@ name: Deploy TechWriter Hub
 on:
   push:
     branches: [ main ]
+  schedule:
+    - cron: '0 */6 * * *' # 🚀 Heartbeat: Auto-refresh data every 6 hours
   workflow_dispatch:
 
 env:
