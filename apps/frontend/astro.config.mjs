@@ -1,8 +1,15 @@
 import { defineConfig, passthroughImageService } from 'astro/config';
+import cloudflare from '@astrojs/cloudflare';
 import tailwind from '@astrojs/tailwind';
 
 export default defineConfig({
-  output: 'static', // 🚀 PURE STATIC: NO WORKER, NO SSR, NO 500s.
+  output: 'server', // 🚀 Back to Server, but with a Shield.
+  adapter: cloudflare({
+    platformProxy: {
+      enabled: true,
+    },
+    runtime: { mode: 'compatibility' }
+  }),
   integrations: [tailwind()],
   image: {
     service: passthroughImageService()
